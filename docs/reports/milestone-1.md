@@ -36,9 +36,9 @@ KNOWN ISSUES:
 - Cross-store RLS coverage deferred to Milestone 2 (no store tables yet)
 - Real SMS provider wiring waits for Owner-selected vendor
 COMMIT:
-- (filled after push)
+- 3c13b51 — feat: Milestone 1 auth, RBAC, audit, and database foundation
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:
-- รอ Owner ตรวจรับ Milestone 1
+- รอ Owner ตรวจรับ Milestone 1 (OWNER REVIEW GATE 1)
 ```

@@ -9,6 +9,8 @@ const navItems = [
   { id: 'payments', label: 'Payments' },
   { id: 'fulfillment', label: 'Fulfillment' },
   { id: 'settlements', label: 'Settlements' },
+  { id: 'promotions', label: 'Promotions' },
+  { id: 'support', label: 'Support' },
   { id: 'approvals', label: 'Approvals' },
   { id: 'staff', label: 'Staff & roles' },
   { id: 'audit', label: 'Audit' },
@@ -39,9 +41,29 @@ export function App() {
         <main className="main">
           <h1>Operations shell</h1>
           <p className="lede">
-            Milestone 7 fulfillment: packing SLA, courier handoff/POD, returns and refunds,
-            product recalls, and maker-checker store settlements.
+            Milestone 8 engagement: promotions with hard caps, verified reviews and TikTok
+            moderation, customer privacy controls, and support SLA tickets.
           </p>
+          <section aria-labelledby="support-heading" id="support">
+            <h2 id="support-heading">Support readiness</h2>
+            <ul className="roles" aria-label="Support checklist">
+              <li>Same-day first reply</li>
+              <li>Urgent → lead + finance</li>
+              <li>SLA escalate</li>
+              <li>Auto-close 3 days</li>
+              <li>Reopen allowed</li>
+            </ul>
+          </section>
+          <section aria-labelledby="promotions-heading" id="promotions">
+            <h2 id="promotions-heading">Promotion readiness</h2>
+            <ul className="roles" aria-label="Promotion checklist">
+              <li>Stacking rules</li>
+              <li>Funding split</li>
+              <li>80/90% alerts</li>
+              <li>Hard budget stop</li>
+              <li>Cancel recalc</li>
+            </ul>
+          </section>
           <section aria-labelledby="settlements-heading" id="settlements">
             <h2 id="settlements-heading">Settlement readiness</h2>
             <ul className="roles" aria-label="Settlement checklist">

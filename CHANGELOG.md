@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 8 — Promotions, reviews/TikTok, customer privacy, and support
+  - Promo stacking/funding/caps; verified reviews; TikTok moderation allowlist
+  - Addresses, dual-OTP phone change, recovery/deletion; support SLA tickets
+
 - Milestone 7 — Delivery, returns, recall, and settlement
   - Courier adapters, packing SLA, POD, claims; return/refund SLA via ledger
   - Product recalls with affected-order tracking; settlement batches with disputes

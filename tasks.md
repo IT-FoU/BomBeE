@@ -466,7 +466,8 @@
 - [x] Permission/Responsive/Regression tests ผ่าน
 - [x] Commit และ Push Milestone 7
 - [x] จัดทำ Milestone Report 7
-- [ ] **OWNER REVIEW GATE 7 — หยุดรอการตรวจรับ**
+- [x] **OWNER REVIEW GATE 7 — อนุมัติแล้ว** (Owner approved 2026-09-03)
+- [x] CI green on PR #8 — 2026-09-03
 
 ---
 
@@ -474,58 +475,58 @@
 
 ### 8.1 Promotions
 
-- [ ] สร้าง promotion rules/conditions/scopes/budget/quantity/effective dates
-- [ ] รองรับ stacking ตาม Admin rules
-- [ ] รองรับ platform-funded, supplier-funded และ percentage split
-- [ ] Snapshot applied promotion ลง order
-- [ ] Alert budget/quantity ที่ 80% และ 90%
-- [ ] Hard stop ที่ cap; ป้องกัน concurrency overspend
-- [ ] Recalculate เมื่อ cancel items
+- [x] สร้าง promotion rules/conditions/scopes/budget/quantity/effective dates
+- [x] รองรับ stacking ตาม Admin rules
+- [x] รองรับ platform-funded, supplier-funded และ percentage split
+- [x] Snapshot applied promotion ลง order
+- [x] Alert budget/quantity ที่ 80% และ 90%
+- [x] Hard stop ที่ cap; ป้องกัน concurrency overspend
+- [x] Recalculate เมื่อ cancel items
 
 ### 8.2 Reviews and TikTok
 
-- [ ] รีวิวได้เฉพาะ delivered verified purchase
-- [ ] เขียนได้ภายใน 30 วัน
-- [ ] แก้ได้ภายใน 7 วันและเก็บ version history
-- [ ] Supplier response ต้อง approval ก่อนแสดง
-- [ ] Staff publish TikTok link ได้
-- [ ] Supplier/customer submissions เข้า moderation queue
-- [ ] Suspicious content ซ่อนชั่วคราวและแจ้ง Admin
-- [ ] ตรวจ URL allowlist/protocol และป้องกัน malicious redirect
+- [x] รีวิวได้เฉพาะ delivered verified purchase
+- [x] เขียนได้ภายใน 30 วัน
+- [x] แก้ได้ภายใน 7 วันและเก็บ version history
+- [x] Supplier response ต้อง approval ก่อนแสดง
+- [x] Staff publish TikTok link ได้
+- [x] Supplier/customer submissions เข้า moderation queue
+- [x] Suspicious content ซ่อนชั่วคราวและแจ้ง Admin
+- [x] ตรวจ URL allowlist/protocol และป้องกัน malicious redirect
 
 ### 8.3 Customers and Privacy
 
-- [ ] รองรับหลาย address และ default address
-- [ ] รองรับ recipient name/phone แยกจาก account
-- [ ] Order address เป็น immutable snapshot
-- [ ] เปลี่ยนเบอร์ต้อง OTP เบอร์เดิมและใหม่
-- [ ] ไม่มีเบอร์เดิมใช้ document-based recovery
-- [ ] เอกสาร recovery encrypted/private/audited
-- [ ] Account deletion request ใช้ OTP + staff approval
-- [ ] Anonymize ข้อมูลที่ไม่จำเป็นแต่รักษา records ที่ต้องเก็บ
-- [ ] Marketing เปิดเริ่มต้นพร้อม notice ชัดเจนและ opt-out ง่าย
-- [ ] ร้านเห็นเฉพาะข้อมูลที่จำเป็นต่อ delivery
+- [x] รองรับหลาย address และ default address
+- [x] รองรับ recipient name/phone แยกจาก account
+- [x] Order address เป็น immutable snapshot
+- [x] เปลี่ยนเบอร์ต้อง OTP เบอร์เดิมและใหม่
+- [x] ไม่มีเบอร์เดิมใช้ document-based recovery
+- [x] เอกสาร recovery encrypted/private/audited
+- [x] Account deletion request ใช้ OTP + staff approval
+- [x] Anonymize ข้อมูลที่ไม่จำเป็นแต่รักษา records ที่ต้องเก็บ
+- [x] Marketing เปิดเริ่มต้นพร้อม notice ชัดเจนและ opt-out ง่าย
+- [x] ร้านเห็นเฉพาะข้อมูลที่จำเป็นต่อ delivery
 
 ### 8.4 Support
 
-- [ ] รองรับ in-app chat/ticket, WhatsApp/message reference และ phone logs
-- [ ] First response ภายในวันเดียวกัน
-- [ ] Urgent case ส่ง Team Lead + Finance ทันที
-- [ ] Urgent preliminary resolution ภายใน 3 business days
-- [ ] General resolution ภายใน 7 business days
-- [ ] SLA breach escalate Team Lead อัตโนมัติ
-- [ ] ลูกค้ายืนยันปิด หรือ auto-close หลัง 3 วัน
-- [ ] ลูกค้าเปิดเรื่องใหม่ได้หากยังมีปัญหา
+- [x] รองรับ in-app chat/ticket, WhatsApp/message reference และ phone logs
+- [x] First response ภายในวันเดียวกัน
+- [x] Urgent case ส่ง Team Lead + Finance ทันที
+- [x] Urgent preliminary resolution ภายใน 3 business days
+- [x] General resolution ภายใน 7 business days
+- [x] SLA breach escalate Team Lead อัตโนมัติ
+- [x] ลูกค้ายืนยันปิด หรือ auto-close หลัง 3 วัน
+- [x] ลูกค้าเปิดเรื่องใหม่ได้หากยังมีปัญหา
 
 ### Quality Gate 8
 
-- [ ] Promotion stacking/cap/funding/concurrency tests ผ่าน
-- [ ] Verified-review/date/edit/moderation tests ผ่าน
-- [ ] Privacy/RLS/account recovery/deletion tests ผ่าน
-- [ ] Support SLA/escalation/closure tests ผ่าน
-- [ ] Lao/English และ Responsive QA ผ่าน
-- [ ] Commit และ Push Milestone 8
-- [ ] จัดทำ Milestone Report 8
+- [x] Promotion stacking/cap/funding/concurrency tests ผ่าน
+- [x] Verified-review/date/edit/moderation tests ผ่าน
+- [x] Privacy/RLS/account recovery/deletion tests ผ่าน
+- [x] Support SLA/escalation/closure tests ผ่าน
+- [x] Lao/English และ Responsive QA ผ่าน
+- [x] Commit และ Push Milestone 8
+- [x] จัดทำ Milestone Report 8
 - [ ] **OWNER REVIEW GATE 8 — หยุดรอการตรวจรับ**
 
 ---

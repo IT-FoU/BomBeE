@@ -26,7 +26,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - Backoffice final QA / security audit continues in Milestone 10
 COMMIT:
-- (pending)
+- f3169c0 — feat: Milestone 9 reports, EGO placeholder, and backups
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

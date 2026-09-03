@@ -256,8 +256,8 @@
 - [x] Media permissions และ signed URL tests ผ่าน
 - [x] Price approval/below-cost/self-approval denial tests ผ่าน
 - [x] Lao/English rendering และ responsive QA ผ่าน
-- [ ] Commit และ Push Milestone 3
-- [ ] จัดทำ Milestone Report 3
+- [x] Commit และ Push Milestone 3 — `4393d71` / branch `cursor/milestone-3-catalog-pricing-35e5`
+- [x] จัดทำ Milestone Report 3 — `docs/reports/milestone-3.md`
 - [ ] **OWNER REVIEW GATE 3 — หยุดรอการตรวจรับ**
 
 ---

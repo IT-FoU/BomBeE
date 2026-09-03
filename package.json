@@ -1,0 +1,41 @@
+{
+  "name": "bombee-market",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "BomBee Market — Managed Reseller / Private Beta marketplace for Vientiane",
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=22 <23",
+    "pnpm": ">=10 <11"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @bombee/customer --filter @bombee/backoffice --filter @bombee/api run dev",
+    "build": "pnpm -r --filter @bombee/shared --filter @bombee/config --filter @bombee/api --filter @bombee/customer --filter @bombee/backoffice run build",
+    "build:packages": "pnpm --filter @bombee/shared --filter @bombee/config run build",
+    "typecheck": "pnpm build:packages && pnpm -r run typecheck",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm build:packages && pnpm -r run test",
+    "test:e2e": "pnpm --filter @bombee/customer run test:e2e",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "pnpm -r run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.35.0",
+    "eslint": "9.35.0",
+    "eslint-plugin-import-x": "4.16.1",
+    "globals": "16.3.0",
+    "prettier": "3.6.2",
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.42.0",
+    "vitest": "3.2.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "unrs-resolver"
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "$comment": "Informal schema note for Milestone 0 fixtures",
+  "type": "object",
+  "required": ["customers", "stores", "products"]
+}

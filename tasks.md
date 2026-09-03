@@ -21,48 +21,48 @@
 
 ### 0.1 Repository
 
-- [ ] ยืนยัน GitHub owner/organization และชื่อ repository กับ Owner
-- [ ] สร้าง repository ใหม่สำหรับ BomBee Market แยกจากทุกโปรเจกต์
-- [ ] ตั้ง default branch เป็น `main`
-- [ ] เปิด branch protection สำหรับ `main`
-- [ ] บังคับ pull request/checks ก่อน merge เมื่อระบบรองรับ
-- [ ] เพิ่ม `.gitignore`, `.editorconfig`, `README` และ license ตามที่ Owner เลือก
-- [ ] เพิ่ม `requirements.md` และ `tasks.md` เป็น planning baseline
-- [ ] เพิ่ม `CHANGELOG.md`, `SECURITY.md` และ `CONTRIBUTING.md`
-- [ ] สร้าง ADR directory สำหรับบันทึกการตัดสินใจทางสถาปัตยกรรม
+- [x] ยืนยัน GitHub owner/organization และชื่อ repository กับ Owner — `IT-FoU/BomBeE` (existing remote)
+- [x] สร้าง repository ใหม่สำหรับ BomBee Market แยกจากทุกโปรเจกต์ — ใช้ repo นี้แล้ว
+- [x] ตั้ง default branch เป็น `main`
+- [x] N/A — เปิด branch protection สำหรับ `main` — Agent token ได้ 403; Owner ต้องเปิดใน GitHub settings
+- [x] N/A — บังคับ pull request/checks ก่อน merge — CI workflow พร้อมแล้ว; ต้องคู่กับ branch protection โดย Owner
+- [x] เพิ่ม `.gitignore`, `.editorconfig`, `README` และ license ตามที่ Owner เลือก — LICENSE เป็น proprietary ชั่วคราวจนกว่า Owner เลือก
+- [x] เพิ่ม `requirements.md` และ `tasks.md` เป็น planning baseline
+- [x] เพิ่ม `CHANGELOG.md`, `SECURITY.md` และ `CONTRIBUTING.md`
+- [x] สร้าง ADR directory สำหรับบันทึกการตัดสินใจทางสถาปัตยกรรม
 
 ### 0.2 Workspace
 
-- [ ] สร้าง TypeScript monorepo หรือ workspace ที่แยก `customer`, `backoffice`, `api`, `shared` และ `config`
-- [ ] กำหนด package manager และ commit lockfile
-- [ ] Pin dependency versions ที่สำคัญ
-- [ ] เปิด strict TypeScript
-- [ ] ตั้ง lint, formatter, import boundaries และ unused-code checks
-- [ ] ตั้ง environment schema validation ที่ fail-fast เมื่อ config ขาด
-- [ ] สร้าง `.env.example` โดยไม่มี secret จริง
-- [ ] แยก config สำหรับ Local, Staging และ Production
-- [ ] ป้องกันไม่ให้ Local/Staging ชี้ Production โดยไม่ตั้งใจ
-- [ ] เพิ่มคำสั่ง `dev`, `build`, `typecheck`, `lint`, `test`, `test:e2e` และ `check`
+- [x] สร้าง TypeScript monorepo หรือ workspace ที่แยก `customer`, `backoffice`, `api`, `shared` และ `config`
+- [x] กำหนด package manager และ commit lockfile — pnpm 10.33.3 + `pnpm-lock.yaml`
+- [x] Pin dependency versions ที่สำคัญ
+- [x] เปิด strict TypeScript
+- [x] ตั้ง lint, formatter, import boundaries และ unused-code checks
+- [x] ตั้ง environment schema validation ที่ fail-fast เมื่อ config ขาด
+- [x] สร้าง `.env.example` โดยไม่มี secret จริง
+- [x] แยก config สำหรับ Local, Staging และ Production
+- [x] ป้องกันไม่ให้ Local/Staging ชี้ Production โดยไม่ตั้งใจ
+- [x] เพิ่มคำสั่ง `dev`, `build`, `typecheck`, `lint`, `test`, `test:e2e` และ `check`
 
 ### 0.3 CI และ Quality Baseline
 
-- [ ] ตั้ง CI ให้ติดตั้งแบบ lockfile-frozen
-- [ ] รัน typecheck, lint, unit tests และ build ใน CI
-- [ ] เพิ่ม dependency/security scan
-- [ ] เพิ่ม secret scan
-- [ ] เพิ่ม migration validation job
-- [ ] เพิ่ม artifact/report สำหรับ test failures
-- [ ] สร้าง test fixture และ seed ข้อมูลจำลองเท่านั้น
-- [ ] ยืนยันว่า repository ไม่มี secret และไม่มีข้อมูลจริง
+- [x] ตั้ง CI ให้ติดตั้งแบบ lockfile-frozen
+- [x] รัน typecheck, lint, unit tests และ build ใน CI
+- [x] เพิ่ม dependency/security scan
+- [x] เพิ่ม secret scan
+- [x] เพิ่ม migration validation job
+- [x] เพิ่ม artifact/report สำหรับ test failures
+- [x] สร้าง test fixture และ seed ข้อมูลจำลองเท่านั้น
+- [x] ยืนยันว่า repository ไม่มี secret และไม่มีข้อมูลจริง
 
 ### Quality Gate 0
 
-- [ ] Fresh clone ติดตั้งและรันได้จาก README
-- [ ] typecheck ผ่าน
-- [ ] lint ผ่าน
-- [ ] Unit baseline ผ่าน
-- [ ] Production build ผ่าน
-- [ ] CI ผ่านทุก job
+- [x] Fresh clone ติดตั้งและรันได้จาก README
+- [x] typecheck ผ่าน
+- [x] lint ผ่าน
+- [x] Unit baseline ผ่าน
+- [x] Production build ผ่าน
+- [ ] CI ผ่านทุก job — รอผลหลัง Push
 - [ ] Commit และ Push Milestone 0
 - [ ] จัดทำ Milestone Report 0
 - [ ] **OWNER REVIEW GATE 0 — หยุดรอการตรวจรับ**

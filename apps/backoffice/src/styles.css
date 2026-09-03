@@ -1,0 +1,82 @@
+:root {
+  color-scheme: light;
+  --navy: #0b1426;
+  --electric: #1f6bff;
+  --ink: #101828;
+  --paper: #f3f6fb;
+  --line: #d7e0ef;
+  font-family: 'Segoe UI', 'Noto Sans Lao', 'Helvetica Neue', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #e8eef8 0%, var(--paper) 40%, #ffffff 100%);
+  color: var(--ink);
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) 1fr;
+}
+
+.nav {
+  background: linear-gradient(180deg, var(--navy), #111827);
+  color: #fff;
+  padding: 1.5rem;
+}
+
+.brand {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.nav-label {
+  margin: 0.35rem 0 0;
+  color: #9db0d4;
+  font-size: 0.875rem;
+}
+
+.main {
+  padding: 2rem;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+}
+
+.lede {
+  margin: 0 0 1.25rem;
+  color: #475467;
+}
+
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roles li {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+}
+
+@media (max-width: 720px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,15 @@
+title = "gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow documented placeholders and planning docs"
+paths = [
+  '''(.*?)(\.|/)env\.example$''',
+  '''(.*?)(\.|/)env\.(local|staging|production)\.example$''',
+  '''^\.gitleaks\.toml$''',
+  '''^docs/''',
+  '''^requirements\.md$''',
+  '''^tasks\.md$''',
+]

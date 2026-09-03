@@ -1,0 +1,34 @@
+{
+  "$schema": "./fixture.schema.json",
+  "description": "Synthetic fixtures only — no real customers, stores, or payments",
+  "customers": [
+    {
+      "id": "cust_fixture_001",
+      "displayName": "Demo Customer One",
+      "phoneE164": "+8562011111111",
+      "locale": "lo"
+    },
+    {
+      "id": "cust_fixture_002",
+      "displayName": "Demo Customer Two",
+      "phoneE164": "+8562022222222",
+      "locale": "en"
+    }
+  ],
+  "stores": [
+    {
+      "id": "store_fixture_001",
+      "name": "Demo Mart Vientiane",
+      "status": "draft"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_fixture_001",
+      "storeId": "store_fixture_001",
+      "title": { "lo": "ນ້ຳດື່ມ", "en": "Drinking Water" },
+      "sku": "DEMO-WATER-1L",
+      "priceLak": 5000
+    }
+  ]
+}

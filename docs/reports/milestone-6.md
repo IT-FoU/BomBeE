@@ -24,7 +24,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - Delivery/return/settlement flows continue in Milestone 7
 COMMIT:
-- (see git log on cursor/milestone-6-payments-recon-35e5)
+- 7be604b — feat: Milestone 6 QR/COD payments and reconciliation
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

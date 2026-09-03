@@ -304,7 +304,7 @@
 - [x] Permission/Responsive/Regression tests ผ่าน
 - [x] Commit และ Push Milestone 4 — `8ed90ec` / branch `cursor/milestone-4-inventory-reservation-35e5`
 - [x] จัดทำ Milestone Report 4 — `docs/reports/milestone-4.md`
-- [ ] **OWNER REVIEW GATE 4 — หยุดรอการตรวจรับ**
+- [ ] **OWNER REVIEW GATE 4 — หยุดรอการตรวจรับ** (CI ผ่านครบ)
 
 ---
 

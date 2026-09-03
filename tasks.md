@@ -209,7 +209,7 @@
 - [x] Permission/Responsive/Regression tests ผ่าน
 - [x] Commit และ Push Milestone 2 — `7545044` / branch `cursor/milestone-2-store-contract-35e5`
 - [x] จัดทำ Milestone Report 2 — `docs/reports/milestone-2.md`
-- [ ] **OWNER REVIEW GATE 2 — หยุดรอการตรวจรับ**
+- [ ] **OWNER REVIEW GATE 2 — หยุดรอการตรวจรับ** (CI ผ่านครบบน `7545044`)
 
 ---
 

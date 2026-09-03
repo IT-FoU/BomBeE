@@ -24,7 +24,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - Promotions/content/support continue in Milestone 8
 COMMIT:
-- (pending)
+- f610cd7 — feat: Milestone 7 delivery, returns, recall, and settlement
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

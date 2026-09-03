@@ -23,8 +23,11 @@ body {
 
 .shell {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
   padding: 2rem;
 }
 
@@ -53,3 +56,51 @@ h1 {
   color: #b6c4e0;
   line-height: 1.5;
 }
+
+.search-panel {
+  width: min(40rem, 100%);
+  border-top: 1px solid rgba(219, 231, 255, 0.2);
+  padding-top: 1.25rem;
+}
+
+.search-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #dbe7ff;
+}
+
+.consent,
+.hint {
+  margin: 0 0 0.75rem;
+  color: #b6c4e0;
+  line-height: 1.45;
+  font-size: 0.95rem;
+}
+
+.search-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.file-label,
+.scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid rgba(219, 231, 255, 0.35);
+  background: rgba(15, 23, 42, 0.55);
+  color: #dbe7ff;
+  border-radius: 0.4rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.file-label input {
+  max-width: 12rem;
+  color: inherit;
+}
+

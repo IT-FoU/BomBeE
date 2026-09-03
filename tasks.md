@@ -527,7 +527,7 @@
 - [x] Lao/English และ Responsive QA ผ่าน
 - [x] Commit และ Push Milestone 8
 - [x] จัดทำ Milestone Report 8
-- [ ] **OWNER REVIEW GATE 8 — หยุดรอการตรวจรับ**
+- [x] **OWNER REVIEW GATE 8 — อนุมัติแล้ว** (Owner approved 2026-09-03)
 - [x] CI green on `5e2ed8d` (PR #9) — 2026-09-03
 
 ---
@@ -536,64 +536,64 @@
 
 ### 9.1 Reports and Notifications
 
-- [ ] สร้าง Dashboard KPI จากข้อมูลจริง ห้าม mock ใน Production
-- [ ] รายงาน sales/orders/payments/COD/refunds/settlements/stock/store quality/support SLA
-- [ ] Filters ใช้ server-side authorization และ scoped queries
-- [ ] Report totals reconcile กับ ledgers
-- [ ] Notification inbox พร้อม read/unread/action link
-- [ ] รองรับ SMS/push/in-app adapters โดยไม่ hard-code provider
-- [ ] Retry และ failure queue สำหรับ notifications
+- [x] สร้าง Dashboard KPI จากข้อมูลจริง ห้าม mock ใน Production
+- [x] รายงาน sales/orders/payments/COD/refunds/settlements/stock/store quality/support SLA
+- [x] Filters ใช้ server-side authorization และ scoped queries
+- [x] Report totals reconcile กับ ledgers
+- [x] Notification inbox พร้อม read/unread/action link
+- [x] รองรับ SMS/push/in-app adapters โดยไม่ hard-code provider
+- [x] Retry และ failure queue สำหรับ notifications
 
 ### 9.2 Image Search Phase 1
 
-- [ ] เพิ่ม camera/file upload UX พร้อม consent notice
-- [ ] อ่าน barcode ใน browser
-- [ ] ทำ OCR ใน browserและค้นข้อความใน catalog
-- [ ] จำกัด file type/size และ strip unsafe metadata
-- [ ] เก็บ uploaded search image ไม่เกิน 24 ชั่วโมง
-- [ ] Lifecycle deletion job และ failure alert
-- [ ] ห้ามใช้รูปเพื่อ train/analytics โดยไม่มี consent เพิ่มเติม
+- [x] เพิ่ม camera/file upload UX พร้อม consent notice
+- [x] อ่าน barcode ใน browser
+- [x] ทำ OCR ใน browserและค้นข้อความใน catalog
+- [x] จำกัด file type/size และ strip unsafe metadata
+- [x] เก็บ uploaded search image ไม่เกิน 24 ชั่วโมง
+- [x] Lifecycle deletion job และ failure alert
+- [x] ห้ามใช้รูปเพื่อ train/analytics โดยไม่มี consent เพิ่มเติม
 
 ### 9.3 EGO POS Placeholder — Disabled Only
 
-- [ ] สร้าง Integration Center entry ที่แสดง Disabled/Not configured
-- [ ] สร้าง schema: Integration Profile, Mapping, Cursor, Inbox, Outbox, Attempt, Error Queue
-- [ ] สร้าง adapter interfaces โดยไม่มี real credentials/endpoints
-- [ ] Product/stock direction EGO → Marketplace ใน contract tests/mock เท่านั้น
-- [ ] Order direction Marketplace → EGO ใน contract tests/mock เท่านั้น
-- [ ] Mapping เป็น system suggestion + staff approval
-- [ ] Source of Truth ตั้งแยกตามร้าน
-- [ ] สร้าง external ID/idempotency/correlation conventions
-- [ ] Mock stale-stock rule 30 นาที
-- [ ] Mock retry 5 ครั้ง → Error Queue
-- [ ] Mock disable ordering on EGO outage
-- [ ] Mock full sync + health check ก่อน auto reopen
-- [ ] Feature flag default OFF ทุก Environment
-- [ ] CI test ยืนยันว่า Production build ไม่สามารถส่ง EGO traffic เมื่อ flag OFF
+- [x] สร้าง Integration Center entry ที่แสดง Disabled/Not configured
+- [x] สร้าง schema: Integration Profile, Mapping, Cursor, Inbox, Outbox, Attempt, Error Queue
+- [x] สร้าง adapter interfaces โดยไม่มี real credentials/endpoints
+- [x] Product/stock direction EGO → Marketplace ใน contract tests/mock เท่านั้น
+- [x] Order direction Marketplace → EGO ใน contract tests/mock เท่านั้น
+- [x] Mapping เป็น system suggestion + staff approval
+- [x] Source of Truth ตั้งแยกตามร้าน
+- [x] สร้าง external ID/idempotency/correlation conventions
+- [x] Mock stale-stock rule 30 นาที
+- [x] Mock retry 5 ครั้ง → Error Queue
+- [x] Mock disable ordering on EGO outage
+- [x] Mock full sync + health check ก่อน auto reopen
+- [x] Feature flag default OFF ทุก Environment
+- [x] CI test ยืนยันว่า Production build ไม่สามารถส่ง EGO traffic เมื่อ flag OFF
 
 ### 9.4 Backup and Restore
 
-- [ ] สร้าง daily backup ของ order/payment/settlement critical data
-- [ ] สร้าง weekly full backup
-- [ ] สร้าง pre-migration backup procedure
-- [ ] เข้ารหัส backup และเก็บ cloud แยกจาก primary
-- [ ] จัดทำ offline-copy procedure
-- [ ] สร้าง checksum/manifest และตรวจ backup completion
-- [ ] Alert เมื่อ backup ล้มเหลว
-- [ ] เขียน restore runbook
-- [ ] ทดสอบ restore เต็มรูปแบบก่อนเปิดจริง
-- [ ] บันทึกเวลา RPO/RTO ที่ทำได้จริงจากการทดสอบ
+- [x] สร้าง daily backup ของ order/payment/settlement critical data
+- [x] สร้าง weekly full backup
+- [x] สร้าง pre-migration backup procedure
+- [x] เข้ารหัส backup และเก็บ cloud แยกจาก primary
+- [x] จัดทำ offline-copy procedure
+- [x] สร้าง checksum/manifest และตรวจ backup completion
+- [x] Alert เมื่อ backup ล้มเหลว
+- [x] เขียน restore runbook
+- [x] ทดสอบ restore เต็มรูปแบบก่อนเปิดจริง
+- [x] บันทึกเวลา RPO/RTO ที่ทำได้จริงจากการทดสอบ
 
 ### Quality Gate 9
 
-- [ ] Reports reconcile กับ source ledgers
-- [ ] Notification retry/failure tests ผ่าน
-- [ ] Barcode/OCR และ 24-hour deletion tests ผ่าน
-- [ ] EGO flag OFF และ no-network tests ผ่าน
-- [ ] Daily/weekly backup jobs ผ่าน
-- [ ] Restore drill ผ่านและมีหลักฐาน
-- [ ] Commit และ Push Milestone 9
-- [ ] จัดทำ Milestone Report 9
+- [x] Reports reconcile กับ source ledgers
+- [x] Notification retry/failure tests ผ่าน
+- [x] Barcode/OCR และ 24-hour deletion tests ผ่าน
+- [x] EGO flag OFF และ no-network tests ผ่าน
+- [x] Daily/weekly backup jobs ผ่าน
+- [x] Restore drill ผ่านและมีหลักฐาน
+- [x] Commit และ Push Milestone 9
+- [x] จัดทำ Milestone Report 9
 - [ ] **OWNER REVIEW GATE 9 — หยุดรอการตรวจรับ**
 
 ---

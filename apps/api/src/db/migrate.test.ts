@@ -35,6 +35,7 @@ describe('migrations', () => {
       '20260903130000_payment_ledger.sql',
       '20260903140000_delivery_returns_settlement.sql',
       '20260903150000_promotions_reviews_customers_support.sql',
+      '20260903160000_reports_notifications_search_ego_backup.sql',
     ]);
   });
 

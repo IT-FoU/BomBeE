@@ -11,6 +11,8 @@ const navItems = [
   { id: 'settlements', label: 'Settlements' },
   { id: 'promotions', label: 'Promotions' },
   { id: 'support', label: 'Support' },
+  { id: 'integrations', label: 'Integrations' },
+  { id: 'notifications', label: 'Notifications' },
   { id: 'approvals', label: 'Approvals' },
   { id: 'staff', label: 'Staff & roles' },
   { id: 'audit', label: 'Audit' },
@@ -41,9 +43,39 @@ export function App() {
         <main className="main">
           <h1>Operations shell</h1>
           <p className="lede">
-            Milestone 8 engagement: promotions with hard caps, verified reviews and TikTok
-            moderation, customer privacy controls, and support SLA tickets.
+            Milestone 9 platform ops: live dashboard KPIs, notification inbox/retry, image search
+            retention, EGO Integration Center (disabled), and encrypted backups.
           </p>
+          <section aria-labelledby="dashboard-heading" id="dashboard">
+            <h2 id="dashboard-heading">Dashboard readiness</h2>
+            <ul className="roles" aria-label="Dashboard checklist">
+              <li>Live KPIs only</li>
+              <li>Server-side authz</li>
+              <li>Ledger reconcile</li>
+              <li>Support SLA</li>
+              <li>Store quality</li>
+            </ul>
+          </section>
+          <section aria-labelledby="integrations-heading" id="integrations">
+            <h2 id="integrations-heading">Integration Center</h2>
+            <ul className="roles" aria-label="Integration checklist">
+              <li>EGO: Disabled/Not configured</li>
+              <li>Flag default OFF</li>
+              <li>No credentials</li>
+              <li>Mapping approval</li>
+              <li>Mock retry → error queue</li>
+            </ul>
+          </section>
+          <section aria-labelledby="notifications-heading" id="notifications">
+            <h2 id="notifications-heading">Notification readiness</h2>
+            <ul className="roles" aria-label="Notification checklist">
+              <li>Inbox read/unread</li>
+              <li>Action links</li>
+              <li>Provider adapters</li>
+              <li>Retry queue</li>
+              <li>Dead-letter</li>
+            </ul>
+          </section>
           <section aria-labelledby="support-heading" id="support">
             <h2 id="support-heading">Support readiness</h2>
             <ul className="roles" aria-label="Support checklist">

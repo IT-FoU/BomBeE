@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 9 — Reports, notifications, image search, EGO placeholder, backups
+  - Live KPIs + ledger reconcile; notification retry inbox; 24h search image purge
+  - EGO disabled Integration Center; encrypted daily/weekly backups + restore drill
+
 - Milestone 8 — Promotions, reviews/TikTok, customer privacy, and support
   - Promo stacking/funding/caps; verified reviews; TikTok moderation allowlist
   - Addresses, dual-OTP phone change, recovery/deletion; support SLA tickets

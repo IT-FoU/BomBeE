@@ -209,7 +209,7 @@
 - [x] Permission/Responsive/Regression tests ผ่าน
 - [x] Commit และ Push Milestone 2 — `7545044` / branch `cursor/milestone-2-store-contract-35e5`
 - [x] จัดทำ Milestone Report 2 — `docs/reports/milestone-2.md`
-- [ ] **OWNER REVIEW GATE 2 — หยุดรอการตรวจรับ** (CI ผ่านครบบน `7545044`)
+- [x] **OWNER REVIEW GATE 2 — อนุมัติแล้ว** (Owner approved 2026-09-03)
 
 ---
 
@@ -217,45 +217,45 @@
 
 ### 3.1 Catalog
 
-- [ ] สร้าง Category hierarchy และ translations Lao/English
-- [ ] สร้าง Brand พร้อม verification evidence
-- [ ] สร้าง Product แยกตาม Store
-- [ ] สร้าง Product Variant พร้อม SKU, barcode, attributes, price และ status
-- [ ] บังคับ SKU unique ภายในร้าน
-- [ ] อนุญาต barcode ซ้ำข้ามร้านและสร้าง duplicate alert
-- [ ] สร้าง Store Product ID สำหรับ future integration mapping
-- [ ] รองรับ draft, pending approval, active, paused, archived
-- [ ] สร้าง bulk import CSV/XLSX validation + preview + error report
-- [ ] Import ต้อง idempotent และ rollback batch ที่ผิดร้ายแรง
+- [x] สร้าง Category hierarchy และ translations Lao/English
+- [x] สร้าง Brand พร้อม verification evidence
+- [x] สร้าง Product แยกตาม Store
+- [x] สร้าง Product Variant พร้อม SKU, barcode, attributes, price และ status
+- [x] บังคับ SKU unique ภายในร้าน
+- [x] อนุญาต barcode ซ้ำข้ามร้านและสร้าง duplicate alert
+- [x] สร้าง Store Product ID สำหรับ future integration mapping
+- [x] รองรับ draft, pending approval, active, paused, archived
+- [x] สร้าง bulk import CSV/XLSX validation + preview + error report
+- [x] Import ต้อง idempotent และ rollback batch ที่ผิดร้ายแรง
 
 ### 3.2 Media and Content
 
-- [ ] รองรับรูปหลายรูปต่อ Product/Variant
-- [ ] รองรับวิดีโอสินค้าโดยกำหนด type/size/duration limits
-- [ ] สร้าง private upload flow และ malware/content validation ตามความเหมาะสม
-- [ ] สร้าง image processing/thumbnail pipeline
-- [ ] รองรับ Lao/English title, description, specifications และ warnings
-- [ ] บังคับวันผลิต วันหมดอายุ ส่วนประกอบ และคำเตือนสำหรับสินค้ามีอายุ
-- [ ] บังคับหลักฐานก่อนใช้คำว่าแบรนด์แท้
-- [ ] ปิดหมวดยา อาวุธ บุหรี่ แอลกอฮอล์ และสินค้าผิดกฎหมาย
+- [x] รองรับรูปหลายรูปต่อ Product/Variant
+- [x] รองรับวิดีโอสินค้าโดยกำหนด type/size/duration limits
+- [x] สร้าง private upload flow และ malware/content validation ตามความเหมาะสม
+- [x] สร้าง image processing/thumbnail pipeline
+- [x] รองรับ Lao/English title, description, specifications และ warnings
+- [x] บังคับวันผลิต วันหมดอายุ ส่วนประกอบ และคำเตือนสำหรับสินค้ามีอายุ
+- [x] บังคับหลักฐานก่อนใช้คำว่าแบรนด์แท้
+- [x] ปิดหมวดยา อาวุธ บุหรี่ แอลกอฮอล์ และสินค้าผิดกฎหมาย
 
 ### 3.3 Pricing
 
-- [ ] เก็บ cost, selling price, compare-at price และ margin เป็น integer LAK
-- [ ] ทุก price change สร้าง approval request
-- [ ] ห้ามใช้ราคาใหม่ก่อนอนุมัติ
-- [ ] Below-cost ต้อง Owner approval + 2FA + reason
-- [ ] เก็บ Price Version history ห้ามแก้ทับ
-- [ ] Product Detail ใช้ active approved price เท่านั้น
-- [ ] สร้างใกล้หมดอายุ discount request; ห้ามลดอัตโนมัติโดยไม่อนุมัติ
+- [x] เก็บ cost, selling price, compare-at price และ margin เป็น integer LAK
+- [x] ทุก price change สร้าง approval request
+- [x] ห้ามใช้ราคาใหม่ก่อนอนุมัติ
+- [x] Below-cost ต้อง Owner approval + 2FA + reason
+- [x] เก็บ Price Version history ห้ามแก้ทับ
+- [x] Product Detail ใช้ active approved price เท่านั้น
+- [x] สร้างใกล้หมดอายุ discount request; ห้ามลดอัตโนมัติโดยไม่อนุมัติ
 
 ### Quality Gate 3
 
-- [ ] CRUD/archive Product/Variant ผ่าน
-- [ ] Import valid/invalid/duplicate/retry tests ผ่าน
-- [ ] Media permissions และ signed URL tests ผ่าน
-- [ ] Price approval/below-cost/self-approval denial tests ผ่าน
-- [ ] Lao/English rendering และ responsive QA ผ่าน
+- [x] CRUD/archive Product/Variant ผ่าน
+- [x] Import valid/invalid/duplicate/retry tests ผ่าน
+- [x] Media permissions และ signed URL tests ผ่าน
+- [x] Price approval/below-cost/self-approval denial tests ผ่าน
+- [x] Lao/English rendering และ responsive QA ผ่าน
 - [ ] Commit และ Push Milestone 3
 - [ ] จัดทำ Milestone Report 3
 - [ ] **OWNER REVIEW GATE 3 — หยุดรอการตรวจรับ**

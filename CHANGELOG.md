@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 3 — Catalog, media, and price approval
+  - Products/variants with bilingual copy, import preview, media limits
+  - Immutable price versions with below-cost Owner 2FA approval
+
 - Milestone 2 — Store, contract, payout, and fulfillment controls
   - Store onboarding documents, fulfillment location rule, contract snapshots
   - Payout account versioning with Owner 2FA and 48-hour hold

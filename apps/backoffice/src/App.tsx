@@ -3,6 +3,7 @@ import { APP_ROLES, BRAND_NAME } from '@bombee/shared';
 const navItems = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'stores', label: 'Stores' },
+  { id: 'catalog', label: 'Catalog' },
   { id: 'approvals', label: 'Approvals' },
   { id: 'staff', label: 'Staff & roles' },
   { id: 'audit', label: 'Audit' },
@@ -33,9 +34,19 @@ export function App() {
         <main className="main">
           <h1>Operations shell</h1>
           <p className="lede">
-            Milestone 2 store controls: onboarding documents, contract versions, payout holds, and
-            quality suspensions. Server decides activation and order acceptance.
+            Milestone 3 catalog controls: bilingual product copy, media limits, import preview, and
+            price approvals. Active selling price is approved-only.
           </p>
+          <section aria-labelledby="catalog-heading" id="catalog">
+            <h2 id="catalog-heading">Catalog readiness</h2>
+            <ul className="roles" aria-label="Catalog checklist">
+              <li>Lo / En copy</li>
+              <li>SKU unique per store</li>
+              <li>Media validation</li>
+              <li>Price approval</li>
+              <li>Prohibited categories blocked</li>
+            </ul>
+          </section>
           <section aria-labelledby="stores-heading" id="stores">
             <h2 id="stores-heading">Store readiness</h2>
             <ul className="roles" aria-label="Store checklist">

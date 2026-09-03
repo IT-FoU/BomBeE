@@ -2,7 +2,7 @@
 
 ```text
 MILESTONE: 0 — Repository และ Project Foundation
-STATUS: PARTIAL (awaiting CI green + Owner Review Gate 0)
+STATUS: PASS (awaiting Owner Review Gate 0)
 IMPLEMENTED:
 - Confirmed repo IT-FoU/BomBeE; default branch main
 - Docs: README, LICENSE (proprietary pending Owner), CHANGELOG, SECURITY, CONTRIBUTING
@@ -29,7 +29,7 @@ VALIDATION:
 - pnpm audit --audit-level=high: PASS (0 known vulns)
 - gitleaks (local): PASS (no leaks)
 - migration validate: PASS
-- CI: PENDING (run started after push)
+- CI: PASS (all 8 checks on commit ece4d84)
 SECURITY / DATA / MONEY / STOCK IMPACT:
 - No Production credentials in repo
 - Integer LAK helpers in @bombee/shared
@@ -37,14 +37,15 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - Branch protection / required checks: Owner must enable (API 403 for agent)
 - Final LICENSE terms pending Owner selection (proprietary placeholder)
-- CI job results pending
 COMMIT:
 - e34ff375ba115700aa6e8a778b031ae5c59c0bb3 — feat: Milestone 0 repository and TypeScript monorepo foundation
+- ece4d84039861a50c3d750c4f96823840883196b — docs: record Milestone 0 commit hash and PR link
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:
-- รอ Owner ตรวจรับ Milestone 0
+- รอ Owner ตรวจรับ Milestone 0 (OWNER REVIEW GATE 0)
 - Owner: enable main branch protection + required CI checks
+- ห้ามเริ่ม Milestone 1 จนกว่า Gate 0 จะได้รับอนุมัติ
 ```
 
 ## Evidence (local)

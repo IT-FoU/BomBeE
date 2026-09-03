@@ -23,7 +23,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - Reports/notifications/OCR/EGO/backup continue in Milestone 9
 COMMIT:
-- (pending)
+- 3a5dd84 — feat: Milestone 8 promotions, reviews, privacy, and support
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

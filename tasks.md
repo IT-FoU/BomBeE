@@ -407,7 +407,7 @@
 - [x] Permission/Security/Regression tests ผ่าน
 - [x] Commit และ Push Milestone 6
 - [x] จัดทำ Milestone Report 6
-- [ ] **OWNER REVIEW GATE 6 — หยุดรอการตรวจรับ**
+- [x] **OWNER REVIEW GATE 6 — อนุมัติแล้ว** (Owner approved 2026-09-03)
 - [x] CI green on `adca4aa` (PR #7) — 2026-09-03
 
 ---
@@ -416,56 +416,56 @@
 
 ### 7.1 Delivery
 
-- [ ] สร้าง Courier และ Courier Contract configuration
-- [ ] รองรับ manual shipment และ API adapter
-- [ ] เก็บรูปพัสดุ tracking number และ handoff timestamp
-- [ ] รองรับ Proof of Delivery หลายวิธีตามบริษัท
-- [ ] เก็บ liability/compensation rules แยก courier
-- [ ] Supplier ต้องแพ็กภายใน 24 ชั่วโมงหลังยืนยัน
-- [ ] สร้าง late packing alert/counter
-- [ ] Lost/damaged claim workflow และ platform coordination
+- [x] สร้าง Courier และ Courier Contract configuration
+- [x] รองรับ manual shipment และ API adapter
+- [x] เก็บรูปพัสดุ tracking number และ handoff timestamp
+- [x] รองรับ Proof of Delivery หลายวิธีตามบริษัท
+- [x] เก็บ liability/compensation rules แยก courier
+- [x] Supplier ต้องแพ็กภายใน 24 ชั่วโมงหลังยืนยัน
+- [x] สร้าง late packing alert/counter
+- [x] Lost/damaged claim workflow และ platform coordination
 
 ### 7.2 Returns and Refunds
 
-- [ ] Return request ภายใน 7 วันหลัง delivery
-- [ ] อนุญาต defective/wrong/incomplete/materially not described เท่านั้น
-- [ ] ปฏิเสธ change-of-mind reason
-- [ ] กำหนด return shipping liability ตาม cause
-- [ ] Refund ทุกจำนวนต้อง approval
-- [ ] Refund SLA 7 business days หลัง approval
-- [ ] Preserve evidence, communications และ audit trail
-- [ ] Refund update ledger ผ่าน refund/reversal records เท่านั้น
+- [x] Return request ภายใน 7 วันหลัง delivery
+- [x] อนุญาต defective/wrong/incomplete/materially not described เท่านั้น
+- [x] ปฏิเสธ change-of-mind reason
+- [x] กำหนด return shipping liability ตาม cause
+- [x] Refund ทุกจำนวนต้อง approval
+- [x] Refund SLA 7 business days หลัง approval
+- [x] Preserve evidence, communications และ audit trail
+- [x] Refund update ledger ผ่าน refund/reversal records เท่านั้น
 
 ### 7.3 Recall
 
-- [ ] Recall action ปิดขาย Product/Lot ทันที
-- [ ] ระบุ affected orders/customers อย่างตรวจสอบได้
-- [ ] ทีมงานและร้านประสานลูกค้าร่วมกัน
-- [ ] ร้านรับผิดชอบค่าใช้จ่ายตามกฎ
-- [ ] ติดตาม contact/refund/replacement จนครบทุก affected order
+- [x] Recall action ปิดขาย Product/Lot ทันที
+- [x] ระบุ affected orders/customers อย่างตรวจสอบได้
+- [x] ทีมงานและร้านประสานลูกค้าร่วมกัน
+- [x] ร้านรับผิดชอบค่าใช้จ่ายตามกฎ
+- [x] ติดตาม contact/refund/replacement จนครบทุก affected order
 
 ### 7.4 Settlement
 
-- [ ] สร้าง Settlement eligibility หลัง delivered + platform received money
-- [ ] ใช้ cadence จาก Contract snapshot
-- [ ] Finance hold item/child ตามกรณี return
-- [ ] สร้าง settlement batch และ line items ที่ trace ถึง order/payment
-- [ ] Maker และ Approver ต้องคนละคน
-- [ ] จ่ายเข้า Payout Account Version ที่อนุมัติ
-- [ ] รองรับ negative balance carry-forward และ collection request
-- [ ] ร้าน dispute ได้ภายใน 7 วัน
-- [ ] พักเฉพาะยอดที่ disputed
+- [x] สร้าง Settlement eligibility หลัง delivered + platform received money
+- [x] ใช้ cadence จาก Contract snapshot
+- [x] Finance hold item/child ตามกรณี return
+- [x] สร้าง settlement batch และ line items ที่ trace ถึง order/payment
+- [x] Maker และ Approver ต้องคนละคน
+- [x] จ่ายเข้า Payout Account Version ที่อนุมัติ
+- [x] รองรับ negative balance carry-forward และ collection request
+- [x] ร้าน dispute ได้ภายใน 7 วัน
+- [x] พักเฉพาะยอดที่ disputed
 
 ### Quality Gate 7
 
-- [ ] Delivery manual/API adapter contract tests ผ่าน
-- [ ] Return eligibility/liability/refund SLA tests ผ่าน
-- [ ] Recall affected-order completeness test ผ่าน
-- [ ] Settlement eligibility/maker-checker/dispute/negative tests ผ่าน
-- [ ] Financial ledger reconciliation ผ่าน
-- [ ] Permission/Responsive/Regression tests ผ่าน
-- [ ] Commit และ Push Milestone 7
-- [ ] จัดทำ Milestone Report 7
+- [x] Delivery manual/API adapter contract tests ผ่าน
+- [x] Return eligibility/liability/refund SLA tests ผ่าน
+- [x] Recall affected-order completeness test ผ่าน
+- [x] Settlement eligibility/maker-checker/dispute/negative tests ผ่าน
+- [x] Financial ledger reconciliation ผ่าน
+- [x] Permission/Responsive/Regression tests ผ่าน
+- [x] Commit และ Push Milestone 7
+- [x] จัดทำ Milestone Report 7
 - [ ] **OWNER REVIEW GATE 7 — หยุดรอการตรวจรับ**
 
 ---

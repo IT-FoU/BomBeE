@@ -7,6 +7,8 @@ const navItems = [
   { id: 'inventory', label: 'Inventory' },
   { id: 'orders', label: 'Orders' },
   { id: 'payments', label: 'Payments' },
+  { id: 'fulfillment', label: 'Fulfillment' },
+  { id: 'settlements', label: 'Settlements' },
   { id: 'approvals', label: 'Approvals' },
   { id: 'staff', label: 'Staff & roles' },
   { id: 'audit', label: 'Audit' },
@@ -37,9 +39,29 @@ export function App() {
         <main className="main">
           <h1>Operations shell</h1>
           <p className="lede">
-            Milestone 6 payment controls: QR after confirmation, COD eligibility, immutable ledger,
-            and daily bank/remittance reconciliation with dual-approved adjustments.
+            Milestone 7 fulfillment: packing SLA, courier handoff/POD, returns and refunds,
+            product recalls, and maker-checker store settlements.
           </p>
+          <section aria-labelledby="settlements-heading" id="settlements">
+            <h2 id="settlements-heading">Settlement readiness</h2>
+            <ul className="roles" aria-label="Settlement checklist">
+              <li>Delivered + paid only</li>
+              <li>Contract cadence</li>
+              <li>Maker ≠ approver</li>
+              <li>Dispute hold</li>
+              <li>Negative carryforward</li>
+            </ul>
+          </section>
+          <section aria-labelledby="fulfillment-heading" id="fulfillment">
+            <h2 id="fulfillment-heading">Fulfillment readiness</h2>
+            <ul className="roles" aria-label="Fulfillment checklist">
+              <li>Pack within 24h</li>
+              <li>Tracking + POD</li>
+              <li>Return window 7d</li>
+              <li>Refund SLA</li>
+              <li>Recall completeness</li>
+            </ul>
+          </section>
           <section aria-labelledby="payments-heading" id="payments">
             <h2 id="payments-heading">Payment readiness</h2>
             <ul className="roles" aria-label="Payment checklist">

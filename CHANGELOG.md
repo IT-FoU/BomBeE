@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 7 — Delivery, returns, recall, and settlement
+  - Courier adapters, packing SLA, POD, claims; return/refund SLA via ledger
+  - Product recalls with affected-order tracking; settlement batches with disputes
+
 - Milestone 6 — QR/COD payments and reconciliation
   - Immutable payment ledger with allocations, receipts, refunds, adjustments
   - Combined QR flow, COD limits/deposit/fail-restore, bank + remittance reconcile

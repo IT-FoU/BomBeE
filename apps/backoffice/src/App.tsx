@@ -2,6 +2,7 @@ import { APP_ROLES, BRAND_NAME } from '@bombee/shared';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'stores', label: 'Stores' },
   { id: 'approvals', label: 'Approvals' },
   { id: 'staff', label: 'Staff & roles' },
   { id: 'audit', label: 'Audit' },
@@ -32,9 +33,19 @@ export function App() {
         <main className="main">
           <h1>Operations shell</h1>
           <p className="lede">
-            Milestone 1 auth foundation: roles, 2FA step-up, maker-checker, and audit-ready
-            controls. Server decides every permission.
+            Milestone 2 store controls: onboarding documents, contract versions, payout holds, and
+            quality suspensions. Server decides activation and order acceptance.
           </p>
+          <section aria-labelledby="stores-heading" id="stores">
+            <h2 id="stores-heading">Store readiness</h2>
+            <ul className="roles" aria-label="Store checklist">
+              <li>Owner ID</li>
+              <li>Store info</li>
+              <li>Bank account</li>
+              <li>Contract</li>
+              <li>One fulfillment location</li>
+            </ul>
+          </section>
           <section aria-labelledby="roles-heading">
             <h2 id="roles-heading">Standard roles</h2>
             <ul className="roles">

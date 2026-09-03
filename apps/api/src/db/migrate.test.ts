@@ -24,6 +24,9 @@ describe('migrations', () => {
       '20260903080200_roles_and_permissions.sql',
       '20260903080300_audit_and_exports.sql',
       '20260903080400_rls_policies.sql',
+      '20260903090000_store_domain.sql',
+      '20260903090100_contracts_and_payouts.sql',
+      '20260903090200_store_quality_controls.sql',
     ]);
   });
 

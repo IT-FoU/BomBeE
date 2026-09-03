@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 2 — Store, contract, payout, and fulfillment controls
+  - Store onboarding documents, fulfillment location rule, contract snapshots
+  - Payout account versioning with Owner 2FA and 48-hour hold
+  - Quality counters and suspension/reactivation workflows
+
 - Milestone 1 — Database, authentication, roles, 2FA, and audit
   - SQL migrations for app/private/security/finance schemas with RLS
   - Identity/OTP/session/lockout services with mock SMS

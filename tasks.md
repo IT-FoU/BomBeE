@@ -159,54 +159,54 @@
 
 ### 2.1 Store Domain
 
-- [ ] สร้าง Store, Store Contact, Store Status และ Store Risk Profile
-- [ ] สร้าง Fulfillment Location แบบหลายจุดใน schema
-- [ ] จำกัด Phase 1 ให้เปิดใช้งานหนึ่งจุดต่อร้านใน business rule
-- [ ] สร้าง store onboarding checklist
-- [ ] บังคับบัตรเจ้าของร้าน ข้อมูลร้าน บัญชีธนาคาร และสัญญาก่อนเปิดขาย
-- [ ] เก็บเอกสารใน private storage พร้อม signed access
-- [ ] จำกัดและ Audit ผู้เปิดดูเอกสาร
-- [ ] ติดตาม document expiry และแจ้งล่วงหน้า
-- [ ] ระงับร้านอัตโนมัติเมื่อเอกสารหมดอายุ
+- [x] สร้าง Store, Store Contact, Store Status และ Store Risk Profile
+- [x] สร้าง Fulfillment Location แบบหลายจุดใน schema
+- [x] จำกัด Phase 1 ให้เปิดใช้งานหนึ่งจุดต่อร้านใน business rule
+- [x] สร้าง store onboarding checklist
+- [x] บังคับบัตรเจ้าของร้าน ข้อมูลร้าน บัญชีธนาคาร และสัญญาก่อนเปิดขาย
+- [x] เก็บเอกสารใน private storage พร้อม signed access
+- [x] จำกัดและ Audit ผู้เปิดดูเอกสาร
+- [x] ติดตาม document expiry และแจ้งล่วงหน้า
+- [x] ระงับร้านอัตโนมัติเมื่อเอกสารหมดอายุ
 
 ### 2.2 Contract Versioning
 
-- [ ] สร้าง immutable Contract Version พร้อม effective date
-- [ ] รองรับ markup, commission, per-order fee และ mixed model
-- [ ] รองรับ settlement cadence รายวัน รายสัปดาห์ รายเดือน กำหนดเอง
-- [ ] Contract ใหม่มีผลเฉพาะออเดอร์ใหม่ตาม effective date
-- [ ] Snapshot contract terms ลง Child Order
-- [ ] ห้ามคำนวณออเดอร์เดิมย้อนหลังจาก Contract ใหม่
+- [x] สร้าง immutable Contract Version พร้อม effective date
+- [x] รองรับ markup, commission, per-order fee และ mixed model
+- [x] รองรับ settlement cadence รายวัน รายสัปดาห์ รายเดือน กำหนดเอง
+- [x] Contract ใหม่มีผลเฉพาะออเดอร์ใหม่ตาม effective date
+- [x] Snapshot contract terms ลง Child Order
+- [x] ห้ามคำนวณออเดอร์เดิมย้อนหลังจาก Contract ใหม่
 
 ### 2.3 Payout Account
 
-- [ ] จำกัดหนึ่ง active payout account ต่อร้าน
-- [ ] เก็บ payout account version history ห้ามแก้ทับ
-- [ ] Finance สร้างคำขอเปลี่ยนบัญชี
-- [ ] Owner อนุมัติด้วย 2FA
-- [ ] พัก payout 48 ชั่วโมงหลังเปลี่ยนบัญชี
-- [ ] Settlement อ้างอิง payout account version ที่ใช้จริง
-- [ ] Alert Owner เมื่อบัญชีรับเงินเปลี่ยน
+- [x] จำกัดหนึ่ง active payout account ต่อร้าน
+- [x] เก็บ payout account version history ห้ามแก้ทับ
+- [x] Finance สร้างคำขอเปลี่ยนบัญชี
+- [x] Owner อนุมัติด้วย 2FA
+- [x] พัก payout 48 ชั่วโมงหลังเปลี่ยนบัญชี
+- [x] Settlement อ้างอิง payout account version ที่ใช้จริง
+- [x] Alert Owner เมื่อบัญชีรับเงินเปลี่ยน
 
 ### 2.4 Store Suspension
 
-- [ ] สร้าง rolling 30-day quality counters
-- [ ] ระงับเมื่อตอบ/แพ็กช้า 5 ครั้ง
-- [ ] ระงับเมื่อ stock mismatch 3 ครั้ง
-- [ ] ระงับเมื่อส่งผิด/เสีย/ไม่ตรงรายละเอียด 3 ครั้ง
-- [ ] รองรับ immediate suspension สำหรับ fraud/security
-- [ ] ร้านระงับยังแสดงสินค้าแต่ซื้อไม่ได้
-- [ ] ออเดอร์เดิมอยู่ภายใต้ staff review
-- [ ] Owner/Admin reactivate พร้อม corrective-action evidence
-- [ ] Audit suspend/reactivate ทุกครั้ง
+- [x] สร้าง rolling 30-day quality counters
+- [x] ระงับเมื่อตอบ/แพ็กช้า 5 ครั้ง
+- [x] ระงับเมื่อ stock mismatch 3 ครั้ง
+- [x] ระงับเมื่อส่งผิด/เสีย/ไม่ตรงรายละเอียด 3 ครั้ง
+- [x] รองรับ immediate suspension สำหรับ fraud/security
+- [x] ร้านระงับยังแสดงสินค้าแต่ซื้อไม่ได้
+- [x] ออเดอร์เดิมอยู่ภายใต้ staff review
+- [x] Owner/Admin reactivate พร้อม corrective-action evidence
+- [x] Audit suspend/reactivate ทุกครั้ง
 
 ### Quality Gate 2
 
-- [ ] Store เปิดขายไม่ได้เมื่อเอกสารไม่ครบ/หมดอายุ
-- [ ] Contract snapshot และ effective-date tests ผ่าน
-- [ ] Payout maker-checker/2FA/48-hour hold tests ผ่าน
-- [ ] Quality threshold และ suspension tests ผ่าน
-- [ ] Permission/Responsive/Regression tests ผ่าน
+- [x] Store เปิดขายไม่ได้เมื่อเอกสารไม่ครบ/หมดอายุ
+- [x] Contract snapshot และ effective-date tests ผ่าน
+- [x] Payout maker-checker/2FA/48-hour hold tests ผ่าน
+- [x] Quality threshold และ suspension tests ผ่าน
+- [x] Permission/Responsive/Regression tests ผ่าน
 - [ ] Commit และ Push Milestone 2
 - [ ] จัดทำ Milestone Report 2
 - [ ] **OWNER REVIEW GATE 2 — หยุดรอการตรวจรับ**

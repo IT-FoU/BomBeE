@@ -23,7 +23,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - Full payment ledger integration continues in Milestone 6
 COMMIT:
-- (filled after push)
+- cbf9dec — feat: Milestone 5 parent/child orders and state machine
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

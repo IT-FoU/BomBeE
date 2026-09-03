@@ -30,7 +30,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - See docs/reports/m12-known-issues-risk-acceptance.md (KI-12-01…06)
 COMMIT:
-- (filled after commit)
+- a1b0f95 — feat: Milestone 12 Staging readiness and Production Hold
 DEPLOYMENT:
 - Staging: dry-run procedure ready (credentials not applied in agent environment)
 - Production: HOLD — not deployed

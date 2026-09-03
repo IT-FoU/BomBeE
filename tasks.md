@@ -266,44 +266,44 @@
 
 ### 4.1 Inventory Ledger
 
-- [ ] สร้าง Inventory Balance ต่อ Store/Location/Variant/Lot
-- [ ] สร้าง append-only Inventory Transactions
-- [ ] คำนวณ Available = On hand − Reserved − Safety buffer
-- [ ] กำหนด Safety buffer แยกสินค้าและร้าน
-- [ ] ห้าม transaction ทำให้ stock ติดลบ
-- [ ] Alert ทีมงานเมื่อ operation ถูกปฏิเสธเพราะ stock ไม่พอ
-- [ ] รองรับ adjustment พร้อม reason/approval ตามสิทธิ์
-- [ ] รองรับ stock import preview และ reconciliation
-- [ ] สร้าง stock verification due ทุก 3 วัน
+- [x] สร้าง Inventory Balance ต่อ Store/Location/Variant/Lot
+- [x] สร้าง append-only Inventory Transactions
+- [x] คำนวณ Available = On hand − Reserved − Safety buffer
+- [x] กำหนด Safety buffer แยกสินค้าและร้าน
+- [x] ห้าม transaction ทำให้ stock ติดลบ
+- [x] Alert ทีมงานเมื่อ operation ถูกปฏิเสธเพราะ stock ไม่พอ
+- [x] รองรับ adjustment พร้อม reason/approval ตามสิทธิ์
+- [x] รองรับ stock import preview และ reconciliation
+- [x] สร้าง stock verification due ทุก 3 วัน
 
 ### 4.2 Lot and Expiry
 
-- [ ] บังคับ Lot/production/expiry สำหรับอาหาร เครื่องสำอาง และสินค้ามีอายุ
-- [ ] Default minimum remaining shelf life 90 วัน
-- [ ] รองรับ minimum shelf life แยกตามประเภทสินค้าอายุสั้น
-- [ ] Alert เมื่อเข้าใกล้ minimum threshold
-- [ ] สร้าง discount approval request จาก expiry alert
-- [ ] ห้าม allocate expired/blocked/recall lot
+- [x] บังคับ Lot/production/expiry สำหรับอาหาร เครื่องสำอาง และสินค้ามีอายุ
+- [x] Default minimum remaining shelf life 90 วัน
+- [x] รองรับ minimum shelf life แยกตามประเภทสินค้าอายุสั้น
+- [x] Alert เมื่อเข้าใกล้ minimum threshold
+- [x] สร้าง discount approval request จาก expiry alert
+- [x] ห้าม allocate expired/blocked/recall lot
 
 ### 4.3 Reservation
 
-- [ ] จองสต็อกเมื่อร้านยืนยันว่ามีสินค้า
-- [ ] QR reservation หมดอายุ payment deadline + 30 นาที
-- [ ] COD reservation ต่อถึง delivered/cancelled/released
-- [ ] ปล่อย reservation แบบ idempotent
-- [ ] ป้องกัน double reservation จาก concurrent requests
-- [ ] สร้าง reconciliation job ตรวจ balance กับ transaction ledger
+- [x] จองสต็อกเมื่อร้านยืนยันว่ามีสินค้า
+- [x] QR reservation หมดอายุ payment deadline + 30 นาที
+- [x] COD reservation ต่อถึง delivered/cancelled/released
+- [x] ปล่อย reservation แบบ idempotent
+- [x] ป้องกัน double reservation จาก concurrent requests
+- [x] สร้าง reconciliation job ตรวจ balance กับ transaction ledger
 
 ### Quality Gate 4
 
-- [ ] Concurrency/oversell tests ผ่าน
-- [ ] Negative-stock constraints ผ่าน
-- [ ] Reservation expiry/release/retry tests ผ่าน
-- [ ] Lot/expiry allocation tests ผ่าน
-- [ ] Ledger reconciliation ได้ศูนย์ difference ใน fixtures
-- [ ] Permission/Responsive/Regression tests ผ่าน
-- [ ] Commit และ Push Milestone 4
-- [ ] จัดทำ Milestone Report 4
+- [x] Concurrency/oversell tests ผ่าน
+- [x] Negative-stock constraints ผ่าน
+- [x] Reservation expiry/release/retry tests ผ่าน
+- [x] Lot/expiry allocation tests ผ่าน
+- [x] Ledger reconciliation ได้ศูนย์ difference ใน fixtures
+- [x] Permission/Responsive/Regression tests ผ่าน
+- [x] Commit และ Push Milestone 4 — `8ed90ec` / branch `cursor/milestone-4-inventory-reservation-35e5`
+- [x] จัดทำ Milestone Report 4 — `docs/reports/milestone-4.md`
 - [ ] **OWNER REVIEW GATE 4 — หยุดรอการตรวจรับ**
 
 ---

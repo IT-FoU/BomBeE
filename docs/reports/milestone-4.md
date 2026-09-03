@@ -24,7 +24,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - True multi-connection concurrency depends on hosted Postgres; PGlite tests cover lock + available checks
 COMMIT:
-- (filled after push)
+- 8ed90ec — feat: Milestone 4 inventory ledger, lots, and reservations
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

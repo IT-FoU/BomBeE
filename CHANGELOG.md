@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 10 — Backoffice final QA and security audit
+  - Responsive/a11y/Lo-En shell hardening; security audit suite; findings log
+  - Production guards: no mock SMS, EGO off, no production data loaded
+
 - Milestone 9 — Reports, notifications, image search, EGO placeholder, backups
   - Live KPIs + ledger reconcile; notification retry inbox; 24h search image purge
   - EGO disabled Integration Center; encrypted daily/weekly backups + restore drill

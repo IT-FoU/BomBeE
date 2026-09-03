@@ -10,6 +10,14 @@ export {
   subtractLak,
 } from './money.js';
 
+export {
+  UI_COPY,
+  formatDisplayDate,
+  formatDisplayDateTime,
+  t,
+  type UiLocale,
+} from './i18n.js';
+
 export { APP_ROLES, type AppRole } from './roles.js';
 
 export {

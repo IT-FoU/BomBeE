@@ -1,59 +1,110 @@
-import { APP_ROLES, BRAND_NAME } from '@bombee/shared';
+import {
+  APP_ROLES,
+  BRAND_NAME,
+  LAK,
+  formatDisplayDate,
+  formatLak,
+  t,
+  type UiLocale,
+} from '@bombee/shared';
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'stores', label: 'Stores' },
-  { id: 'catalog', label: 'Catalog' },
-  { id: 'inventory', label: 'Inventory' },
-  { id: 'orders', label: 'Orders' },
-  { id: 'payments', label: 'Payments' },
-  { id: 'fulfillment', label: 'Fulfillment' },
-  { id: 'settlements', label: 'Settlements' },
-  { id: 'promotions', label: 'Promotions' },
-  { id: 'support', label: 'Support' },
-  { id: 'integrations', label: 'Integrations' },
-  { id: 'notifications', label: 'Notifications' },
-  { id: 'approvals', label: 'Approvals' },
-  { id: 'staff', label: 'Staff & roles' },
-  { id: 'audit', label: 'Audit' },
-  { id: 'exports', label: 'Exports' },
+  { id: 'dashboard', label: { lo: 'ແຜງຄວບຄຸມ', en: 'Dashboard' } },
+  { id: 'stores', label: { lo: 'ຮ້ານ', en: 'Stores' } },
+  { id: 'catalog', label: { lo: 'ສິນຄ້າ', en: 'Catalog' } },
+  { id: 'inventory', label: { lo: 'ສະຕັອກ', en: 'Inventory' } },
+  { id: 'orders', label: { lo: 'ອໍເດີ', en: 'Orders' } },
+  { id: 'payments', label: { lo: 'ການຊຳລະ', en: 'Payments' } },
+  { id: 'fulfillment', label: { lo: 'ຈັດສົ່ງ', en: 'Fulfillment' } },
+  { id: 'settlements', label: { lo: 'ຈ່າຍຮ້ານ', en: 'Settlements' } },
+  { id: 'promotions', label: { lo: 'ໂປຣໂມຊັນ', en: 'Promotions' } },
+  { id: 'support', label: { lo: 'ສະໜັບສະໜູນ', en: 'Support' } },
+  { id: 'integrations', label: { lo: 'ການເຊື່ອມຕໍ່', en: 'Integrations' } },
+  { id: 'notifications', label: { lo: 'ແຈ້ງເຕືອນ', en: 'Notifications' } },
+  { id: 'approvals', label: { lo: 'ອະນຸມັດ', en: 'Approvals' } },
+  { id: 'staff', label: { lo: 'ພະນັກງານ', en: 'Staff & roles' } },
+  { id: 'audit', label: { lo: 'ອອດິດ', en: 'Audit' } },
+  { id: 'exports', label: { lo: 'ສົ່ງອອກ', en: 'Exports' } },
 ] as const;
 
-export function App() {
+const SAMPLE_AMOUNT = LAK(1_250_000);
+const SAMPLE_DATE = '2026-09-03T04:00:00.000Z';
+
+export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   return (
     <div className="shell">
-      <aside className="nav" aria-label="Backoffice navigation">
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
+      <aside className="nav" aria-label={t('backoffice', locale)}>
         <p className="brand">{BRAND_NAME}</p>
-        <p className="nav-label">Backoffice</p>
-        <nav className="nav-list">
+        <p className="nav-label">{t('backoffice', locale)}</p>
+        <nav className="nav-list" aria-label="Primary">
           {navItems.map((item) => (
-            <a key={item.id} className="nav-link" href={`#${item.id}`}>
-              {item.label}
+            <a
+              key={item.id}
+              className="nav-link"
+              href={`#${item.id}`}
+              aria-label={`${item.label.en} / ${item.label.lo}`}
+            >
+              <span lang="en">{item.label.en}</span>
+              <span className="nav-lo" lang="lo">
+                {item.label.lo}
+              </span>
             </a>
           ))}
         </nav>
       </aside>
       <div className="content">
         <header className="topbar">
-          <p className="session-note">Session idle limit: 1 hour · New devices require OTP</p>
-          <p className="delegation-banner" role="status">
+          <p className="session-note">{t('sessionIdle', locale)}</p>
+          <p className="delegation-banner" role="status" aria-live="polite">
             Active Owner delegation banner appears here when applicable
           </p>
-        </header>
-        <main className="main">
-          <h1>Operations shell</h1>
-          <p className="lede">
-            Milestone 9 platform ops: live dashboard KPIs, notification inbox/retry, image search
-            retention, EGO Integration Center (disabled), and encrypted backups.
+          <p className="prod-guard" role="status">
+            {t('noProductionData', locale)}
           </p>
-          <section aria-labelledby="dashboard-heading" id="dashboard">
-            <h2 id="dashboard-heading">Dashboard readiness</h2>
-            <ul className="roles" aria-label="Dashboard checklist">
-              <li>Live KPIs only</li>
-              <li>Server-side authz</li>
-              <li>Ledger reconcile</li>
-              <li>Support SLA</li>
-              <li>Store quality</li>
+        </header>
+        <main className="main" id="main-content" tabIndex={-1}>
+          <h1>{t('operationsShell', locale)}</h1>
+          <p className="lede">
+            Milestone 10 final QA: responsive shell, keyboard focus, Lo/En labels, LAK/date
+            formatting, and security audit evidence before Customer PWA.
+          </p>
+          <section aria-labelledby="format-heading" id="formats">
+            <h2 id="format-heading">Locale formatting</h2>
+            <p>
+              <span lang="en">Amount (en): {formatLak(SAMPLE_AMOUNT, 'en-US')}</span>
+              {' · '}
+              <span lang="lo">ຈຳນວນ (lo): {formatLak(SAMPLE_AMOUNT, 'lo-LA')}</span>
+            </p>
+            <p>
+              <span lang="en">Date (en): {formatDisplayDate(SAMPLE_DATE, 'en')}</span>
+              {' · '}
+              <span lang="lo">ວັນທີ (lo): {formatDisplayDate(SAMPLE_DATE, 'lo')}</span>
+            </p>
+          </section>
+          <section aria-labelledby="a11y-heading" id="accessibility">
+            <h2 id="a11y-heading">Accessibility checklist</h2>
+            <ul className="roles" aria-label="Accessibility checklist">
+              <li>Skip link</li>
+              <li>Focus-visible nav</li>
+              <li>Labeled regions</li>
+              <li>Contrast navy/blue</li>
+              <li>Error live region ready</li>
+            </ul>
+            <div className="error-demo" role="alert" aria-live="assertive">
+              Example error: approval denied — self-approval is not allowed.
+            </div>
+          </section>
+          <section aria-labelledby="qa-heading" id="dashboard">
+            <h2 id="qa-heading">Responsive QA surfaces</h2>
+            <ul className="roles" aria-label="Viewport checklist">
+              <li>Desktop shell</li>
+              <li>Tablet sticky nav</li>
+              <li>Mobile horizontal nav</li>
+              <li>Lo/En overflow wrap</li>
+              <li>All {APP_ROLES.length} roles listed</li>
             </ul>
           </section>
           <section aria-labelledby="integrations-heading" id="integrations">
@@ -62,120 +113,34 @@ export function App() {
               <li>EGO: Disabled/Not configured</li>
               <li>Flag default OFF</li>
               <li>No credentials</li>
-              <li>Mapping approval</li>
-              <li>Mock retry → error queue</li>
+              <li>No mock SMS in production</li>
+              <li>No demo auth bypass</li>
             </ul>
           </section>
-          <section aria-labelledby="notifications-heading" id="notifications">
-            <h2 id="notifications-heading">Notification readiness</h2>
-            <ul className="roles" aria-label="Notification checklist">
-              <li>Inbox read/unread</li>
-              <li>Action links</li>
-              <li>Provider adapters</li>
-              <li>Retry queue</li>
-              <li>Dead-letter</li>
-            </ul>
-          </section>
-          <section aria-labelledby="support-heading" id="support">
-            <h2 id="support-heading">Support readiness</h2>
-            <ul className="roles" aria-label="Support checklist">
-              <li>Same-day first reply</li>
-              <li>Urgent → lead + finance</li>
-              <li>SLA escalate</li>
-              <li>Auto-close 3 days</li>
-              <li>Reopen allowed</li>
-            </ul>
-          </section>
-          <section aria-labelledby="promotions-heading" id="promotions">
-            <h2 id="promotions-heading">Promotion readiness</h2>
-            <ul className="roles" aria-label="Promotion checklist">
-              <li>Stacking rules</li>
-              <li>Funding split</li>
-              <li>80/90% alerts</li>
-              <li>Hard budget stop</li>
-              <li>Cancel recalc</li>
-            </ul>
-          </section>
-          <section aria-labelledby="settlements-heading" id="settlements">
-            <h2 id="settlements-heading">Settlement readiness</h2>
-            <ul className="roles" aria-label="Settlement checklist">
-              <li>Delivered + paid only</li>
-              <li>Contract cadence</li>
-              <li>Maker ≠ approver</li>
-              <li>Dispute hold</li>
-              <li>Negative carryforward</li>
-            </ul>
-          </section>
-          <section aria-labelledby="fulfillment-heading" id="fulfillment">
-            <h2 id="fulfillment-heading">Fulfillment readiness</h2>
-            <ul className="roles" aria-label="Fulfillment checklist">
-              <li>Pack within 24h</li>
-              <li>Tracking + POD</li>
-              <li>Return window 7d</li>
-              <li>Refund SLA</li>
-              <li>Recall completeness</li>
-            </ul>
-          </section>
-          <section aria-labelledby="payments-heading" id="payments">
-            <h2 id="payments-heading">Payment readiness</h2>
-            <ul className="roles" aria-label="Payment checklist">
-              <li>QR combined allocation</li>
-              <li>COD limit + deposit</li>
-              <li>Idempotent confirm</li>
-              <li>Bank reconcile</li>
-              <li>Adjustment dual approve</li>
-            </ul>
-          </section>
-          <section aria-labelledby="orders-heading" id="orders">
-            <h2 id="orders-heading">Order readiness</h2>
-            <ul className="roles" aria-label="Order checklist">
-              <li>Parent / child</li>
-              <li>Item snapshots</li>
-              <li>State machine</li>
-              <li>Cancel before handoff</li>
-              <li>Split shipment approval</li>
-            </ul>
-          </section>
-          <section aria-labelledby="inventory-heading" id="inventory">
-            <h2 id="inventory-heading">Inventory readiness</h2>
-            <ul className="roles" aria-label="Inventory checklist">
-              <li>Lot + expiry</li>
-              <li>Safety buffer</li>
-              <li>QR/COD reserve</li>
-              <li>No negative stock</li>
-              <li>3-day verification</li>
-            </ul>
-          </section>
-          <section aria-labelledby="catalog-heading" id="catalog">
-            <h2 id="catalog-heading">Catalog readiness</h2>
-            <ul className="roles" aria-label="Catalog checklist">
-              <li>Lo / En copy</li>
-              <li>SKU unique per store</li>
-              <li>Media validation</li>
-              <li>Price approval</li>
-              <li>Prohibited categories blocked</li>
-            </ul>
-          </section>
-          <section aria-labelledby="stores-heading" id="stores">
-            <h2 id="stores-heading">Store readiness</h2>
-            <ul className="roles" aria-label="Store checklist">
-              <li>Owner ID</li>
-              <li>Store info</li>
-              <li>Bank account</li>
-              <li>Contract</li>
-              <li>One fulfillment location</li>
-            </ul>
-          </section>
-          <section aria-labelledby="roles-heading">
+          <section aria-labelledby="roles-heading" id="staff">
             <h2 id="roles-heading">Standard roles</h2>
-            <ul className="roles">
+            <ul className="roles" aria-label="Standard staff roles">
               {APP_ROLES.map((role) => (
                 <li key={role}>{role}</li>
               ))}
             </ul>
           </section>
+          {navItems
+            .filter((item) => !['dashboard', 'integrations', 'staff'].includes(item.id))
+            .map((item) => (
+              <section key={item.id} aria-labelledby={`${item.id}-heading`} id={item.id}>
+                <h2 id={`${item.id}-heading`}>
+                  <span lang="en">{item.label.en}</span>
+                  {' / '}
+                  <span lang="lo">{item.label.lo}</span>
+                </h2>
+                <p className="lede">Section ready for role-scoped operations.</p>
+              </section>
+            ))}
         </main>
       </div>
     </div>
   );
 }
+
+export const BACKOFFICE_NAV_IDS = navItems.map((item) => item.id);

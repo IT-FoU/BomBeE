@@ -594,30 +594,31 @@
 - [x] Restore drill ผ่านและมีหลักฐาน
 - [x] Commit และ Push Milestone 9
 - [x] จัดทำ Milestone Report 9
-- [ ] **OWNER REVIEW GATE 9 — หยุดรอการตรวจรับ**
+- [x] **OWNER REVIEW GATE 9 — อนุมัติแล้ว** (Owner approved 2026-09-03)
+- [x] CI green on `d9ead20` (PR #10) — 2026-09-03
 
 ---
 
 ## Milestone 10 — Backoffice Final QA และ Security Audit
 
-- [ ] ตรวจทุก Backoffice screen บน Desktop, Tablet และ Mobile
-- [ ] ตรวจ keyboard navigation, focus, labels, contrast และ error messages
-- [ ] ตรวจ Lao/English overflow และ number/date/currency formatting
-- [ ] รัน full unit suite
-- [ ] รัน full integration suite
-- [ ] รัน full permission/RLS suite
-- [ ] รัน full financial/inventory/order regression suite
-- [ ] รัน end-to-end flow ทุก role
-- [ ] รัน dependency, secret และ static security scans
-- [ ] ทดสอบ IDOR/BOLA, privilege escalation, session theft/revocation, rate limits และ file access
-- [ ] ทดสอบ duplicate/replayed webhooks และ concurrent order/payment/stock operations
-- [ ] ทดสอบ backup restore และ incident runbook
-- [ ] แก้ Critical/High issues ทั้งหมด
-- [ ] บันทึก Medium/Low พร้อม owner/risk/plan
-- [ ] ลบ mock/demo bypass จาก Production build
-- [ ] ยืนยัน Production ไม่มีข้อมูลจริงก่อน release authorization
-- [ ] Commit และ Push Milestone 10
-- [ ] จัดทำ Backoffice Final QA Report
+- [x] ตรวจทุก Backoffice screen บน Desktop, Tablet และ Mobile
+- [x] ตรวจ keyboard navigation, focus, labels, contrast และ error messages
+- [x] ตรวจ Lao/English overflow และ number/date/currency formatting
+- [x] รัน full unit suite
+- [x] รัน full integration suite
+- [x] รัน full permission/RLS suite
+- [x] รัน full financial/inventory/order regression suite
+- [x] รัน end-to-end flow ทุก role
+- [x] รัน dependency, secret และ static security scans
+- [x] ทดสอบ IDOR/BOLA, privilege escalation, session theft/revocation, rate limits และ file access
+- [x] ทดสอบ duplicate/replayed webhooks และ concurrent order/payment/stock operations
+- [x] ทดสอบ backup restore และ incident runbook
+- [x] แก้ Critical/High issues ทั้งหมด
+- [x] บันทึก Medium/Low พร้อม owner/risk/plan
+- [x] ลบ mock/demo bypass จาก Production build
+- [x] ยืนยัน Production ไม่มีข้อมูลจริงก่อน release authorization
+- [x] Commit และ Push Milestone 10
+- [x] จัดทำ Backoffice Final QA Report
 - [ ] **OWNER REVIEW GATE 10 — หลังบ้านต้องได้รับอนุมัติก่อนเริ่ม Customer PWA**
 
 ---

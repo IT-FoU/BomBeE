@@ -27,6 +27,22 @@ body {
   grid-template-columns: minmax(12rem, 16rem) 1fr;
 }
 
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: #fff;
+  color: var(--navy);
+  padding: 0.5rem 0.75rem;
+  z-index: 10;
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+  top: 0.75rem;
+  outline: 3px solid var(--electric);
+}
+
 .nav {
   background: linear-gradient(180deg, var(--navy), #111827);
   color: #fff;
@@ -56,13 +72,22 @@ body {
   text-decoration: none;
   padding: 0.55rem 0.65rem;
   border-left: 3px solid transparent;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.nav-lo {
+  color: #9db0d4;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
 }
 
 .nav-link:hover,
 .nav-link:focus-visible {
   border-left-color: var(--electric);
   background: rgba(31, 107, 255, 0.16);
-  outline: none;
+  outline: 2px solid var(--electric);
+  outline-offset: 2px;
 }
 
 .content {
@@ -92,8 +117,35 @@ body {
   font-size: 0.9rem;
 }
 
+.prod-guard {
+  margin: 0.55rem 0 0;
+  padding: 0.55rem 0.75rem;
+  background: #e8f1ff;
+  color: #0b3a86;
+  font-size: 0.9rem;
+  border: 1px solid #b7d0ff;
+}
+
+.error-demo {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: #fff1f0;
+  color: #7a1f1a;
+  border: 1px solid #f0b4af;
+  font-size: 0.9rem;
+}
+
 .main {
   padding: 1.5rem;
+}
+
+.main:focus {
+  outline: none;
+}
+
+.main:focus-visible {
+  outline: 2px solid var(--electric);
+  outline-offset: 4px;
 }
 
 h1 {

@@ -21,6 +21,7 @@ VALIDATION:
 - Permission/RLS: PASS (prior + store service-role paths)
 - Build: PASS
 - pnpm audit --audit-level=high: PASS
+- CI: PASS (all checks on 7545044)
 SECURITY / DATA / MONEY / STOCK IMPACT:
 - Store documents private with audited signed access
 - Contract/payout versions immutable / non-overwritable
@@ -29,7 +30,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - Real object storage (R2) signed URL provider still abstracted; tokens stored in private.signed_access_tokens
 COMMIT:
-- (filled after push)
+- 7545044 — feat: Milestone 2 store, contract, payout, and quality controls
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

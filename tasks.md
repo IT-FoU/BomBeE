@@ -207,8 +207,8 @@
 - [x] Payout maker-checker/2FA/48-hour hold tests ผ่าน
 - [x] Quality threshold และ suspension tests ผ่าน
 - [x] Permission/Responsive/Regression tests ผ่าน
-- [ ] Commit และ Push Milestone 2
-- [ ] จัดทำ Milestone Report 2
+- [x] Commit และ Push Milestone 2 — `7545044` / branch `cursor/milestone-2-store-contract-35e5`
+- [x] จัดทำ Milestone Report 2 — `docs/reports/milestone-2.md`
 - [ ] **OWNER REVIEW GATE 2 — หยุดรอการตรวจรับ**
 
 ---

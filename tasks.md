@@ -528,6 +528,7 @@
 - [x] Commit และ Push Milestone 8
 - [x] จัดทำ Milestone Report 8
 - [ ] **OWNER REVIEW GATE 8 — หยุดรอการตรวจรับ**
+- [x] CI green on `5e2ed8d` (PR #9) — 2026-09-03
 
 ---
 

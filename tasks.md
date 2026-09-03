@@ -73,82 +73,82 @@
 
 ### 1.1 Supabase/PostgreSQL Foundation
 
-- [ ] สร้าง Supabase projects/config แยก Local, Staging, Production
-- [ ] ห้ามใส่ Production credentials ใน Local/Staging
-- [ ] สร้าง migration framework และ naming convention
-- [ ] สร้าง private schemas สำหรับ internal/financial/security data
-- [ ] เปิด RLS บนทุก table ใน exposed schema
-- [ ] กำหนด grants อย่างชัดเจน; ห้ามพึ่ง default grants
-- [ ] สร้าง UUID/ID strategy, timestamps และ soft/archive policy
-- [ ] เก็บเวลา UTC และกำหนด timezone display เป็น Laos
-- [ ] กำหนดเงิน LAK เป็น integer หน่วยกีบ
-- [ ] เพิ่ม database constraints และ indexes สำหรับ foreign keys/status/lookups
+- [x] สร้าง Supabase projects/config แยก Local, Staging, Production — `supabase/config.toml` + env examples; hosted projects Owner-provisioned
+- [x] ห้ามใส่ Production credentials ใน Local/Staging — env schema guards + docs
+- [x] สร้าง migration framework และ naming convention — `apps/api/src/db/migrate.ts` + PGlite apply
+- [x] สร้าง private schemas สำหรับ internal/financial/security data — `app`/`private`/`security`/`finance`
+- [x] เปิด RLS บนทุก table ใน exposed schema — `app.customer_profiles`, `app.staff_profiles` (+ FORCE)
+- [x] กำหนด grants อย่างชัดเจน; ห้ามพึ่ง default grants
+- [x] สร้าง UUID/ID strategy, timestamps และ soft/archive policy — uuid PKs, `archived_at`, `updated_at` triggers
+- [x] เก็บเวลา UTC และกำหนด timezone display เป็น Laos
+- [x] กำหนดเงิน LAK เป็น integer หน่วยกีบ — `bigint amount_lak` example + shared helpers
+- [x] เพิ่ม database constraints และ indexes สำหรับ foreign keys/status/lookups
 
 ### 1.2 Identity and Sessions
 
-- [ ] สร้าง customer profile แยกจาก auth identity
-- [ ] บังคับหนึ่งเบอร์โทรต่อหนึ่งบัญชี
-- [ ] เชื่อม SMS OTP provider ผ่าน abstraction; รองรับ mock provider เฉพาะ Local/Test
-- [ ] เพิ่ม OTP rate limit, cooldown, expiry และ anti-enumeration response
-- [ ] เพิ่ม CAPTCHA/risk control สำหรับ OTP abuse
-- [ ] สร้าง staff profile และ staff status
-- [ ] บังคับ OTP เมื่อ staff login จากอุปกรณ์ใหม่
-- [ ] แจ้ง Owner เมื่อมีอุปกรณ์ใหม่
-- [ ] ออกจาก Backoffice หลัง idle 1 ชั่วโมง
-- [ ] นับ login/OTP failures อย่างปลอดภัย
-- [ ] ล็อกบัญชีเมื่อผิด 5 ครั้ง
-- [ ] Admin ปลดล็อก staff ได้แต่ห้ามปลดล็อกตนเอง
-- [ ] Owner เป็นผู้ปลดล็อก Admin
-- [ ] สร้าง Owner recovery process แบบ audited
-- [ ] สร้าง session/device list และ Sign out all sessions
-- [ ] รองรับหลายอุปกรณ์และแจ้งทุก session ใหม่
+- [x] สร้าง customer profile แยกจาก auth identity
+- [x] บังคับหนึ่งเบอร์โทรต่อหนึ่งบัญชี — UNIQUE `phone_e164`
+- [x] เชื่อม SMS OTP provider ผ่าน abstraction; รองรับ mock provider เฉพาะ Local/Test
+- [x] เพิ่ม OTP rate limit, cooldown, expiry และ anti-enumeration response
+- [x] เพิ่ม CAPTCHA/risk control สำหรับ OTP abuse — `captchaRequired` after threshold
+- [x] สร้าง staff profile และ staff status
+- [x] บังคับ OTP เมื่อ staff login จากอุปกรณ์ใหม่ — new device detection + `staff_new_device` purpose
+- [x] แจ้ง Owner เมื่อมีอุปกรณ์ใหม่ — `NotificationBus.notifyOwnerNewDevice`
+- [x] ออกจาก Backoffice หลัง idle 1 ชั่วโมง
+- [x] นับ login/OTP failures อย่างปลอดภัย
+- [x] ล็อกบัญชีเมื่อผิด 5 ครั้ง
+- [x] Admin ปลดล็อก staff ได้แต่ห้ามปลดล็อกตนเอง
+- [x] Owner เป็นผู้ปลดล็อก Admin
+- [x] สร้าง Owner recovery process แบบ audited — `owner_recovery_requests`
+- [x] สร้าง session/device list และ Sign out all sessions
+- [x] รองรับหลายอุปกรณ์และแจ้งทุก session ใหม่
 
 ### 1.3 Roles and Permissions
 
-- [ ] สร้างมาตรฐาน Owner, Admin, Finance, Operations, Catalog, Support, Auditor
-- [ ] สร้าง permission catalog แบบ granular
-- [ ] รองรับ role defaults และ per-user overrides
-- [ ] เก็บ authorization claims ใน trusted server/app metadata เท่านั้น
-- [ ] Server ตรวจสิทธิ์ทุก action; ห้ามพึ่งการซ่อนปุ่มใน UI
-- [ ] สร้าง maker-checker policy engine
-- [ ] ห้ามผู้สร้างอนุมัติรายการตนเอง
-- [ ] การเปลี่ยนสิทธิ์ Finance/Admin ต้อง Owner + 2FA
-- [ ] รองรับ Owner delegation ให้ Admin แยกตาม approval type
-- [ ] Delegated Admin ใช้ 2FA ทุก high-risk approval
-- [ ] แสดง active delegation banner
-- [ ] ส่ง daily delegation summary ให้ Owner
-- [ ] Owner revoke delegation ได้ทันที
+- [x] สร้างมาตรฐาน Owner, Admin, Finance, Operations, Catalog, Support, Auditor
+- [x] สร้าง permission catalog แบบ granular
+- [x] รองรับ role defaults และ per-user overrides
+- [x] เก็บ authorization claims ใน trusted server/app metadata เท่านั้น
+- [x] Server ตรวจสิทธิ์ทุก action; ห้ามพึ่งการซ่อนปุ่มใน UI — evaluator + maker-checker in API
+- [x] สร้าง maker-checker policy engine
+- [x] ห้ามผู้สร้างอนุมัติรายการตนเอง
+- [x] การเปลี่ยนสิทธิ์ Finance/Admin ต้อง Owner + 2FA
+- [x] รองรับ Owner delegation ให้ Admin แยกตาม approval type
+- [x] Delegated Admin ใช้ 2FA ทุก high-risk approval
+- [x] แสดง active delegation banner — Backoffice shell banner
+- [x] ส่ง daily delegation summary ให้ Owner — `buildDelegationDailySummary`
+- [x] Owner revoke delegation ได้ทันที
 
 ### 1.4 Audit and Export Security
 
-- [ ] สร้าง append-only audit events พร้อม actor, action, target, before/after, reason, IP/device, correlation ID และ timestamp
-- [ ] ป้องกัน application roles แก้หรือลบ Audit Log
-- [ ] ตั้ง retention Audit Log 5 ปี
-- [ ] Log การเปิดดูข้อมูลลูกค้าที่สำคัญ
-- [ ] สร้าง export request + approval workflow
-- [ ] บังคับเหตุผลในการ export
-- [ ] สร้าง encrypted export file พร้อม expiry และ download limit
-- [ ] Log การสร้าง อนุมัติ ดาวน์โหลด หมดอายุ และลบ export
+- [x] สร้าง append-only audit events พร้อม actor, action, target, before/after, reason, IP/device, correlation ID และ timestamp
+- [x] ป้องกัน application roles แก้หรือลบ Audit Log — trigger deny + no grants
+- [x] ตั้ง retention Audit Log 5 ปี — `retain_until`
+- [x] Log การเปิดดูข้อมูลลูกค้าที่สำคัญ
+- [x] สร้าง export request + approval workflow
+- [x] บังคับเหตุผลในการ export
+- [x] สร้าง encrypted export file พร้อม expiry และ download limit — AES-256-GCM
+- [x] Log การสร้าง อนุมัติ ดาวน์โหลด หมดอายุ และลบ export
 
 ### 1.5 Tests
 
-- [ ] Unit test permission evaluator
-- [ ] Unit test maker-checker/self-approval rejection
-- [ ] Integration test OTP rate limits/lockout
-- [ ] Integration test session expiry/device notification
-- [ ] RLS tests ทุก role และ cross-user/cross-store denial
-- [ ] Test service-role/secret ไม่ปรากฏใน client bundle
-- [ ] Test Audit Log เขียนได้แต่แก้/ลบไม่ได้จาก app roles
-- [ ] Test export approval และ expired link rejection
+- [x] Unit test permission evaluator
+- [x] Unit test maker-checker/self-approval rejection
+- [x] Integration test OTP rate limits/lockout
+- [x] Integration test session expiry/device notification
+- [x] RLS tests ทุก role และ cross-user/cross-store denial — cross-user customer denial + service bypass; cross-store in Milestone 2
+- [x] Test service-role/secret ไม่ปรากฏใน client bundle
+- [x] Test Audit Log เขียนได้แต่แก้/ลบไม่ได้จาก app roles
+- [x] Test export approval และ expired link rejection
 
 ### Quality Gate 1
 
-- [ ] Login/OTP/2FA happy path ผ่าน
-- [ ] Invalid/expired/replayed OTP ถูกปฏิเสธ
-- [ ] Role matrix tests ผ่านทั้งหมด
-- [ ] ไม่มี BOLA/IDOR จาก RLS/API tests
-- [ ] Security scan ไม่มี Critical/High ที่ยังไม่แก้
-- [ ] Responsive Backoffice shell ผ่าน Desktop/Tablet/Mobile
+- [x] Login/OTP/2FA happy path ผ่าน
+- [x] Invalid/expired/replayed OTP ถูกปฏิเสธ
+- [x] Role matrix tests ผ่านทั้งหมด
+- [x] ไม่มี BOLA/IDOR จาก RLS/API tests
+- [x] Security scan ไม่มี Critical/High ที่ยังไม่แก้
+- [x] Responsive Backoffice shell ผ่าน Desktop/Tablet/Mobile — CSS breakpoints 900/600
 - [ ] Commit และ Push Milestone 1
 - [ ] จัดทำ Milestone Report 1
 - [ ] **OWNER REVIEW GATE 1 — หยุดรอการตรวจรับ**

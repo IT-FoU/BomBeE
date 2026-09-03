@@ -1,0 +1,42 @@
+import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+
+import { createTestDatabase } from './migrate.js';
+import type { PGlite } from '@electric-sql/pglite';
+
+describe('migrations', () => {
+  let db: PGlite;
+
+  beforeAll(async () => {
+    db = await createTestDatabase();
+  });
+
+  afterAll(async () => {
+    await db.close();
+  });
+
+  it('applies all milestone 1 migrations', async () => {
+    const rows = await db.query<{ id: string }>(
+      `SELECT id FROM public.schema_migrations ORDER BY id`,
+    );
+    expect(rows.rows.map((r) => r.id)).toEqual([
+      '20260903080000_extensions_and_schemas.sql',
+      '20260903080100_identity_and_sessions.sql',
+      '20260903080200_roles_and_permissions.sql',
+      '20260903080300_audit_and_exports.sql',
+      '20260903080400_rls_policies.sql',
+    ]);
+  });
+
+  it('stores money as bigint LAK example', async () => {
+    await db.query(`INSERT INTO private.money_unit_example (amount_lak) VALUES (500000)`);
+    const row = await db.query<{ amount_lak: number }>(
+      `SELECT amount_lak FROM private.money_unit_example LIMIT 1`,
+    );
+    expect(row.rows[0]?.amount_lak).toBe(500000);
+  });
+
+  it('uses UTC timestamps', async () => {
+    const row = await db.query<{ v: string }>(`SELECT app.current_utc()::text AS v`);
+    expect(row.rows[0]?.v).toMatch(/Z|[+-]\d{2}/);
+  });
+});

@@ -11,3 +11,10 @@ export {
 } from './money.js';
 
 export { APP_ROLES, type AppRole } from './roles.js';
+
+export {
+  HIGH_RISK_APPROVAL_TYPES,
+  PERMISSIONS,
+  type HighRiskApprovalType,
+  type PermissionCode,
+} from './permissions.js';

@@ -17,6 +17,7 @@
     "@bombee/shared": "workspace:*"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.7",
     "@types/node": "22.18.1",
     "tsx": "4.20.5",
     "typescript": "5.9.2",

@@ -1,0 +1,53 @@
+# BomBee Market — local Supabase CLI defaults
+# Do not put Production credentials here.
+
+project_id = "bombee-local"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["app", "public"]
+extra_search_path = ["app", "public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[db.pooler]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5174"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = true
+template = "Your BomBee code is {{ .Code }}"
+
+# Local only — mock provider; never commit real Twilio/etc credentials
+[auth.sms.twilio]
+enabled = false
+account_sid = ""
+message_service_sid = ""
+auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"

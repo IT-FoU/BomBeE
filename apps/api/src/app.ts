@@ -10,8 +10,18 @@ export function createAppRouter(env: BombeeEnv) {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
 
     if (req.method === 'GET' && url.pathname === '/health') {
-      const body = getHealth(env);
-      sendJson(res, 200, body);
+      sendJson(res, 200, getHealth(env));
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/auth/capabilities') {
+      sendJson(res, 200, {
+        smsProvider: env.APP_ENV === 'local' ? 'mock' : 'external',
+        backofficeIdleSeconds: 3600,
+        maxFailedLogins: 5,
+        egoPosEnabled: env.EGO_POS_ENABLED,
+        auditRetentionYears: 5,
+      });
       return;
     }
 

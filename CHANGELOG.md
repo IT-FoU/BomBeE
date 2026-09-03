@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 1 — Database, authentication, roles, 2FA, and audit
+  - SQL migrations for app/private/security/finance schemas with RLS
+  - Identity/OTP/session/lockout services with mock SMS
+  - RBAC permission catalog, maker-checker, Owner delegation
+  - Append-only audit log and encrypted export workflow
+  - PGlite-backed integration tests in CI
+
 - Milestone 0 — Repository and project foundation
   - TypeScript monorepo with `apps/customer`, `apps/backoffice`, `apps/api`, `packages/shared`, `packages/config`
   - Strict TypeScript, ESLint, Prettier, import boundaries, and environment schema validation

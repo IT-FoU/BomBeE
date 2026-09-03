@@ -304,7 +304,7 @@
 - [x] Permission/Responsive/Regression tests ผ่าน
 - [x] Commit และ Push Milestone 4 — `8ed90ec` / branch `cursor/milestone-4-inventory-reservation-35e5`
 - [x] จัดทำ Milestone Report 4 — `docs/reports/milestone-4.md`
-- [ ] **OWNER REVIEW GATE 4 — หยุดรอการตรวจรับ** (CI ผ่านครบ)
+- [x] **OWNER REVIEW GATE 4 — อนุมัติแล้ว** (Owner approved 2026-09-03)
 
 ---
 
@@ -312,45 +312,45 @@
 
 ### 5.1 Order Creation
 
-- [ ] สร้าง Cart แยกรายการตาม Store
-- [ ] Server revalidate product status, price, promo, stock และ shipping ก่อนสร้าง order
-- [ ] สร้าง Parent Order หนึ่งรายการต่อ checkout
-- [ ] สร้าง Child Order หนึ่งรายการต่อร้าน
-- [ ] สร้าง immutable Order Item snapshots
-- [ ] สร้างเลขออเดอร์หลักและเลขย่อยร้านแบบ unique
-- [ ] รองรับดูรวมและดูแยกตามร้าน
-- [ ] สร้าง combined summary และ store-level documents
+- [x] สร้าง Cart แยกรายการตาม Store
+- [x] Server revalidate product status, price, promo, stock และ shipping ก่อนสร้าง order
+- [x] สร้าง Parent Order หนึ่งรายการต่อ checkout
+- [x] สร้าง Child Order หนึ่งรายการต่อร้าน
+- [x] สร้าง immutable Order Item snapshots
+- [x] สร้างเลขออเดอร์หลักและเลขย่อยร้านแบบ unique
+- [x] รองรับดูรวมและดูแยกตามร้าน
+- [x] สร้าง combined summary และ store-level documents
 
 ### 5.2 State Machine
 
-- [ ] Implement allowed transitions เท่านั้น
-- [ ] รองรับ pending supplier, confirmed, partial confirmed, awaiting payment/COD, packing, ready, handed to courier, in transit, delivered
-- [ ] รองรับ partial cancelled, cancelled, delivery failed, return requested, refunded
-- [ ] Parent status derive จาก Child statuses
-- [ ] Mixed delivered/cancelled แสดง completed พร้อม cancellation note
-- [ ] Transition ทุกครั้งต้องมี actor, reason, timestamp และ audit event
-- [ ] ป้องกัน out-of-order/replayed transition
+- [x] Implement allowed transitions เท่านั้น
+- [x] รองรับ pending supplier, confirmed, partial confirmed, awaiting payment/COD, packing, ready, handed to courier, in transit, delivered
+- [x] รองรับ partial cancelled, cancelled, delivery failed, return requested, refunded
+- [x] Parent status derive จาก Child statuses
+- [x] Mixed delivered/cancelled แสดง completed พร้อม cancellation note
+- [x] Transition ทุกครั้งต้องมี actor, reason, timestamp และ audit event
+- [x] ป้องกัน out-of-order/replayed transition
 
 ### 5.3 Cancellation and Split Shipment
 
-- [ ] ลูกค้ายกเลิกระดับ item/store/order ก่อน courier handoff
-- [ ] หลัง handoff เปลี่ยนเป็น refusal/return workflow
-- [ ] Recalculate promotion เมื่อยกเลิกบางรายการ
-- [ ] แสดงยอด/ส่วนลดที่เปลี่ยนก่อนลูกค้ายืนยัน
-- [ ] หลังจ่าย QR สร้าง refund request แทนการแก้ payment
-- [ ] Split shipment ต่อร้านต้อง Admin approval
-- [ ] Shipment ทุกใบอ้าง Child Order และ items ที่อยู่ในพัสดุ
+- [x] ลูกค้ายกเลิกระดับ item/store/order ก่อน courier handoff
+- [x] หลัง handoff เปลี่ยนเป็น refusal/return workflow
+- [x] Recalculate promotion เมื่อยกเลิกบางรายการ
+- [x] แสดงยอด/ส่วนลดที่เปลี่ยนก่อนลูกค้ายืนยัน
+- [x] หลังจ่าย QR สร้าง refund request แทนการแก้ payment
+- [x] Split shipment ต่อร้านต้อง Admin approval
+- [x] Shipment ทุกใบอ้าง Child Order และ items ที่อยู่ในพัสดุ
 
 ### Quality Gate 5
 
-- [ ] Multi-store creation atomicity tests ผ่าน
-- [ ] Order snapshot immutability tests ผ่าน
-- [ ] State transition matrix tests ผ่านทุก allowed/forbidden path
-- [ ] Partial cancel/promo recalculation tests ผ่าน
-- [ ] Split shipment approval tests ผ่าน
-- [ ] Permission/Responsive/Regression tests ผ่าน
-- [ ] Commit และ Push Milestone 5
-- [ ] จัดทำ Milestone Report 5
+- [x] Multi-store creation atomicity tests ผ่าน
+- [x] Order snapshot immutability tests ผ่าน
+- [x] State transition matrix tests ผ่านทุก allowed/forbidden path
+- [x] Partial cancel/promo recalculation tests ผ่าน
+- [x] Split shipment approval tests ผ่าน
+- [x] Permission/Responsive/Regression tests ผ่าน
+- [x] Commit และ Push Milestone 5 — branch `cursor/milestone-5-orders-state-35e5`
+- [x] จัดทำ Milestone Report 5 — `docs/reports/milestone-5.md`
 - [ ] **OWNER REVIEW GATE 5 — หยุดรอการตรวจรับ**
 
 ---

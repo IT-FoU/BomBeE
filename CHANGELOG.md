@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 5 — Parent/child orders and state machine
+  - Multi-store checkout, immutable snapshots, cancellation previews, split shipments
+
 - Milestone 4 — Inventory ledger, lots, and reservations
   - Available qty formula, QR/COD reservations, lot shelf-life gates, ledger reconcile
 

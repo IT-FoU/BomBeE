@@ -5,6 +5,7 @@ const navItems = [
   { id: 'stores', label: 'Stores' },
   { id: 'catalog', label: 'Catalog' },
   { id: 'inventory', label: 'Inventory' },
+  { id: 'orders', label: 'Orders' },
   { id: 'approvals', label: 'Approvals' },
   { id: 'staff', label: 'Staff & roles' },
   { id: 'audit', label: 'Audit' },
@@ -35,9 +36,19 @@ export function App() {
         <main className="main">
           <h1>Operations shell</h1>
           <p className="lede">
-            Milestone 4 inventory controls: lot-aware balances, reservations, and ledger
-            reconciliation. Available = on hand − reserved − safety buffer.
+            Milestone 5 order controls: multi-store parent/child checkout, strict state transitions,
+            cancellation previews, and admin-approved split shipments.
           </p>
+          <section aria-labelledby="orders-heading" id="orders">
+            <h2 id="orders-heading">Order readiness</h2>
+            <ul className="roles" aria-label="Order checklist">
+              <li>Parent / child</li>
+              <li>Item snapshots</li>
+              <li>State machine</li>
+              <li>Cancel before handoff</li>
+              <li>Split shipment approval</li>
+            </ul>
+          </section>
           <section aria-labelledby="inventory-heading" id="inventory">
             <h2 id="inventory-heading">Inventory readiness</h2>
             <ul className="roles" aria-label="Inventory checklist">

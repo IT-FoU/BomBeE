@@ -31,6 +31,7 @@ describe('migrations', () => {
       '20260903100100_catalog_media_pricing.sql',
       '20260903110000_inventory_ledger.sql',
       '20260903110100_inventory_reservations_lots.sql',
+      '20260903120000_orders_parent_child.sql',
     ]);
   });
 

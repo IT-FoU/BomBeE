@@ -258,7 +258,7 @@
 - [x] Lao/English rendering และ responsive QA ผ่าน
 - [x] Commit และ Push Milestone 3 — `4393d71` / branch `cursor/milestone-3-catalog-pricing-35e5`
 - [x] จัดทำ Milestone Report 3 — `docs/reports/milestone-3.md`
-- [ ] **OWNER REVIEW GATE 3 — หยุดรอการตรวจรับ** (CI ผ่านครบบน `4393d71`)
+- [x] **OWNER REVIEW GATE 3 — อนุมัติแล้ว** (Owner approved 2026-09-03)
 
 ---
 

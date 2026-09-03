@@ -4,6 +4,7 @@ const navItems = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'stores', label: 'Stores' },
   { id: 'catalog', label: 'Catalog' },
+  { id: 'inventory', label: 'Inventory' },
   { id: 'approvals', label: 'Approvals' },
   { id: 'staff', label: 'Staff & roles' },
   { id: 'audit', label: 'Audit' },
@@ -34,9 +35,19 @@ export function App() {
         <main className="main">
           <h1>Operations shell</h1>
           <p className="lede">
-            Milestone 3 catalog controls: bilingual product copy, media limits, import preview, and
-            price approvals. Active selling price is approved-only.
+            Milestone 4 inventory controls: lot-aware balances, reservations, and ledger
+            reconciliation. Available = on hand − reserved − safety buffer.
           </p>
+          <section aria-labelledby="inventory-heading" id="inventory">
+            <h2 id="inventory-heading">Inventory readiness</h2>
+            <ul className="roles" aria-label="Inventory checklist">
+              <li>Lot + expiry</li>
+              <li>Safety buffer</li>
+              <li>QR/COD reserve</li>
+              <li>No negative stock</li>
+              <li>3-day verification</li>
+            </ul>
+          </section>
           <section aria-labelledby="catalog-heading" id="catalog">
             <h2 id="catalog-heading">Catalog readiness</h2>
             <ul className="roles" aria-label="Catalog checklist">

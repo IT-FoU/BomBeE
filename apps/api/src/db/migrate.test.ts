@@ -29,6 +29,8 @@ describe('migrations', () => {
       '20260903090200_store_quality_controls.sql',
       '20260903100000_catalog_products.sql',
       '20260903100100_catalog_media_pricing.sql',
+      '20260903110000_inventory_ledger.sql',
+      '20260903110100_inventory_reservations_lots.sql',
     ]);
   });
 

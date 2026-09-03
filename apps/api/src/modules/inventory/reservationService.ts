@@ -1,0 +1,200 @@
+import type { PGlite } from '@electric-sql/pglite';
+
+import { availableQty, qrReservationExpiresAt } from './rules.js';
+import type { InventoryService } from './inventoryService.js';
+
+export class ReservationService {
+  constructor(
+    private readonly db: PGlite,
+    private readonly inventory: InventoryService,
+  ) {}
+
+  async reserve(input: {
+    balanceId: string;
+    quantity: number;
+    reservationType: 'qr' | 'cod';
+    idempotencyKey: string;
+    correlationId: string;
+    paymentDeadlineAt?: number;
+    now?: number;
+    lotAllocatable?: boolean;
+  }) {
+    if (input.quantity <= 0) throw new Error('quantity_must_be_positive');
+    if (input.lotAllocatable === false) {
+      return { ok: false as const, reason: 'lot_not_allocatable' };
+    }
+
+    const existing = await this.db.query<{ id: string; status: string }>(
+      `SELECT id, status FROM private.inventory_reservations WHERE idempotency_key = $1`,
+      [input.idempotencyKey],
+    );
+    if (existing.rows[0]) {
+      return {
+        ok: true as const,
+        reservationId: existing.rows[0].id,
+        idempotentReplay: true as const,
+        status: existing.rows[0].status,
+      };
+    }
+
+    const now = input.now ?? Date.now();
+    let expiresAt: string | null = null;
+    let paymentDeadline: string | null = null;
+    if (input.reservationType === 'qr') {
+      if (!input.paymentDeadlineAt) throw new Error('payment_deadline_required');
+      paymentDeadline = new Date(input.paymentDeadlineAt).toISOString();
+      expiresAt = new Date(qrReservationExpiresAt(input.paymentDeadlineAt)).toISOString();
+    }
+
+    await this.db.query(`BEGIN`);
+    try {
+      const bal = await this.inventory._lockBalance(input.balanceId);
+      const available = availableQty(bal.on_hand, bal.reserved, bal.safety_buffer);
+      if (available < input.quantity) {
+        await this.inventory._alertStockout({
+          storeId: bal.store_id,
+          variantId: bal.variant_id,
+          requestedQty: input.quantity,
+          availableQty: available,
+          correlationId: input.correlationId,
+        });
+        await this.db.query(`ROLLBACK`);
+        return { ok: false as const, reason: 'insufficient_available' };
+      }
+
+      const reserved = bal.reserved + input.quantity;
+      await this.db.query(
+        `UPDATE private.inventory_balances
+         SET reserved = $2, updated_at = timezone('utc', now())
+         WHERE id = $1`,
+        [input.balanceId, reserved],
+      );
+      await this.inventory._appendTx({
+        balanceId: input.balanceId,
+        txType: 'reserve',
+        quantity: input.quantity,
+        correlationId: input.correlationId,
+        reason: `${input.reservationType}_reserve`,
+      });
+
+      const row = await this.db.query<{ id: string }>(
+        `INSERT INTO private.inventory_reservations
+          (balance_id, quantity, reservation_type, status, payment_deadline_at,
+           expires_at, idempotency_key, correlation_id)
+         VALUES ($1,$2,$3,'active',$4,$5,$6,$7)
+         RETURNING id`,
+        [
+          input.balanceId,
+          input.quantity,
+          input.reservationType,
+          paymentDeadline,
+          expiresAt,
+          input.idempotencyKey,
+          input.correlationId,
+        ],
+      );
+      await this.db.query(`COMMIT`);
+      return {
+        ok: true as const,
+        reservationId: row.rows[0]!.id,
+        idempotentReplay: false as const,
+        status: 'active',
+        now,
+      };
+    } catch (error) {
+      await this.db.query(`ROLLBACK`);
+      // unique idempotency race
+      const again = await this.db.query<{ id: string; status: string }>(
+        `SELECT id, status FROM private.inventory_reservations WHERE idempotency_key = $1`,
+        [input.idempotencyKey],
+      );
+      if (again.rows[0]) {
+        return {
+          ok: true as const,
+          reservationId: again.rows[0].id,
+          idempotentReplay: true as const,
+          status: again.rows[0].status,
+        };
+      }
+      throw error;
+    }
+  }
+
+  async release(input: {
+    reservationId: string;
+    correlationId: string;
+    reason?: string;
+    finalStatus?: 'released' | 'expired';
+  }) {
+    await this.db.query(`BEGIN`);
+    try {
+      const res = await this.db.query<{
+        id: string;
+        balance_id: string;
+        quantity: number;
+        status: string;
+      }>(
+        `SELECT id, balance_id, quantity, status
+         FROM private.inventory_reservations WHERE id = $1 FOR UPDATE`,
+        [input.reservationId],
+      );
+      const current = res.rows[0];
+      if (!current) {
+        await this.db.query(`ROLLBACK`);
+        return { ok: false as const, reason: 'not_found' };
+      }
+      if (current.status !== 'active') {
+        await this.db.query(`COMMIT`);
+        return { ok: true as const, idempotentReplay: true as const, status: current.status };
+      }
+
+      const bal = await this.inventory._lockBalance(current.balance_id);
+      const reserved = Math.max(0, bal.reserved - current.quantity);
+      await this.db.query(
+        `UPDATE private.inventory_balances
+         SET reserved = $2, updated_at = timezone('utc', now())
+         WHERE id = $1`,
+        [current.balance_id, reserved],
+      );
+      await this.inventory._appendTx({
+        balanceId: current.balance_id,
+        txType: 'release',
+        quantity: -current.quantity,
+        correlationId: input.correlationId,
+        reason: input.reason ?? 'release',
+      });
+      const finalStatus = input.finalStatus ?? 'released';
+      await this.db.query(
+        `UPDATE private.inventory_reservations
+         SET status = $2, released_at = timezone('utc', now())
+         WHERE id = $1`,
+        [current.id, finalStatus],
+      );
+      await this.db.query(`COMMIT`);
+      return { ok: true as const, idempotentReplay: false as const, status: finalStatus };
+    } catch (error) {
+      await this.db.query(`ROLLBACK`);
+      throw error;
+    }
+  }
+
+  async expireDue(now = Date.now()) {
+    const due = await this.db.query<{ id: string }>(
+      `SELECT id FROM private.inventory_reservations
+       WHERE status = 'active' AND reservation_type = 'qr'
+         AND expires_at IS NOT NULL AND expires_at <= to_timestamp($1 / 1000.0)`,
+      [now],
+    );
+    const results = [];
+    for (const row of due.rows) {
+      const released = await this.release({
+        reservationId: row.id,
+        correlationId: crypto.randomUUID(),
+        reason: 'qr_expired',
+        finalStatus: 'expired',
+      });
+      results.push({ reservationId: row.id, ...released });
+    }
+    return results;
+  }
+}

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 4 — Inventory ledger, lots, and reservations
+  - Available qty formula, QR/COD reservations, lot shelf-life gates, ledger reconcile
+
 - Milestone 3 — Catalog, media, and price approval
   - Products/variants with bilingual copy, import preview, media limits
   - Immutable price versions with below-cost Owner 2FA approval

@@ -26,7 +26,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - CSV/XLSX file parsers are represented by structured import rows (API-ready); spreadsheet parsing UI arrives with richer Backoffice screens
 COMMIT:
-- (filled after push)
+- 4393d71 — feat: Milestone 3 catalog, media, and price approval
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

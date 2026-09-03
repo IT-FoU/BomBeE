@@ -21,6 +21,7 @@ None open. All Critical/High items from the Milestone 10 audit suite are mitigat
 
 ## Production readiness affirmations
 - `EGO_POS_ENABLED` cannot be `true` in any env (schema guard)
-- Production `/v1/auth/capabilities` reports `smsProvider: external` (mock only when `APP_ENV=local`)
+- Phase 1 capabilities report `smsProvider: mock|sandbox` (never paid live until Owner opens `INTEGRATIONS_MODE=live`)
 - UI apps do not embed service-role secrets
 - No Production customer/order data loaded in this environment
+- `productionHold: true` remains on health until Owner written Production order

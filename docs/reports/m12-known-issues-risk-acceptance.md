@@ -4,12 +4,12 @@
 
 | ID | Issue | Impact | Mitigation | Owner decision |
 | --- | --- | --- | --- | --- |
-| KI-12-01 | Live SMS/bank/courier credentials not loaded | Staging uses mock/sandbox only | Manual fallback runbooks | Pending acceptance |
-| KI-12-02 | Staging host credentials may be absent in CI agent | Deploy script stays dry-run | Owner/Ops applies with secret store | Pending acceptance |
-| KI-12-03 | Legal/privacy Lo+En copy needs local human review | Compliance residual | Checklist in `docs/runbooks/legal-privacy-review.md` | Pending sign-off |
-| KI-12-04 | Monitoring DSN not committed (by design) | Alerts configured outside git | Secret store + monitoring runbook | Pending acceptance |
+| KI-12-01 | Live SMS/bank/courier credentials not loaded | Staging uses mock/sandbox only | Manual fallback runbooks | Accepted for Staging (Gate 12) |
+| KI-12-02 | Staging host credentials may be absent in CI agent | Deploy script stays dry-run | Owner/Ops applies with secret store | Accepted for Staging (Gate 12) |
+| KI-12-03 | Legal/privacy Lo+En copy needs local human review | Compliance residual | Checklist in `docs/runbooks/legal-privacy-review.md` | Accepted residual — complete before public launch |
+| KI-12-04 | Monitoring DSN not committed (by design) | Alerts configured outside git | Secret store + monitoring runbook | Accepted for Staging (Gate 12) |
 | KI-12-05 | EGO POS disabled | No POS sync in Phase 1 | Integration Center placeholder only | Accepted (Phase 1 rule) |
-| KI-12-06 | Production not deployed | No public Production URL | **PRODUCTION HOLD** | Required |
+| KI-12-06 | Production not deployed | No public Production URL | **PRODUCTION HOLD** | Required — still HOLD |
 
 ## Risk acceptance statement (Owner)
 
@@ -19,10 +19,10 @@
 
 | Field | Value |
 | --- | --- |
-| Owner name | _pending_ |
-| Date | _pending_ |
-| Staging go / no-go | _pending_ |
-| Production authorization | **HOLD — not granted by Milestone 12 approval alone** |
+| Owner name | Owner (อนุมัติ via Gate 12) |
+| Date | 2026-09-03 |
+| Staging go / no-go | **GO** — packaging approved (Gate 12) |
+| Production authorization | **HOLD — not granted by Milestone 12 / Gate 12 approval** |
 
 ## Notes
 Approving Owner Review Gate 12 (Staging readiness) does **not** authorize Production.

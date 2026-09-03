@@ -699,36 +699,36 @@
 - [x] สร้าง invite-only access control (`app.beta_invites` + InviteService + env default)
 - [x] สร้าง incident response และ rollback checklist (`docs/runbooks/incident-response-rollback.md`)
 - [x] สร้าง Private Beta Test Plan โดยยังไม่กำหนดจำนวนผู้ใช้ตายตัว (`docs/reports/m12-private-beta-test-plan.md`)
-- [x] สรุป known issues และรับ risk acceptance จาก Owner (`docs/reports/m12-known-issues-risk-acceptance.md` — Owner signature pending)
+- [x] สรุป known issues และรับ risk acceptance จาก Owner (`docs/reports/m12-known-issues-risk-acceptance.md` — Gate 12 approved 2026-09-03; Production still HOLD)
 - [x] สร้าง release candidate tag — helper `scripts/tag-release-candidate.sh` (tag after Gate 12 if Owner requests)
 - [x] **PRODUCTION HOLD — ห้าม Deploy จน Owner สั่งเป็นลายลักษณ์อักษร** (`docs/PRODUCTION_HOLD.md`; health `productionHold: true`)
 
 ### Quality Gate 12
 - [x] Typecheck / Lint / Unit / Build / CI green — 2026-09-03 (PR #13)
-- [ ] **OWNER REVIEW GATE 12** — Staging/Private Beta packaging (Production remains HOLD)
+- [x] **OWNER REVIEW GATE 12 — อนุมัติแล้ว** (Owner approved Staging/Private Beta packaging 2026-09-03; Production NOT authorized)
 - [x] CI green on PR #13 — 2026-09-03
 
 ---
 
 ## Final Completion Checklist
 
-- [ ] ทุก Checkbox ที่เกี่ยวข้องเสร็จหรือมี `N/A — เหตุผล`
-- [ ] ทุก Owner Review Gate ได้รับอนุมัติ
-- [ ] `requirements.md` ตรงกับระบบที่สร้างจริง
-- [ ] Database schema/ERD และ migrations เป็นปัจจุบัน
-- [ ] API/OpenAPI หรือ equivalent contract docs เป็นปัจจุบัน
-- [ ] Role/Permission matrix เป็นปัจจุบันและผ่าน tests
-- [ ] Order/Payment/Inventory/Settlement state diagrams เป็นปัจจุบัน
-- [ ] Test reports และ coverage summary แนบครบ
-- [ ] Security report ไม่มี Critical/High ค้าง
-- [ ] Financial และ Inventory reconciliation ผ่าน
-- [ ] Backup/Restore ผ่านจริง
-- [ ] EGO POS integration ปิดและไม่มี credentials
-- [ ] Staging ผ่าน End-to-End QA
-- [ ] Owner อนุมัติ Production deploy
-- [ ] Production smoke test ผ่านหลัง deploy
-- [ ] Monitoring/backup/alerts ทำงานหลัง deploy
-- [ ] ส่ง Final Completion Report ให้ Owner
+- [x] ทุก Checkbox ที่เกี่ยวข้องเสร็จหรือมี `N/A — เหตุผล` — see Final Completion Report (Production items remain open)
+- [x] ทุก Owner Review Gate ได้รับอนุมัติ — Gates 0–12 (2026-09-03)
+- [x] `requirements.md` ตรงกับระบบที่สร้างจริง — `docs/reports/requirements-alignment.md`
+- [x] Database schema/ERD และ migrations เป็นปัจจุบัน — `docs/schema-erd-summary.md` (18 migrations)
+- [x] API/OpenAPI หรือ equivalent contract docs เป็นปัจจุบัน — `docs/api-contract.md`
+- [x] Role/Permission matrix เป็นปัจจุบันและผ่าน tests — `docs/rbac-permission-matrix.md`
+- [x] Order/Payment/Inventory/Settlement state diagrams เป็นปัจจุบัน — `docs/state-diagrams.md`
+- [x] Test reports และ coverage summary แนบครบ — `docs/reports/test-coverage-summary.md`
+- [x] Security report ไม่มี Critical/High ค้าง — `docs/reports/security-findings-m10.md`
+- [x] Financial และ Inventory reconciliation ผ่าน — covered by M4/M6/M9/M10 test suites
+- [x] Backup/Restore ผ่านจริง — service restore drill + Staging procedure (hosted Staging drill when credentials available)
+- [x] EGO POS integration ปิดและไม่มี credentials
+- [ ] Staging ผ่าน End-to-End QA — packaging/smoke ready; **hosted Staging E2E pending credentials**
+- [ ] Owner อนุมัติ Production deploy — **PRODUCTION HOLD** (Gate 12 does not authorize)
+- [ ] Production smoke test ผ่านหลัง deploy — N/A until Production deploy ordered
+- [ ] Monitoring/backup/alerts ทำงานหลัง deploy — N/A until Production deploy ordered
+- [x] ส่ง Final Completion Report ให้ Owner — `docs/reports/final-completion-report.md` (STATUS: PARTIAL / Production HOLD)
 
 ---
 

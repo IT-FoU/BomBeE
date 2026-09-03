@@ -3,6 +3,9 @@
 ## Status
 **ACTIVE** — BomBee Market Phase 1 must not be deployed to Production.
 
+Owner Review Gate 12 approved Staging/Private Beta **packaging** on 2026-09-03.
+That approval does **not** lift this hold.
+
 ## What is allowed
 - Local development
 - Staging deploy from RC tags with Staging credentials

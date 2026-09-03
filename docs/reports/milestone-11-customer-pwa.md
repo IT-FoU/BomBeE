@@ -27,7 +27,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - OTP is demo verify until Staging SMS credentials (Milestone 12)
 COMMIT:
-- (pending)
+- c085072 — feat: Milestone 11 Customer PWA shell and commerce flows
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

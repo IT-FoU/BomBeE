@@ -351,7 +351,7 @@
 - [x] Permission/Responsive/Regression tests ผ่าน
 - [x] Commit และ Push Milestone 5 — `cbf9dec` / branch `cursor/milestone-5-orders-state-35e5`
 - [x] จัดทำ Milestone Report 5 — `docs/reports/milestone-5.md`
-- [ ] **OWNER REVIEW GATE 5 — หยุดรอการตรวจรับ**
+- [ ] **OWNER REVIEW GATE 5 — หยุดรอการตรวจรับ** (CI ผ่านครบ)
 
 ---
 

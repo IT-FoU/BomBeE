@@ -6,6 +6,7 @@ const navItems = [
   { id: 'catalog', label: 'Catalog' },
   { id: 'inventory', label: 'Inventory' },
   { id: 'orders', label: 'Orders' },
+  { id: 'payments', label: 'Payments' },
   { id: 'approvals', label: 'Approvals' },
   { id: 'staff', label: 'Staff & roles' },
   { id: 'audit', label: 'Audit' },
@@ -36,9 +37,19 @@ export function App() {
         <main className="main">
           <h1>Operations shell</h1>
           <p className="lede">
-            Milestone 5 order controls: multi-store parent/child checkout, strict state transitions,
-            cancellation previews, and admin-approved split shipments.
+            Milestone 6 payment controls: QR after confirmation, COD eligibility, immutable ledger,
+            and daily bank/remittance reconciliation with dual-approved adjustments.
           </p>
+          <section aria-labelledby="payments-heading" id="payments">
+            <h2 id="payments-heading">Payment readiness</h2>
+            <ul className="roles" aria-label="Payment checklist">
+              <li>QR combined allocation</li>
+              <li>COD limit + deposit</li>
+              <li>Idempotent confirm</li>
+              <li>Bank reconcile</li>
+              <li>Adjustment dual approve</li>
+            </ul>
+          </section>
           <section aria-labelledby="orders-heading" id="orders">
             <h2 id="orders-heading">Order readiness</h2>
             <ul className="roles" aria-label="Order checklist">

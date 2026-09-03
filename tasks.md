@@ -351,7 +351,7 @@
 - [x] Permission/Responsive/Regression tests ผ่าน
 - [x] Commit และ Push Milestone 5 — `cbf9dec` / branch `cursor/milestone-5-orders-state-35e5`
 - [x] จัดทำ Milestone Report 5 — `docs/reports/milestone-5.md`
-- [ ] **OWNER REVIEW GATE 5 — หยุดรอการตรวจรับ** (CI ผ่านครบ)
+- [x] **OWNER REVIEW GATE 5 — อนุมัติแล้ว** (Owner approved 2026-09-03)
 
 ---
 
@@ -359,54 +359,54 @@
 
 ### 6.1 Payment Ledger
 
-- [ ] สร้าง Payment Request, Payment Attempt, Receipt, Allocation, Refund และ Adjustment
-- [ ] ห้ามแก้ ledger rows ย้อนหลัง
-- [ ] ใช้ idempotency key กับ manual/API payment confirmation
-- [ ] สร้าง unique bank/courier reference constraints
-- [ ] แยก delivered status ออกจาก money-received status
-- [ ] สร้าง daily reconciliation views/jobs
+- [x] สร้าง Payment Request, Payment Attempt, Receipt, Allocation, Refund และ Adjustment
+- [x] ห้ามแก้ ledger rows ย้อนหลัง
+- [x] ใช้ idempotency key กับ manual/API payment confirmation
+- [x] สร้าง unique bank/courier reference constraints
+- [x] แยก delivered status ออกจาก money-received status
+- [x] สร้าง daily reconciliation views/jobs
 
 ### 6.2 QR Flow
 
-- [ ] แสดง QR หลัง supplier confirmation เท่านั้น
-- [ ] ลูกค้าเลือก confirmed stores ที่จะรวมใน QR ได้
-- [ ] สร้าง Allocation ต่อ Child Order ให้รวมตรง Payment Request
-- [ ] Deadline ภายในวันเดียวกันและอย่างน้อย 2 ชั่วโมง
-- [ ] QR expired ต้องหยุดรับและจัดการ reservation ตามกฎ
-- [ ] รองรับ manual verification และ Bank API adapter
-- [ ] รูปหลักฐานอยู่ pending จนยืนยันเงินจริง
-- [ ] Overpayment สร้าง excess refund request
-- [ ] Underpayment สร้าง QR เฉพาะยอดขาดและ link attempt เดิม
+- [x] แสดง QR หลัง supplier confirmation เท่านั้น
+- [x] ลูกค้าเลือก confirmed stores ที่จะรวมใน QR ได้
+- [x] สร้าง Allocation ต่อ Child Order ให้รวมตรง Payment Request
+- [x] Deadline ภายในวันเดียวกันและอย่างน้อย 2 ชั่วโมง
+- [x] QR expired ต้องหยุดรับและจัดการ reservation ตามกฎ
+- [x] รองรับ manual verification และ Bank API adapter
+- [x] รูปหลักฐานอยู่ pending จนยืนยันเงินจริง
+- [x] Overpayment สร้าง excess refund request
+- [x] Underpayment สร้าง QR เฉพาะยอดขาดและ link attempt เดิม
 
 ### 6.3 COD Flow
 
-- [ ] COD แยกยอดตามพัสดุ
-- [ ] ลูกค้าใหม่ limit 500,000 LAK
-- [ ] ตั้งแต่ 300,000 LAK ต้อง phone verification + 30% deposit
-- [ ] Deposit หักจาก COD balance อย่างถูกต้อง
-- [ ] นับ customer-caused failed deliveries เท่านั้น
-- [ ] Failed COD 2 ครั้งบังคับ QR
-- [ ] Staff restore COD พร้อม reason/audit
-- [ ] Redelivery จากติดต่อไม่ได้ต้องชำระค่าส่งก่อน
-- [ ] Courier remittance แยกจาก delivery proof
+- [x] COD แยกยอดตามพัสดุ
+- [x] ลูกค้าใหม่ limit 500,000 LAK
+- [x] ตั้งแต่ 300,000 LAK ต้อง phone verification + 30% deposit
+- [x] Deposit หักจาก COD balance อย่างถูกต้อง
+- [x] นับ customer-caused failed deliveries เท่านั้น
+- [x] Failed COD 2 ครั้งบังคับ QR
+- [x] Staff restore COD พร้อม reason/audit
+- [x] Redelivery จากติดต่อไม่ได้ต้องชำระค่าส่งก่อน
+- [x] Courier remittance แยกจาก delivery proof
 
 ### 6.4 Reconciliation
 
-- [ ] Reconcile bank receipts กับ Payment Requests/Allocations
-- [ ] Reconcile COD collections กับ courier remittance
-- [ ] สร้าง mismatch queue และ Finance resolution workflow
-- [ ] Adjustment ต้อง approval และไม่แก้ source ledger
-- [ ] Daily totals ต้องพิสูจน์ได้ถึง child/item level
+- [x] Reconcile bank receipts กับ Payment Requests/Allocations
+- [x] Reconcile COD collections กับ courier remittance
+- [x] สร้าง mismatch queue และ Finance resolution workflow
+- [x] Adjustment ต้อง approval และไม่แก้ source ledger
+- [x] Daily totals ต้องพิสูจน์ได้ถึง child/item level
 
 ### Quality Gate 6
 
-- [ ] QR combined allocation/partial/over/under/expiry tests ผ่าน
-- [ ] Duplicate webhook/manual confirmation ไม่สร้างเงินซ้ำ
-- [ ] COD limit/deposit/failure/remittance tests ผ่าน
-- [ ] Reconciliation fixtures ไม่มี unexplained difference
-- [ ] Permission/Security/Regression tests ผ่าน
-- [ ] Commit และ Push Milestone 6
-- [ ] จัดทำ Milestone Report 6
+- [x] QR combined allocation/partial/over/under/expiry tests ผ่าน
+- [x] Duplicate webhook/manual confirmation ไม่สร้างเงินซ้ำ
+- [x] COD limit/deposit/failure/remittance tests ผ่าน
+- [x] Reconciliation fixtures ไม่มี unexplained difference
+- [x] Permission/Security/Regression tests ผ่าน
+- [x] Commit และ Push Milestone 6
+- [x] จัดทำ Milestone Report 6
 - [ ] **OWNER REVIEW GATE 6 — หยุดรอการตรวจรับ**
 
 ---

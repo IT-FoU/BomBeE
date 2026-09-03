@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 6 — QR/COD payments and reconciliation
+  - Immutable payment ledger with allocations, receipts, refunds, adjustments
+  - Combined QR flow, COD limits/deposit/fail-restore, bank + remittance reconcile
+
 - Milestone 5 — Parent/child orders and state machine
   - Multi-store checkout, immutable snapshots, cancellation previews, split shipments
 

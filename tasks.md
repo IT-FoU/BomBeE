@@ -151,7 +151,7 @@
 - [x] Responsive Backoffice shell ผ่าน Desktop/Tablet/Mobile — CSS breakpoints 900/600
 - [x] Commit และ Push Milestone 1 — `3c13b51` / `f2ddbb7` / branch `cursor/milestone-1-auth-audit-35e5` / PR #2
 - [x] จัดทำ Milestone Report 1 — `docs/reports/milestone-1.md`
-- [ ] **OWNER REVIEW GATE 1 — หยุดรอการตรวจรับ** (CI ผ่านครบบน `f2ddbb7`)
+- [x] **OWNER REVIEW GATE 1 — อนุมัติแล้ว** (Owner approved 2026-09-03)
 
 ---
 

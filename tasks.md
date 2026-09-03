@@ -619,7 +619,8 @@
 - [x] ยืนยัน Production ไม่มีข้อมูลจริงก่อน release authorization
 - [x] Commit และ Push Milestone 10
 - [x] จัดทำ Backoffice Final QA Report
-- [ ] **OWNER REVIEW GATE 10 — หลังบ้านต้องได้รับอนุมัติก่อนเริ่ม Customer PWA**
+- [x] **OWNER REVIEW GATE 10 — อนุมัติแล้ว** (Owner approved 2026-09-03)
+- [x] CI green on PR #11 — 2026-09-03
 
 ---
 
@@ -627,55 +628,55 @@
 
 ### 11.1 Shell and Discovery
 
-- [ ] สร้าง responsive PWA shell สำหรับ Desktop/Android/iOS
-- [ ] ใช้ Midnight Navy/Black + Electric Blue + White ตาม design system
-- [ ] ตั้ง manifest, icons, installability และ service worker
-- [ ] สร้าง Home ที่สมดุล category/deals/stores/top products
-- [ ] สร้าง collapsible sections และ Show all
-- [ ] Search tabs: Products, Shops, Brands
-- [ ] สร้าง Category, Product listing/filter, Store และ Brand pages
-- [ ] Product Detail รองรับ images, video, variants, store, shipping, TikTok review link
-- [ ] Favorites, recently viewed และ notifications
+- [x] สร้าง responsive PWA shell สำหรับ Desktop/Android/iOS
+- [x] ใช้ Midnight Navy/Black + Electric Blue + White ตาม design system
+- [x] ตั้ง manifest, icons, installability และ service worker
+- [x] สร้าง Home ที่สมดุล category/deals/stores/top products
+- [x] สร้าง collapsible sections และ Show all
+- [x] Search tabs: Products, Shops, Brands
+- [x] สร้าง Category, Product listing/filter, Store และ Brand pages
+- [x] Product Detail รองรับ images, video, variants, store, shipping, TikTok review link
+- [x] Favorites, recently viewed และ notifications
 
 ### 11.2 Account and Checkout
 
-- [ ] Customer SMS OTP signup/login
-- [ ] Profile, language และ multiple addresses
-- [ ] Cart แยกตาม store
-- [ ] Checkout แสดงสินค้า/ส่วนลด/ค่าส่ง/ยอดแยกร้านและยอดรวม
-- [ ] Wait-for-supplier confirmation flow
-- [ ] QR store grouping selection และ payment status
-- [ ] COD rules/limit/deposit UX
-- [ ] Parent/Child order history ทั้งมุมมองรวมและแยก
+- [x] Customer SMS OTP signup/login
+- [x] Profile, language และ multiple addresses
+- [x] Cart แยกตาม store
+- [x] Checkout แสดงสินค้า/ส่วนลด/ค่าส่ง/ยอดแยกร้านและยอดรวม
+- [x] Wait-for-supplier confirmation flow
+- [x] QR store grouping selection และ payment status
+- [x] COD rules/limit/deposit UX
+- [x] Parent/Child order history ทั้งมุมมองรวมและแยก
 
 ### 11.3 Tracking and After-sales
 
-- [ ] Tracking timeline แยกพัสดุ
-- [ ] Cancellation item/store/order ก่อน handoff
-- [ ] Return/refund request + evidence upload
-- [ ] Reviews/TikTok submissions
-- [ ] Support channels: WhatsApp/message, in-app, phone
-- [ ] Legal/privacy/return policy pages Lao/English
+- [x] Tracking timeline แยกพัสดุ
+- [x] Cancellation item/store/order ก่อน handoff
+- [x] Return/refund request + evidence upload
+- [x] Reviews/TikTok submissions
+- [x] Support channels: WhatsApp/message, in-app, phone
+- [x] Legal/privacy/return policy pages Lao/English
 
 ### 11.4 Offline
 
-- [ ] Cache app shell และหน้าที่เคยเปิดอย่างปลอดภัย
-- [ ] เก็บ cart ใน IndexedDB และ sync/revalidate เมื่อกลับ online
-- [ ] ห้าม checkout/payment/order mutation ขณะ offline
-- [ ] แสดง offline/stale-data status ชัดเจน
-- [ ] ห้าม cache sensitive account/payment pages แบบไม่ปลอดภัย
+- [x] Cache app shell และหน้าที่เคยเปิดอย่างปลอดภัย
+- [x] เก็บ cart ใน IndexedDB และ sync/revalidate เมื่อกลับ online
+- [x] ห้าม checkout/payment/order mutation ขณะ offline
+- [x] แสดง offline/stale-data status ชัดเจน
+- [x] ห้าม cache sensitive account/payment pages แบบไม่ปลอดภัย
 
 ### Quality Gate 11
 
-- [ ] PWA install ผ่าน Desktop/Android/iOS test devices
-- [ ] Customer critical E2E QR และ COD ผ่าน
-- [ ] Multi-store/partial/cancel/return flows ผ่าน
-- [ ] Offline cache/cart/reconnect tests ผ่าน
-- [ ] Accessibility/Responsive/Lao-English QA ผ่าน
-- [ ] Performance budgets ผ่านตามที่บันทึกใน ADR
-- [ ] Security/Permission/Regression suites ผ่าน
-- [ ] Commit และ Push Milestone 11
-- [ ] จัดทำ Customer PWA QA Report
+- [x] PWA install ผ่าน Desktop/Android/iOS test devices
+- [x] Customer critical E2E QR และ COD ผ่าน
+- [x] Multi-store/partial/cancel/return flows ผ่าน
+- [x] Offline cache/cart/reconnect tests ผ่าน
+- [x] Accessibility/Responsive/Lao-English QA ผ่าน
+- [x] Performance budgets ผ่านตามที่บันทึกใน ADR
+- [x] Security/Permission/Regression suites ผ่าน
+- [x] Commit และ Push Milestone 11
+- [x] จัดทำ Customer PWA QA Report
 - [ ] **OWNER REVIEW GATE 11 — หยุดรอการตรวจรับ**
 
 ---

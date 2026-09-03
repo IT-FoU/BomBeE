@@ -1,38 +1,815 @@
-import { BRAND_NAME } from '@bombee/shared';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+
+import { BRAND_NAME, LAK, formatLak } from '@bombee/shared';
+
+import { BRANDS, CATEGORIES, PRODUCTS, STORES, productTitle, type CatalogProduct, type Locale } from './data/catalog';
+import { cartTotals, groupCartByStore, loadCart, saveCart, type CartLine } from './lib/cart';
+import { evaluateCodUx, parentChildSummary } from './lib/checkout';
+import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './lib/offline';
+
+type Route =
+  | 'home'
+  | 'search'
+  | 'category'
+  | 'store'
+  | 'brand'
+  | 'product'
+  | 'favorites'
+  | 'cart'
+  | 'checkout'
+  | 'payment'
+  | 'orders'
+  | 'tracking'
+  | 'account'
+  | 'support'
+  | 'legal'
+  | 'otp';
+
+const SHIPPING: Record<string, number> = {
+  'store-a': 10000,
+  'store-b': 12000,
+  'store-c': 15000,
+};
 
 export function App() {
+  const [route, setRoute] = useState<Route>('home');
+  const [locale, setLocale] = useState<Locale>('lo');
+  const [query, setQuery] = useState('');
+  const [searchTab, setSearchTab] = useState<'products' | 'shops' | 'brands'>('products');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(PRODUCTS[0]!);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({
+    categories: true,
+    deals: true,
+    stores: false,
+    tops: true,
+  });
+  const [favorites, setFavorites] = useState<string[]>(['p1']);
+  const [recent, setRecent] = useState<string[]>(['p1', 'p3']);
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [online, setOnline] = useState(true);
+  const [otpPhone, setOtpPhone] = useState('');
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'qr' | 'cod'>('qr');
+  const [selectedQrStores, setSelectedQrStores] = useState<string[]>(['store-a', 'store-c']);
+  const [orderStatus, setOrderStatus] = useState('awaiting_supplier');
+  const [notifications] = useState([
+    { id: 'n1', title: locale === 'lo' ? 'ຮ້ານຢືນຢັນແລ້ວ' : 'Store confirmed', unread: true },
+  ]);
+
+  useEffect(() => {
+    void loadCart().then(setCart);
+    const sync = () => setOnline(readNetworkStatus().online);
+    sync();
+    window.addEventListener('online', sync);
+    window.addEventListener('offline', sync);
+    return () => {
+      window.removeEventListener('online', sync);
+      window.removeEventListener('offline', sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    void saveCart(cart);
+  }, [cart]);
+
+  const totals = useMemo(() => cartTotals(cart, 5000, SHIPPING), [cart]);
+  const cod = evaluateCodUx({
+    amountLak: totals.totalLak,
+    isNewCustomer: true,
+    phoneVerified: loggedIn,
+    failCount: 0,
+  });
+
+  const sampleOrder = {
+    parentId: 'P-1001',
+    status: orderStatus,
+    children: totals.groups.map((g, i) => ({
+      id: `C-${i + 1}`,
+      storeName: g.storeName,
+      status: orderStatus === 'awaiting_supplier' ? 'pending_supplier' : 'in_transit',
+      totalLak: g.subtotalLak + (SHIPPING[g.storeId] ?? 10000),
+    })),
+  };
+  const orderSummary = parentChildSummary(sampleOrder);
+
+  function go(next: Route) {
+    setRoute(next);
+    window.location.hash = next;
+  }
+
+  function openProduct(product: CatalogProduct) {
+    setSelectedProduct(product);
+    setRecent((r) => [product.id, ...r.filter((id) => id !== product.id)].slice(0, 8));
+    go('product');
+  }
+
+  function addToCart(product: CatalogProduct, variantId?: string) {
+    try {
+      assertOnlineForMutation(online, 'cart_sync');
+    } catch {
+      // cart may still be edited offline; checkout blocked later
+    }
+    const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0]!;
+    setCart((prev) => {
+      const existing = prev.find((l) => l.variantId === variant.id);
+      if (existing) {
+        return prev.map((l) =>
+          l.variantId === variant.id ? { ...l, quantity: l.quantity + 1 } : l,
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          variantId: variant.id,
+          storeId: product.storeId,
+          storeName: product.storeName,
+          title: productTitle(product, locale),
+          unitPriceLak: variant.priceLak,
+          quantity: 1,
+        },
+      ];
+    });
+  }
+
+  function placeOrder() {
+    assertOnlineForMutation(online, 'checkout');
+    setOrderStatus('awaiting_supplier');
+    go('orders');
+  }
+
+  function pay() {
+    assertOnlineForMutation(online, 'payment');
+    setOrderStatus('awaiting_payment');
+    go('orders');
+  }
+
+  const filteredProducts = PRODUCTS.filter((p) => {
+    if (selectedCategory && p.categoryId !== selectedCategory) return false;
+    if (selectedStore && p.storeId !== selectedStore) return false;
+    if (selectedBrand && p.brandId !== selectedBrand) return false;
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      p.titleEn.toLowerCase().includes(q) ||
+      p.titleLo.includes(query) ||
+      p.storeName.toLowerCase().includes(q) ||
+      p.brandName.toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <div className="shell">
-      <header className="hero">
-        <p className="brand">{BRAND_NAME}</p>
-        <h1>Shop Vientiane with confidence</h1>
-        <p className="lede">
-          Managed reseller marketplace — Phase 1 foundation. Customer PWA arrives after backoffice
-          acceptance.
-        </p>
-      </header>
-      <section className="search-panel" aria-labelledby="image-search-heading">
-        <h2 id="image-search-heading">Image search (Phase 1)</h2>
-        <p className="consent">
-          Upload or capture a product photo to search the catalog. Images are used for search only,
-          deleted within 24 hours, and never used for training or analytics.
-        </p>
-        <div className="search-actions">
-          <label className="file-label">
-            Camera / file
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              capture="environment"
-              aria-describedby="image-search-heading"
-            />
-          </label>
-          <button type="button" className="scan-btn">
-            Scan barcode
-          </button>
+    <div className={`app ${!online ? 'is-offline' : ''}`}>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+      {!online && (
+        <div className="offline-banner" role="status">
+          {locale === 'lo'
+            ? 'ອອฟໄລນ໌ — cart ຍັງໃຊ້ໄດ້ແຕ່ຫ້າມ checkout/ຊຳລະ'
+            : 'Offline — cart available; checkout and payment blocked'}
         </div>
-        <p className="hint">OCR text search runs in the browser; max 5 MB JPEG/PNG/WebP.</p>
-      </section>
+      )}
+
+      <header className="topnav" aria-label="Customer navigation">
+        <button type="button" className="brand-btn" onClick={() => go('home')}>
+          {BRAND_NAME}
+        </button>
+        <nav className="topnav-links" aria-label="Primary">
+          <button type="button" onClick={() => go('search')}>
+            {locale === 'lo' ? 'ຄົ້ນຫາ' : 'Search'}
+          </button>
+          <button type="button" onClick={() => go('cart')}>
+            {locale === 'lo' ? 'ກະຕ່າ' : 'Cart'} ({cart.reduce((s, l) => s + l.quantity, 0)})
+          </button>
+          <button type="button" onClick={() => go('orders')}>
+            {locale === 'lo' ? 'ອໍເດີ' : 'Orders'}
+          </button>
+          <button type="button" onClick={() => go(loggedIn ? 'account' : 'otp')}>
+            {locale === 'lo' ? 'ບັນຊີ' : 'Account'}
+          </button>
+        </nav>
+        <label className="lang">
+          <span className="sr-only">Language</span>
+          <select
+            value={locale}
+            onChange={(e) => setLocale(e.target.value as Locale)}
+            aria-label="Language"
+          >
+            <option value="lo">ລາວ</option>
+            <option value="en">EN</option>
+          </select>
+        </label>
+      </header>
+
+      <main id="main">
+        {route === 'home' && (
+          <div className="home">
+            <section className="hero" aria-label="Hero">
+              <p className="brand-hero">{BRAND_NAME}</p>
+              <h1>{locale === 'lo' ? 'ຊື້ເຂົ້ານະຄອນຫຼວງໄດ້ໝັ້ນໃຈ' : 'Shop Vientiane with confidence'}</h1>
+              <p className="lede">
+                {locale === 'lo'
+                  ? 'ຕະຫຼາດຜູ້ຂາຍທີ່ຈັດການ — ສັ່ງຫຼາຍຮ້ານ ໃນເທື່ອດຽວ'
+                  : 'Managed reseller marketplace — multi-store checkout in one place'}
+              </p>
+              <div className="cta-row">
+                <button type="button" className="cta primary" onClick={() => go('search')}>
+                  {locale === 'lo' ? 'ເລີ່ມຊື້' : 'Start shopping'}
+                </button>
+                <button type="button" className="cta ghost" onClick={() => go('otp')}>
+                  {locale === 'lo' ? 'ເຂົ້າສູ່ລະບົບ OTP' : 'Sign in with OTP'}
+                </button>
+              </div>
+              <div className="hero-plane" aria-hidden="true" />
+            </section>
+
+            <HomeSection
+              id="categories"
+              title={locale === 'lo' ? 'ໝວດໝູ່' : 'Categories'}
+              expanded={expanded.categories ?? true}
+              onToggle={() => setExpanded((e) => ({ ...e, categories: !e.categories }))}
+              onShowAll={() => {
+                setSelectedCategory(null);
+                go('category');
+              }}
+              locale={locale}
+            >
+              <div className="chip-row">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="chip"
+                    onClick={() => {
+                      setSelectedCategory(c.id);
+                      go('category');
+                    }}
+                  >
+                    {locale === 'lo' ? c.lo : c.en}
+                  </button>
+                ))}
+              </div>
+            </HomeSection>
+
+            <HomeSection
+              id="deals"
+              title={locale === 'lo' ? 'ໂປຣໂມຊັນ' : 'Deals'}
+              expanded={expanded.deals ?? true}
+              onToggle={() => setExpanded((e) => ({ ...e, deals: !e.deals }))}
+              onShowAll={() => go('search')}
+              locale={locale}
+            >
+              <ProductRow
+                products={PRODUCTS.filter((p) => p.deal)}
+                locale={locale}
+                onOpen={openProduct}
+                onAdd={addToCart}
+              />
+            </HomeSection>
+
+            <HomeSection
+              id="stores"
+              title={locale === 'lo' ? 'ຮ້ານແນະນຳ' : 'Stores'}
+              expanded={expanded.stores ?? false}
+              onToggle={() => setExpanded((e) => ({ ...e, stores: !e.stores }))}
+              onShowAll={() => go('store')}
+              locale={locale}
+            >
+              <div className="chip-row">
+                {STORES.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className="chip"
+                    onClick={() => {
+                      setSelectedStore(s.id);
+                      go('store');
+                    }}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </HomeSection>
+
+            <HomeSection
+              id="tops"
+              title={locale === 'lo' ? 'ສິນຄ້າຍອດນິຍົມ' : 'Top products'}
+              expanded={expanded.tops ?? true}
+              onToggle={() => setExpanded((e) => ({ ...e, tops: !e.tops }))}
+              onShowAll={() => go('search')}
+              locale={locale}
+            >
+              <ProductRow products={PRODUCTS} locale={locale} onOpen={openProduct} onAdd={addToCart} />
+            </HomeSection>
+          </div>
+        )}
+
+        {route === 'search' && (
+          <section className="page" aria-labelledby="search-heading">
+            <h1 id="search-heading">{locale === 'lo' ? 'ຄົ້ນຫາ' : 'Search'}</h1>
+            <input
+              className="search-input"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={locale === 'lo' ? 'ສິນຄ້າ / ຮ້ານ / ແບรນด์' : 'Products / shops / brands'}
+              aria-label="Search"
+            />
+            <div className="tabs" role="tablist" aria-label="Search tabs">
+              {(['products', 'shops', 'brands'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={searchTab === tab}
+                  className={searchTab === tab ? 'tab active' : 'tab'}
+                  onClick={() => setSearchTab(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+            {searchTab === 'products' && (
+              <ProductRow products={filteredProducts} locale={locale} onOpen={openProduct} onAdd={addToCart} />
+            )}
+            {searchTab === 'shops' && (
+              <ul className="list">
+                {STORES.filter((s) => s.name.toLowerCase().includes(query.toLowerCase()) || !query).map(
+                  (s) => (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedStore(s.id);
+                          go('store');
+                        }}
+                      >
+                        {s.name}
+                      </button>
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+            {searchTab === 'brands' && (
+              <ul className="list">
+                {BRANDS.filter((b) => b.name.toLowerCase().includes(query.toLowerCase()) || !query).map(
+                  (b) => (
+                    <li key={b.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedBrand(b.id);
+                          go('brand');
+                        }}
+                      >
+                        {b.name}
+                      </button>
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+            <div className="search-panel inline">
+              <h2>{locale === 'lo' ? 'ຄົ້ນຫາດ້ວຍຮູບ' : 'Image search'}</h2>
+              <p className="consent">
+                {locale === 'lo'
+                  ? 'ໃຊ້ເພື່ອຄົ້ນຫາເທົ່ານັ້ນ · ລຶບໃນ 24 ຊົ່ວໂມງ · ບໍ່ໃຊ້ train/analytics'
+                  : 'Search only · deleted in 24h · no train/analytics'}
+              </p>
+              <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" />
+            </div>
+          </section>
+        )}
+
+        {(route === 'category' || route === 'store' || route === 'brand') && (
+          <section className="page">
+            <h1>
+              {route === 'category' && (locale === 'lo' ? 'ໝວດໝູ່' : 'Category')}
+              {route === 'store' && (locale === 'lo' ? 'ຮ້ານ' : 'Store')}
+              {route === 'brand' && (locale === 'lo' ? 'ແບรนด์' : 'Brand')}
+            </h1>
+            <ProductRow products={filteredProducts} locale={locale} onOpen={openProduct} onAdd={addToCart} />
+          </section>
+        )}
+
+        {route === 'product' && selectedProduct && (
+          <section className="page product-detail">
+            <img className="product-hero" src={selectedProduct.image} alt="" />
+            <h1>{productTitle(selectedProduct, locale)}</h1>
+            <p className="price">{formatLak(LAK(selectedProduct.priceLak), locale === 'lo' ? 'lo-LA' : 'en-US')}</p>
+            <p>
+              {selectedProduct.storeName} · {selectedProduct.brandName}
+            </p>
+            <p>{locale === 'lo' ? selectedProduct.shippingNoteLo : selectedProduct.shippingNoteEn}</p>
+            {selectedProduct.videoUrl && <p>Video: {selectedProduct.videoUrl}</p>}
+            {selectedProduct.tiktokUrl && (
+              <p>
+                TikTok:{' '}
+                <a href={selectedProduct.tiktokUrl} rel="noopener noreferrer">
+                  {selectedProduct.tiktokUrl}
+                </a>
+              </p>
+            )}
+            <label>
+              Variant
+              <select
+                defaultValue={selectedProduct.variants[0]?.id}
+                onChange={(e) => addToCart(selectedProduct, e.target.value)}
+                aria-label="Variant"
+              >
+                {selectedProduct.variants.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label} — {formatLak(LAK(v.priceLak))}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="cta-row">
+              <button type="button" className="cta primary" onClick={() => addToCart(selectedProduct)}>
+                {locale === 'lo' ? 'ເພີ່ມກະຕ່າ' : 'Add to cart'}
+              </button>
+              <button
+                type="button"
+                className="cta ghost"
+                onClick={() =>
+                  setFavorites((f) =>
+                    f.includes(selectedProduct.id)
+                      ? f.filter((id) => id !== selectedProduct.id)
+                      : [...f, selectedProduct.id],
+                  )
+                }
+              >
+                {favorites.includes(selectedProduct.id) ? '★' : '☆'} Favorite
+              </button>
+            </div>
+          </section>
+        )}
+
+        {route === 'favorites' && (
+          <section className="page">
+            <h1>{locale === 'lo' ? 'ລາຍການທີ່ມັກ' : 'Favorites'}</h1>
+            <ProductRow
+              products={PRODUCTS.filter((p) => favorites.includes(p.id))}
+              locale={locale}
+              onOpen={openProduct}
+              onAdd={addToCart}
+            />
+            <h2>{locale === 'lo' ? 'ເບິ່ງລ່າສຸດ' : 'Recently viewed'}</h2>
+            <ProductRow
+              products={PRODUCTS.filter((p) => recent.includes(p.id))}
+              locale={locale}
+              onOpen={openProduct}
+              onAdd={addToCart}
+            />
+          </section>
+        )}
+
+        {route === 'cart' && (
+          <section className="page">
+            <h1>{locale === 'lo' ? 'ກະຕ່າ (ແຍກຕາມຮ້ານ)' : 'Cart by store'}</h1>
+            {groupCartByStore(cart).map((g) => (
+              <div key={g.storeId} className="store-block">
+                <h2>{g.storeName}</h2>
+                <ul>
+                  {g.items.map((item) => (
+                    <li key={item.variantId}>
+                      {item.title} × {item.quantity} —{' '}
+                      {formatLak(LAK(item.unitPriceLak * item.quantity))}
+                    </li>
+                  ))}
+                </ul>
+                <p>
+                  Subtotal {formatLak(LAK(g.subtotalLak))} · Shipping{' '}
+                  {formatLak(LAK(SHIPPING[g.storeId] ?? 10000))}
+                </p>
+              </div>
+            ))}
+            <p>
+              Discount {formatLak(LAK(totals.discountLak))} · Total {formatLak(LAK(totals.totalLak))}
+            </p>
+            <button
+              type="button"
+              className="cta primary"
+              disabled={!online || cart.length === 0}
+              onClick={() => {
+                try {
+                  assertOnlineForMutation(online, 'checkout');
+                  go('checkout');
+                } catch (e) {
+                  alert(String(e));
+                }
+              }}
+            >
+              {locale === 'lo' ? 'ໄປ Checkout' : 'Checkout'}
+            </button>
+          </section>
+        )}
+
+        {route === 'checkout' && (
+          <section className="page">
+            <h1>Checkout</h1>
+            {!online && <p role="alert">Offline — mutations blocked</p>}
+            {totals.groups.map((g) => (
+              <div key={g.storeId} className="store-block">
+                <h2>{g.storeName}</h2>
+                <p>
+                  Goods {formatLak(LAK(g.subtotalLak))} + ship{' '}
+                  {formatLak(LAK(SHIPPING[g.storeId] ?? 10000))}
+                </p>
+              </div>
+            ))}
+            <p>Discount {formatLak(LAK(totals.discountLak))}</p>
+            <p>
+              <strong>Grand total {formatLak(LAK(totals.totalLak))}</strong>
+            </p>
+            <fieldset>
+              <legend>Payment method</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="pay"
+                  checked={paymentMethod === 'qr'}
+                  onChange={() => setPaymentMethod('qr')}
+                />{' '}
+                QR
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="pay"
+                  checked={paymentMethod === 'cod'}
+                  onChange={() => setPaymentMethod('cod')}
+                />{' '}
+                COD {cod.allowed ? `(deposit ${formatLak(LAK(cod.depositLak))})` : `(blocked: ${cod.reason})`}
+              </label>
+            </fieldset>
+            <button
+              type="button"
+              className="cta primary"
+              disabled={!online}
+              onClick={() => {
+                try {
+                  placeOrder();
+                } catch (e) {
+                  alert(String(e));
+                }
+              }}
+            >
+              Place order (wait for supplier)
+            </button>
+          </section>
+        )}
+
+        {route === 'payment' && (
+          <section className="page">
+            <h1>QR payment</h1>
+            <p>Select confirmed stores to combine:</p>
+            {totals.groups.map((g) => (
+              <label key={g.storeId} className="check">
+                <input
+                  type="checkbox"
+                  checked={selectedQrStores.includes(g.storeId)}
+                  onChange={(e) =>
+                    setSelectedQrStores((prev) =>
+                      e.target.checked ? [...prev, g.storeId] : prev.filter((id) => id !== g.storeId),
+                    )
+                  }
+                />
+                {g.storeName}
+              </label>
+            ))}
+            <p>Status: awaiting transfer · evidence upload pending</p>
+            <button
+              type="button"
+              className="cta primary"
+              disabled={!online}
+              onClick={() => {
+                try {
+                  pay();
+                } catch (e) {
+                  alert(String(e));
+                }
+              }}
+            >
+              Confirm payment
+            </button>
+          </section>
+        )}
+
+        {route === 'orders' && (
+          <section className="page">
+            <h1>{locale === 'lo' ? 'ປະຫວັດອໍເດີ' : 'Order history'}</h1>
+            <p>
+              Parent {sampleOrder.parentId} — {sampleOrder.status}
+            </p>
+            <h2>Combined</h2>
+            <p>Total {formatLak(LAK(orderSummary.combinedTotalLak))}</p>
+            <h2>By store</h2>
+            <ul>
+              {orderSummary.byStore.map((c) => (
+                <li key={c.storeName}>
+                  {c.storeName}: {c.status} — {formatLak(LAK(c.totalLak))}
+                </li>
+              ))}
+            </ul>
+            <div className="cta-row">
+              <button type="button" className="cta ghost" onClick={() => go('payment')}>
+                Pay QR
+              </button>
+              <button type="button" className="cta ghost" onClick={() => go('tracking')}>
+                Track
+              </button>
+              <button
+                type="button"
+                className="cta ghost"
+                onClick={() => setOrderStatus('cancelled_before_handoff')}
+              >
+                Cancel before handoff
+              </button>
+            </div>
+          </section>
+        )}
+
+        {route === 'tracking' && (
+          <section className="page">
+            <h1>Tracking</h1>
+            {sampleOrder.children.map((c) => (
+              <ol key={c.id} className="timeline">
+                <li>Confirmed — {c.storeName}</li>
+                <li>Packed</li>
+                <li>Handed to courier</li>
+                <li>In transit ({c.status})</li>
+              </ol>
+            ))}
+            <h2>After-sales</h2>
+            <button type="button" className="cta ghost">
+              Request return / refund + evidence
+            </button>
+            <button type="button" className="cta ghost">
+              Submit review / TikTok link
+            </button>
+          </section>
+        )}
+
+        {route === 'otp' && (
+          <section className="page">
+            <h1>SMS OTP</h1>
+            <label>
+              Phone
+              <input
+                value={otpPhone}
+                onChange={(e) => setOtpPhone(e.target.value)}
+                placeholder="+85620..."
+                aria-label="Phone"
+              />
+            </label>
+            <button
+              type="button"
+              className="cta primary"
+              onClick={() => {
+                setLoggedIn(true);
+                go('account');
+              }}
+            >
+              Verify demo OTP
+            </button>
+          </section>
+        )}
+
+        {route === 'account' && (
+          <section className="page">
+            <h1>{locale === 'lo' ? 'ໂປຣໄຟລ໌' : 'Profile'}</h1>
+            <p>{loggedIn ? otpPhone || '+85620…' : 'Guest'}</p>
+            <p>Language: {locale}</p>
+            <h2>Addresses</h2>
+            <ul>
+              <li>Home — Ban Hatsady (default)</li>
+              <li>Office — That Luang (recipient: ທ້າວ ສົມ)</li>
+            </ul>
+            <h2>Notifications</h2>
+            <ul>
+              {notifications.map((n) => (
+                <li key={n.id}>
+                  {n.unread ? '● ' : ''}
+                  {n.title}
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="cta ghost" onClick={() => go('favorites')}>
+              Favorites & recent
+            </button>
+            <button type="button" className="cta ghost" onClick={() => go('support')}>
+              Support
+            </button>
+            <button type="button" className="cta ghost" onClick={() => go('legal')}>
+              Legal
+            </button>
+          </section>
+        )}
+
+        {route === 'support' && (
+          <section className="page">
+            <h1>Support</h1>
+            <ul>
+              <li>In-app ticket</li>
+              <li>WhatsApp / message reference</li>
+              <li>Phone log</li>
+            </ul>
+          </section>
+        )}
+
+        {route === 'legal' && (
+          <section className="page">
+            <h1>Legal / Privacy / Returns</h1>
+            <article lang="lo">
+              <h2>ນະໂຍບາຍຄວາມເປັນສ່ວນຕົວ</h2>
+              <p>ເຮົາເກັບຂໍ້ມູນເພື່ອຈັດສົ່ງເທົ່ານັ້ນ ແລະບໍ່ຂາຍຂໍ້ມູນລູກຄ້າ.</p>
+            </article>
+            <article lang="en">
+              <h2>Privacy policy</h2>
+              <p>We use data for delivery only and never sell customer data.</p>
+            </article>
+            <article lang="lo">
+              <h2>ການຄືນສິນຄ້າ</h2>
+              <p>ຄືນໄດ້ພາຍໃນ 7 ວັນເມື່ອເສຍ/ຜິດ/ບໍ່ຄົບ — ບໍ່ຮັບປ່ຽນໃຈ.</p>
+            </article>
+            <article lang="en">
+              <h2>Returns</h2>
+              <p>Returns within 7 days for defective/wrong/incomplete — no change-of-mind.</p>
+            </article>
+          </section>
+        )}
+      </main>
+
+      <footer className="footer">
+        <button type="button" onClick={() => go('home')}>
+          Home
+        </button>
+        <button type="button" onClick={() => go('favorites')}>
+          Saved
+        </button>
+        <button type="button" onClick={() => go('support')}>
+          Help
+        </button>
+        <span className="sensitive-flag" data-sensitive={isSensitiveRoute(route) ? 'yes' : 'no'}>
+          {isSensitiveRoute(route) ? 'sensitive-view' : 'cacheable-view'}
+        </span>
+      </footer>
     </div>
+  );
+}
+
+function HomeSection(props: {
+  id: string;
+  title: string;
+  expanded: boolean;
+  onToggle: () => void;
+  onShowAll: () => void;
+  locale: Locale;
+  children: ReactNode;
+}) {
+  return (
+    <section className="home-section" aria-labelledby={`${props.id}-title`}>
+      <div className="section-head">
+        <h2 id={`${props.id}-title`}>
+          <button type="button" className="collapse-btn" aria-expanded={props.expanded} onClick={props.onToggle}>
+            {props.title}
+          </button>
+        </h2>
+        <button type="button" className="show-all" onClick={props.onShowAll}>
+          {props.locale === 'lo' ? 'ສະແດງທັງໝົດ' : 'Show all'}
+        </button>
+      </div>
+      {props.expanded && props.children}
+    </section>
+  );
+}
+
+function ProductRow(props: {
+  products: CatalogProduct[];
+  locale: Locale;
+  onOpen: (p: CatalogProduct) => void;
+  onAdd: (p: CatalogProduct) => void;
+}) {
+  return (
+    <ul className="product-row">
+      {props.products.map((p) => (
+        <li key={p.id}>
+          <button type="button" className="product-link" onClick={() => props.onOpen(p)}>
+            <img src={p.image} alt="" width={72} height={72} />
+            <span>{productTitle(p, props.locale)}</span>
+            <span>{formatLak(LAK(p.priceLak))}</span>
+          </button>
+          <button type="button" className="add-btn" onClick={() => props.onAdd(p)}>
+            +
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }

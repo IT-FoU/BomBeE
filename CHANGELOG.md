@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 11 — Customer PWA
+  - Installable shell with SW/manifest; discovery, cart/checkout, tracking, offline guards
+  - Lo/En UX; multi-store cart in IndexedDB; QR/COD flows; performance budget ADR
+
 - Milestone 10 — Backoffice final QA and security audit
   - Responsive/a11y/Lo-En shell hardening; security audit suite; findings log
   - Production guards: no mock SMS, EGO off, no production data loaded

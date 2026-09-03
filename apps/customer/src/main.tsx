@@ -14,3 +14,11 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 );
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => {
+      // installability still works via manifest; SW optional in local preview
+    });
+  });
+}

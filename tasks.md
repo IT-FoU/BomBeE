@@ -149,8 +149,8 @@
 - [x] ไม่มี BOLA/IDOR จาก RLS/API tests
 - [x] Security scan ไม่มี Critical/High ที่ยังไม่แก้
 - [x] Responsive Backoffice shell ผ่าน Desktop/Tablet/Mobile — CSS breakpoints 900/600
-- [ ] Commit และ Push Milestone 1
-- [ ] จัดทำ Milestone Report 1
+- [x] Commit และ Push Milestone 1 — `3c13b51` / branch `cursor/milestone-1-auth-audit-35e5`
+- [x] จัดทำ Milestone Report 1 — `docs/reports/milestone-1.md`
 - [ ] **OWNER REVIEW GATE 1 — หยุดรอการตรวจรับ**
 
 ---

@@ -14,6 +14,7 @@ IMPLEMENTED:
 - CI: frozen lockfile install, typecheck, lint, test, build, pnpm audit, gitleaks, migration validate
 - Synthetic fixtures under tests/fixtures
 - scripts/validate-migrations.sh, scripts/check-no-secrets.sh
+- PR: https://github.com/IT-FoU/BomBeE/pull/1
 FILES / MIGRATIONS:
 - apps/*, packages/*, docs/adr/*, .github/workflows/ci.yml
 - supabase/migrations/README.md (0 SQL files in Milestone 0)
@@ -28,6 +29,7 @@ VALIDATION:
 - pnpm audit --audit-level=high: PASS (0 known vulns)
 - gitleaks (local): PASS (no leaks)
 - migration validate: PASS
+- CI: PENDING (run started after push)
 SECURITY / DATA / MONEY / STOCK IMPACT:
 - No Production credentials in repo
 - Integer LAK helpers in @bombee/shared
@@ -35,9 +37,9 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - Branch protection / required checks: Owner must enable (API 403 for agent)
 - Final LICENSE terms pending Owner selection (proprietary placeholder)
-- CI job results pending first push of this branch
+- CI job results pending
 COMMIT:
-- (filled after push)
+- e34ff375ba115700aa6e8a778b031ae5c59c0bb3 — feat: Milestone 0 repository and TypeScript monorepo foundation
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

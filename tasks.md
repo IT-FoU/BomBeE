@@ -63,8 +63,8 @@
 - [x] Unit baseline ผ่าน
 - [x] Production build ผ่าน
 - [ ] CI ผ่านทุก job — รอผลหลัง Push
-- [ ] Commit และ Push Milestone 0
-- [ ] จัดทำ Milestone Report 0
+- [x] Commit และ Push Milestone 0 — `e34ff375` / branch `cursor/milestone-0-foundation-35e5` / PR #1
+- [x] จัดทำ Milestone Report 0 — `docs/reports/milestone-0.md`
 - [ ] **OWNER REVIEW GATE 0 — หยุดรอการตรวจรับ**
 
 ---

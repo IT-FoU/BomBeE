@@ -65,7 +65,7 @@
 - [x] CI ผ่านทุก job — commit `ece4d84`, all 8 checks success
 - [x] Commit และ Push Milestone 0 — `e34ff375` / `ece4d84` / branch `cursor/milestone-0-foundation-35e5` / PR #1
 - [x] จัดทำ Milestone Report 0 — `docs/reports/milestone-0.md`
-- [ ] **OWNER REVIEW GATE 0 — หยุดรอการตรวจรับ**
+- [x] **OWNER REVIEW GATE 0 — อนุมัติแล้ว** (Owner approved 2026-09-03)
 
 ---
 

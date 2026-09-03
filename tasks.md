@@ -704,9 +704,9 @@
 - [x] **PRODUCTION HOLD — ห้าม Deploy จน Owner สั่งเป็นลายลักษณ์อักษร** (`docs/PRODUCTION_HOLD.md`; health `productionHold: true`)
 
 ### Quality Gate 12
-- [ ] Typecheck / Lint / Unit / Build / CI green
+- [x] Typecheck / Lint / Unit / Build / CI green — 2026-09-03 (PR #13)
 - [ ] **OWNER REVIEW GATE 12** — Staging/Private Beta packaging (Production remains HOLD)
-- [ ] CI green on PR
+- [x] CI green on PR #13 — 2026-09-03
 
 ---
 

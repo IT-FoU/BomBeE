@@ -25,6 +25,7 @@ KNOWN ISSUES:
 - Delivery/return/settlement flows continue in Milestone 7
 COMMIT:
 - 7be604b — feat: Milestone 6 QR/COD payments and reconciliation
+- adca4aa — docs: record Milestone 6 commit hash; CI green
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

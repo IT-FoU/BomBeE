@@ -25,7 +25,8 @@ VALIDATION:
 - Permission/RLS: PASS (cross-user denial + service role)
 - E2E: PASS placeholder (unchanged)
 - Build: PASS
-- pnpm audit --audit-level=high: (run at commit time)
+- pnpm audit --audit-level=high: PASS
+- CI: PASS (all checks on f2ddbb7)
 SECURITY / DATA / MONEY / STOCK IMPACT:
 - No Production credentials; mock SMS only in local/test
 - Audit immutable; exports encrypted at rest in DB columns

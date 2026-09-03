@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Milestone 12 — Staging, Private Beta readiness, Production Hold
+  - Invite-only beta invites schema/service; sandbox/mock integrations guard
+  - Staging seed (100–500), deploy dry-run, smoke, RC tag helpers
+  - Runbooks + Private Beta plan + risk acceptance; PRODUCTION HOLD active
+
 - Milestone 11 — Customer PWA
   - Installable shell with SW/manifest; discovery, cart/checkout, tracking, offline guards
   - Lo/En UX; multi-store cart in IndexedDB; QR/COD flows; performance budget ADR

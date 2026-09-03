@@ -1,0 +1,3505 @@
+{
+  "description": "Synthetic Staging QA seed (100–500 items). No real PII, payments, or Production data.",
+  "generatedAt": "2026-09-03T11:34:56.755Z",
+  "productCount": 250,
+  "customers": [
+    {
+      "id": "cust_qa_001",
+      "displayName": "QA Customer 001",
+      "phoneE164": "+8562090000000",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_002",
+      "displayName": "QA Customer 002",
+      "phoneE164": "+8562090000001",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_003",
+      "displayName": "QA Customer 003",
+      "phoneE164": "+8562090000002",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_004",
+      "displayName": "QA Customer 004",
+      "phoneE164": "+8562090000003",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_005",
+      "displayName": "QA Customer 005",
+      "phoneE164": "+8562090000004",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_006",
+      "displayName": "QA Customer 006",
+      "phoneE164": "+8562090000005",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_007",
+      "displayName": "QA Customer 007",
+      "phoneE164": "+8562090000006",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_008",
+      "displayName": "QA Customer 008",
+      "phoneE164": "+8562090000007",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_009",
+      "displayName": "QA Customer 009",
+      "phoneE164": "+8562090000008",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_010",
+      "displayName": "QA Customer 010",
+      "phoneE164": "+8562090000009",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_011",
+      "displayName": "QA Customer 011",
+      "phoneE164": "+8562090000010",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_012",
+      "displayName": "QA Customer 012",
+      "phoneE164": "+8562090000011",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_013",
+      "displayName": "QA Customer 013",
+      "phoneE164": "+8562090000012",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_014",
+      "displayName": "QA Customer 014",
+      "phoneE164": "+8562090000013",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_015",
+      "displayName": "QA Customer 015",
+      "phoneE164": "+8562090000014",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_016",
+      "displayName": "QA Customer 016",
+      "phoneE164": "+8562090000015",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_017",
+      "displayName": "QA Customer 017",
+      "phoneE164": "+8562090000016",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_018",
+      "displayName": "QA Customer 018",
+      "phoneE164": "+8562090000017",
+      "locale": "en",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_019",
+      "displayName": "QA Customer 019",
+      "phoneE164": "+8562090000018",
+      "locale": "lo",
+      "synthetic": true
+    },
+    {
+      "id": "cust_qa_020",
+      "displayName": "QA Customer 020",
+      "phoneE164": "+8562090000019",
+      "locale": "en",
+      "synthetic": true
+    }
+  ],
+  "stores": [
+    {
+      "id": "store_qa_001",
+      "name": "QA Store 001",
+      "status": "active",
+      "synthetic": true
+    },
+    {
+      "id": "store_qa_002",
+      "name": "QA Store 002",
+      "status": "active",
+      "synthetic": true
+    },
+    {
+      "id": "store_qa_003",
+      "name": "QA Store 003",
+      "status": "active",
+      "synthetic": true
+    },
+    {
+      "id": "store_qa_004",
+      "name": "QA Store 004",
+      "status": "active",
+      "synthetic": true
+    },
+    {
+      "id": "store_qa_005",
+      "name": "QA Store 005",
+      "status": "active",
+      "synthetic": true
+    },
+    {
+      "id": "store_qa_006",
+      "name": "QA Store 006",
+      "status": "active",
+      "synthetic": true
+    },
+    {
+      "id": "store_qa_007",
+      "name": "QA Store 007",
+      "status": "active",
+      "synthetic": true
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_qa_0001",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0001",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0001",
+        "en": "Beverages QA Item 0001"
+      },
+      "category": "Beverages",
+      "priceLak": 5000,
+      "stockQty": 10,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0002",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0002",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0002",
+        "en": "Food QA Item 0002"
+      },
+      "category": "Food",
+      "priceLak": 6000,
+      "stockQty": 11,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0003",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0003",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0003",
+        "en": "Household QA Item 0003"
+      },
+      "category": "Household",
+      "priceLak": 7000,
+      "stockQty": 12,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0004",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0004",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0004",
+        "en": "Health QA Item 0004"
+      },
+      "category": "Health",
+      "priceLak": 8000,
+      "stockQty": 13,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0005",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0005",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0005",
+        "en": "Apparel QA Item 0005"
+      },
+      "category": "Apparel",
+      "priceLak": 9000,
+      "stockQty": 14,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0006",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0006",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0006",
+        "en": "Beverages QA Item 0006"
+      },
+      "category": "Beverages",
+      "priceLak": 10000,
+      "stockQty": 15,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0007",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0007",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0007",
+        "en": "Food QA Item 0007"
+      },
+      "category": "Food",
+      "priceLak": 11000,
+      "stockQty": 16,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0008",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0008",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0008",
+        "en": "Household QA Item 0008"
+      },
+      "category": "Household",
+      "priceLak": 12000,
+      "stockQty": 17,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0009",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0009",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0009",
+        "en": "Health QA Item 0009"
+      },
+      "category": "Health",
+      "priceLak": 13000,
+      "stockQty": 18,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0010",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0010",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0010",
+        "en": "Apparel QA Item 0010"
+      },
+      "category": "Apparel",
+      "priceLak": 14000,
+      "stockQty": 19,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0011",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0011",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0011",
+        "en": "Beverages QA Item 0011"
+      },
+      "category": "Beverages",
+      "priceLak": 15000,
+      "stockQty": 20,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0012",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0012",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0012",
+        "en": "Food QA Item 0012"
+      },
+      "category": "Food",
+      "priceLak": 16000,
+      "stockQty": 21,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0013",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0013",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0013",
+        "en": "Household QA Item 0013"
+      },
+      "category": "Household",
+      "priceLak": 17000,
+      "stockQty": 22,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0014",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0014",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0014",
+        "en": "Health QA Item 0014"
+      },
+      "category": "Health",
+      "priceLak": 18000,
+      "stockQty": 23,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0015",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0015",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0015",
+        "en": "Apparel QA Item 0015"
+      },
+      "category": "Apparel",
+      "priceLak": 19000,
+      "stockQty": 24,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0016",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0016",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0016",
+        "en": "Beverages QA Item 0016"
+      },
+      "category": "Beverages",
+      "priceLak": 20000,
+      "stockQty": 25,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0017",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0017",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0017",
+        "en": "Food QA Item 0017"
+      },
+      "category": "Food",
+      "priceLak": 21000,
+      "stockQty": 26,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0018",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0018",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0018",
+        "en": "Household QA Item 0018"
+      },
+      "category": "Household",
+      "priceLak": 22000,
+      "stockQty": 27,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0019",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0019",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0019",
+        "en": "Health QA Item 0019"
+      },
+      "category": "Health",
+      "priceLak": 23000,
+      "stockQty": 28,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0020",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0020",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0020",
+        "en": "Apparel QA Item 0020"
+      },
+      "category": "Apparel",
+      "priceLak": 24000,
+      "stockQty": 29,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0021",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0021",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0021",
+        "en": "Beverages QA Item 0021"
+      },
+      "category": "Beverages",
+      "priceLak": 25000,
+      "stockQty": 30,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0022",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0022",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0022",
+        "en": "Food QA Item 0022"
+      },
+      "category": "Food",
+      "priceLak": 26000,
+      "stockQty": 31,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0023",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0023",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0023",
+        "en": "Household QA Item 0023"
+      },
+      "category": "Household",
+      "priceLak": 27000,
+      "stockQty": 32,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0024",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0024",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0024",
+        "en": "Health QA Item 0024"
+      },
+      "category": "Health",
+      "priceLak": 28000,
+      "stockQty": 33,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0025",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0025",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0025",
+        "en": "Apparel QA Item 0025"
+      },
+      "category": "Apparel",
+      "priceLak": 29000,
+      "stockQty": 34,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0026",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0026",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0026",
+        "en": "Beverages QA Item 0026"
+      },
+      "category": "Beverages",
+      "priceLak": 30000,
+      "stockQty": 35,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0027",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0027",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0027",
+        "en": "Food QA Item 0027"
+      },
+      "category": "Food",
+      "priceLak": 31000,
+      "stockQty": 36,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0028",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0028",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0028",
+        "en": "Household QA Item 0028"
+      },
+      "category": "Household",
+      "priceLak": 32000,
+      "stockQty": 37,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0029",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0029",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0029",
+        "en": "Health QA Item 0029"
+      },
+      "category": "Health",
+      "priceLak": 33000,
+      "stockQty": 38,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0030",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0030",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0030",
+        "en": "Apparel QA Item 0030"
+      },
+      "category": "Apparel",
+      "priceLak": 34000,
+      "stockQty": 39,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0031",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0031",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0031",
+        "en": "Beverages QA Item 0031"
+      },
+      "category": "Beverages",
+      "priceLak": 35000,
+      "stockQty": 40,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0032",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0032",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0032",
+        "en": "Food QA Item 0032"
+      },
+      "category": "Food",
+      "priceLak": 36000,
+      "stockQty": 41,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0033",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0033",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0033",
+        "en": "Household QA Item 0033"
+      },
+      "category": "Household",
+      "priceLak": 37000,
+      "stockQty": 42,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0034",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0034",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0034",
+        "en": "Health QA Item 0034"
+      },
+      "category": "Health",
+      "priceLak": 38000,
+      "stockQty": 43,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0035",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0035",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0035",
+        "en": "Apparel QA Item 0035"
+      },
+      "category": "Apparel",
+      "priceLak": 39000,
+      "stockQty": 44,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0036",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0036",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0036",
+        "en": "Beverages QA Item 0036"
+      },
+      "category": "Beverages",
+      "priceLak": 40000,
+      "stockQty": 45,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0037",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0037",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0037",
+        "en": "Food QA Item 0037"
+      },
+      "category": "Food",
+      "priceLak": 41000,
+      "stockQty": 46,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0038",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0038",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0038",
+        "en": "Household QA Item 0038"
+      },
+      "category": "Household",
+      "priceLak": 42000,
+      "stockQty": 47,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0039",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0039",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0039",
+        "en": "Health QA Item 0039"
+      },
+      "category": "Health",
+      "priceLak": 43000,
+      "stockQty": 48,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0040",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0040",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0040",
+        "en": "Apparel QA Item 0040"
+      },
+      "category": "Apparel",
+      "priceLak": 44000,
+      "stockQty": 49,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0041",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0041",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0041",
+        "en": "Beverages QA Item 0041"
+      },
+      "category": "Beverages",
+      "priceLak": 45000,
+      "stockQty": 10,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0042",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0042",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0042",
+        "en": "Food QA Item 0042"
+      },
+      "category": "Food",
+      "priceLak": 46000,
+      "stockQty": 11,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0043",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0043",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0043",
+        "en": "Household QA Item 0043"
+      },
+      "category": "Household",
+      "priceLak": 47000,
+      "stockQty": 12,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0044",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0044",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0044",
+        "en": "Health QA Item 0044"
+      },
+      "category": "Health",
+      "priceLak": 48000,
+      "stockQty": 13,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0045",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0045",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0045",
+        "en": "Apparel QA Item 0045"
+      },
+      "category": "Apparel",
+      "priceLak": 49000,
+      "stockQty": 14,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0046",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0046",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0046",
+        "en": "Beverages QA Item 0046"
+      },
+      "category": "Beverages",
+      "priceLak": 50000,
+      "stockQty": 15,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0047",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0047",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0047",
+        "en": "Food QA Item 0047"
+      },
+      "category": "Food",
+      "priceLak": 51000,
+      "stockQty": 16,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0048",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0048",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0048",
+        "en": "Household QA Item 0048"
+      },
+      "category": "Household",
+      "priceLak": 52000,
+      "stockQty": 17,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0049",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0049",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0049",
+        "en": "Health QA Item 0049"
+      },
+      "category": "Health",
+      "priceLak": 53000,
+      "stockQty": 18,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0050",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0050",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0050",
+        "en": "Apparel QA Item 0050"
+      },
+      "category": "Apparel",
+      "priceLak": 54000,
+      "stockQty": 19,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0051",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0051",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0051",
+        "en": "Beverages QA Item 0051"
+      },
+      "category": "Beverages",
+      "priceLak": 5000,
+      "stockQty": 20,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0052",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0052",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0052",
+        "en": "Food QA Item 0052"
+      },
+      "category": "Food",
+      "priceLak": 6000,
+      "stockQty": 21,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0053",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0053",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0053",
+        "en": "Household QA Item 0053"
+      },
+      "category": "Household",
+      "priceLak": 7000,
+      "stockQty": 22,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0054",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0054",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0054",
+        "en": "Health QA Item 0054"
+      },
+      "category": "Health",
+      "priceLak": 8000,
+      "stockQty": 23,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0055",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0055",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0055",
+        "en": "Apparel QA Item 0055"
+      },
+      "category": "Apparel",
+      "priceLak": 9000,
+      "stockQty": 24,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0056",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0056",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0056",
+        "en": "Beverages QA Item 0056"
+      },
+      "category": "Beverages",
+      "priceLak": 10000,
+      "stockQty": 25,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0057",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0057",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0057",
+        "en": "Food QA Item 0057"
+      },
+      "category": "Food",
+      "priceLak": 11000,
+      "stockQty": 26,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0058",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0058",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0058",
+        "en": "Household QA Item 0058"
+      },
+      "category": "Household",
+      "priceLak": 12000,
+      "stockQty": 27,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0059",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0059",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0059",
+        "en": "Health QA Item 0059"
+      },
+      "category": "Health",
+      "priceLak": 13000,
+      "stockQty": 28,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0060",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0060",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0060",
+        "en": "Apparel QA Item 0060"
+      },
+      "category": "Apparel",
+      "priceLak": 14000,
+      "stockQty": 29,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0061",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0061",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0061",
+        "en": "Beverages QA Item 0061"
+      },
+      "category": "Beverages",
+      "priceLak": 15000,
+      "stockQty": 30,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0062",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0062",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0062",
+        "en": "Food QA Item 0062"
+      },
+      "category": "Food",
+      "priceLak": 16000,
+      "stockQty": 31,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0063",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0063",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0063",
+        "en": "Household QA Item 0063"
+      },
+      "category": "Household",
+      "priceLak": 17000,
+      "stockQty": 32,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0064",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0064",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0064",
+        "en": "Health QA Item 0064"
+      },
+      "category": "Health",
+      "priceLak": 18000,
+      "stockQty": 33,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0065",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0065",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0065",
+        "en": "Apparel QA Item 0065"
+      },
+      "category": "Apparel",
+      "priceLak": 19000,
+      "stockQty": 34,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0066",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0066",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0066",
+        "en": "Beverages QA Item 0066"
+      },
+      "category": "Beverages",
+      "priceLak": 20000,
+      "stockQty": 35,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0067",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0067",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0067",
+        "en": "Food QA Item 0067"
+      },
+      "category": "Food",
+      "priceLak": 21000,
+      "stockQty": 36,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0068",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0068",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0068",
+        "en": "Household QA Item 0068"
+      },
+      "category": "Household",
+      "priceLak": 22000,
+      "stockQty": 37,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0069",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0069",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0069",
+        "en": "Health QA Item 0069"
+      },
+      "category": "Health",
+      "priceLak": 23000,
+      "stockQty": 38,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0070",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0070",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0070",
+        "en": "Apparel QA Item 0070"
+      },
+      "category": "Apparel",
+      "priceLak": 24000,
+      "stockQty": 39,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0071",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0071",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0071",
+        "en": "Beverages QA Item 0071"
+      },
+      "category": "Beverages",
+      "priceLak": 25000,
+      "stockQty": 40,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0072",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0072",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0072",
+        "en": "Food QA Item 0072"
+      },
+      "category": "Food",
+      "priceLak": 26000,
+      "stockQty": 41,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0073",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0073",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0073",
+        "en": "Household QA Item 0073"
+      },
+      "category": "Household",
+      "priceLak": 27000,
+      "stockQty": 42,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0074",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0074",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0074",
+        "en": "Health QA Item 0074"
+      },
+      "category": "Health",
+      "priceLak": 28000,
+      "stockQty": 43,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0075",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0075",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0075",
+        "en": "Apparel QA Item 0075"
+      },
+      "category": "Apparel",
+      "priceLak": 29000,
+      "stockQty": 44,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0076",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0076",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0076",
+        "en": "Beverages QA Item 0076"
+      },
+      "category": "Beverages",
+      "priceLak": 30000,
+      "stockQty": 45,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0077",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0077",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0077",
+        "en": "Food QA Item 0077"
+      },
+      "category": "Food",
+      "priceLak": 31000,
+      "stockQty": 46,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0078",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0078",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0078",
+        "en": "Household QA Item 0078"
+      },
+      "category": "Household",
+      "priceLak": 32000,
+      "stockQty": 47,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0079",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0079",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0079",
+        "en": "Health QA Item 0079"
+      },
+      "category": "Health",
+      "priceLak": 33000,
+      "stockQty": 48,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0080",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0080",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0080",
+        "en": "Apparel QA Item 0080"
+      },
+      "category": "Apparel",
+      "priceLak": 34000,
+      "stockQty": 49,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0081",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0081",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0081",
+        "en": "Beverages QA Item 0081"
+      },
+      "category": "Beverages",
+      "priceLak": 35000,
+      "stockQty": 10,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0082",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0082",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0082",
+        "en": "Food QA Item 0082"
+      },
+      "category": "Food",
+      "priceLak": 36000,
+      "stockQty": 11,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0083",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0083",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0083",
+        "en": "Household QA Item 0083"
+      },
+      "category": "Household",
+      "priceLak": 37000,
+      "stockQty": 12,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0084",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0084",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0084",
+        "en": "Health QA Item 0084"
+      },
+      "category": "Health",
+      "priceLak": 38000,
+      "stockQty": 13,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0085",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0085",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0085",
+        "en": "Apparel QA Item 0085"
+      },
+      "category": "Apparel",
+      "priceLak": 39000,
+      "stockQty": 14,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0086",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0086",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0086",
+        "en": "Beverages QA Item 0086"
+      },
+      "category": "Beverages",
+      "priceLak": 40000,
+      "stockQty": 15,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0087",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0087",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0087",
+        "en": "Food QA Item 0087"
+      },
+      "category": "Food",
+      "priceLak": 41000,
+      "stockQty": 16,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0088",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0088",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0088",
+        "en": "Household QA Item 0088"
+      },
+      "category": "Household",
+      "priceLak": 42000,
+      "stockQty": 17,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0089",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0089",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0089",
+        "en": "Health QA Item 0089"
+      },
+      "category": "Health",
+      "priceLak": 43000,
+      "stockQty": 18,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0090",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0090",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0090",
+        "en": "Apparel QA Item 0090"
+      },
+      "category": "Apparel",
+      "priceLak": 44000,
+      "stockQty": 19,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0091",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0091",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0091",
+        "en": "Beverages QA Item 0091"
+      },
+      "category": "Beverages",
+      "priceLak": 45000,
+      "stockQty": 20,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0092",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0092",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0092",
+        "en": "Food QA Item 0092"
+      },
+      "category": "Food",
+      "priceLak": 46000,
+      "stockQty": 21,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0093",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0093",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0093",
+        "en": "Household QA Item 0093"
+      },
+      "category": "Household",
+      "priceLak": 47000,
+      "stockQty": 22,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0094",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0094",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0094",
+        "en": "Health QA Item 0094"
+      },
+      "category": "Health",
+      "priceLak": 48000,
+      "stockQty": 23,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0095",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0095",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0095",
+        "en": "Apparel QA Item 0095"
+      },
+      "category": "Apparel",
+      "priceLak": 49000,
+      "stockQty": 24,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0096",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0096",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0096",
+        "en": "Beverages QA Item 0096"
+      },
+      "category": "Beverages",
+      "priceLak": 50000,
+      "stockQty": 25,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0097",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0097",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0097",
+        "en": "Food QA Item 0097"
+      },
+      "category": "Food",
+      "priceLak": 51000,
+      "stockQty": 26,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0098",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0098",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0098",
+        "en": "Household QA Item 0098"
+      },
+      "category": "Household",
+      "priceLak": 52000,
+      "stockQty": 27,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0099",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0099",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0099",
+        "en": "Health QA Item 0099"
+      },
+      "category": "Health",
+      "priceLak": 53000,
+      "stockQty": 28,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0100",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0100",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0100",
+        "en": "Apparel QA Item 0100"
+      },
+      "category": "Apparel",
+      "priceLak": 54000,
+      "stockQty": 29,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0101",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0101",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0101",
+        "en": "Beverages QA Item 0101"
+      },
+      "category": "Beverages",
+      "priceLak": 5000,
+      "stockQty": 30,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0102",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0102",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0102",
+        "en": "Food QA Item 0102"
+      },
+      "category": "Food",
+      "priceLak": 6000,
+      "stockQty": 31,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0103",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0103",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0103",
+        "en": "Household QA Item 0103"
+      },
+      "category": "Household",
+      "priceLak": 7000,
+      "stockQty": 32,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0104",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0104",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0104",
+        "en": "Health QA Item 0104"
+      },
+      "category": "Health",
+      "priceLak": 8000,
+      "stockQty": 33,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0105",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0105",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0105",
+        "en": "Apparel QA Item 0105"
+      },
+      "category": "Apparel",
+      "priceLak": 9000,
+      "stockQty": 34,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0106",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0106",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0106",
+        "en": "Beverages QA Item 0106"
+      },
+      "category": "Beverages",
+      "priceLak": 10000,
+      "stockQty": 35,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0107",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0107",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0107",
+        "en": "Food QA Item 0107"
+      },
+      "category": "Food",
+      "priceLak": 11000,
+      "stockQty": 36,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0108",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0108",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0108",
+        "en": "Household QA Item 0108"
+      },
+      "category": "Household",
+      "priceLak": 12000,
+      "stockQty": 37,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0109",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0109",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0109",
+        "en": "Health QA Item 0109"
+      },
+      "category": "Health",
+      "priceLak": 13000,
+      "stockQty": 38,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0110",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0110",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0110",
+        "en": "Apparel QA Item 0110"
+      },
+      "category": "Apparel",
+      "priceLak": 14000,
+      "stockQty": 39,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0111",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0111",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0111",
+        "en": "Beverages QA Item 0111"
+      },
+      "category": "Beverages",
+      "priceLak": 15000,
+      "stockQty": 40,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0112",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0112",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0112",
+        "en": "Food QA Item 0112"
+      },
+      "category": "Food",
+      "priceLak": 16000,
+      "stockQty": 41,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0113",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0113",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0113",
+        "en": "Household QA Item 0113"
+      },
+      "category": "Household",
+      "priceLak": 17000,
+      "stockQty": 42,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0114",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0114",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0114",
+        "en": "Health QA Item 0114"
+      },
+      "category": "Health",
+      "priceLak": 18000,
+      "stockQty": 43,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0115",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0115",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0115",
+        "en": "Apparel QA Item 0115"
+      },
+      "category": "Apparel",
+      "priceLak": 19000,
+      "stockQty": 44,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0116",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0116",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0116",
+        "en": "Beverages QA Item 0116"
+      },
+      "category": "Beverages",
+      "priceLak": 20000,
+      "stockQty": 45,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0117",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0117",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0117",
+        "en": "Food QA Item 0117"
+      },
+      "category": "Food",
+      "priceLak": 21000,
+      "stockQty": 46,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0118",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0118",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0118",
+        "en": "Household QA Item 0118"
+      },
+      "category": "Household",
+      "priceLak": 22000,
+      "stockQty": 47,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0119",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0119",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0119",
+        "en": "Health QA Item 0119"
+      },
+      "category": "Health",
+      "priceLak": 23000,
+      "stockQty": 48,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0120",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0120",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0120",
+        "en": "Apparel QA Item 0120"
+      },
+      "category": "Apparel",
+      "priceLak": 24000,
+      "stockQty": 49,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0121",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0121",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0121",
+        "en": "Beverages QA Item 0121"
+      },
+      "category": "Beverages",
+      "priceLak": 25000,
+      "stockQty": 10,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0122",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0122",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0122",
+        "en": "Food QA Item 0122"
+      },
+      "category": "Food",
+      "priceLak": 26000,
+      "stockQty": 11,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0123",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0123",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0123",
+        "en": "Household QA Item 0123"
+      },
+      "category": "Household",
+      "priceLak": 27000,
+      "stockQty": 12,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0124",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0124",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0124",
+        "en": "Health QA Item 0124"
+      },
+      "category": "Health",
+      "priceLak": 28000,
+      "stockQty": 13,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0125",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0125",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0125",
+        "en": "Apparel QA Item 0125"
+      },
+      "category": "Apparel",
+      "priceLak": 29000,
+      "stockQty": 14,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0126",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0126",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0126",
+        "en": "Beverages QA Item 0126"
+      },
+      "category": "Beverages",
+      "priceLak": 30000,
+      "stockQty": 15,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0127",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0127",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0127",
+        "en": "Food QA Item 0127"
+      },
+      "category": "Food",
+      "priceLak": 31000,
+      "stockQty": 16,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0128",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0128",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0128",
+        "en": "Household QA Item 0128"
+      },
+      "category": "Household",
+      "priceLak": 32000,
+      "stockQty": 17,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0129",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0129",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0129",
+        "en": "Health QA Item 0129"
+      },
+      "category": "Health",
+      "priceLak": 33000,
+      "stockQty": 18,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0130",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0130",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0130",
+        "en": "Apparel QA Item 0130"
+      },
+      "category": "Apparel",
+      "priceLak": 34000,
+      "stockQty": 19,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0131",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0131",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0131",
+        "en": "Beverages QA Item 0131"
+      },
+      "category": "Beverages",
+      "priceLak": 35000,
+      "stockQty": 20,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0132",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0132",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0132",
+        "en": "Food QA Item 0132"
+      },
+      "category": "Food",
+      "priceLak": 36000,
+      "stockQty": 21,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0133",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0133",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0133",
+        "en": "Household QA Item 0133"
+      },
+      "category": "Household",
+      "priceLak": 37000,
+      "stockQty": 22,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0134",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0134",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0134",
+        "en": "Health QA Item 0134"
+      },
+      "category": "Health",
+      "priceLak": 38000,
+      "stockQty": 23,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0135",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0135",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0135",
+        "en": "Apparel QA Item 0135"
+      },
+      "category": "Apparel",
+      "priceLak": 39000,
+      "stockQty": 24,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0136",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0136",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0136",
+        "en": "Beverages QA Item 0136"
+      },
+      "category": "Beverages",
+      "priceLak": 40000,
+      "stockQty": 25,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0137",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0137",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0137",
+        "en": "Food QA Item 0137"
+      },
+      "category": "Food",
+      "priceLak": 41000,
+      "stockQty": 26,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0138",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0138",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0138",
+        "en": "Household QA Item 0138"
+      },
+      "category": "Household",
+      "priceLak": 42000,
+      "stockQty": 27,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0139",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0139",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0139",
+        "en": "Health QA Item 0139"
+      },
+      "category": "Health",
+      "priceLak": 43000,
+      "stockQty": 28,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0140",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0140",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0140",
+        "en": "Apparel QA Item 0140"
+      },
+      "category": "Apparel",
+      "priceLak": 44000,
+      "stockQty": 29,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0141",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0141",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0141",
+        "en": "Beverages QA Item 0141"
+      },
+      "category": "Beverages",
+      "priceLak": 45000,
+      "stockQty": 30,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0142",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0142",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0142",
+        "en": "Food QA Item 0142"
+      },
+      "category": "Food",
+      "priceLak": 46000,
+      "stockQty": 31,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0143",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0143",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0143",
+        "en": "Household QA Item 0143"
+      },
+      "category": "Household",
+      "priceLak": 47000,
+      "stockQty": 32,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0144",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0144",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0144",
+        "en": "Health QA Item 0144"
+      },
+      "category": "Health",
+      "priceLak": 48000,
+      "stockQty": 33,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0145",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0145",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0145",
+        "en": "Apparel QA Item 0145"
+      },
+      "category": "Apparel",
+      "priceLak": 49000,
+      "stockQty": 34,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0146",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0146",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0146",
+        "en": "Beverages QA Item 0146"
+      },
+      "category": "Beverages",
+      "priceLak": 50000,
+      "stockQty": 35,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0147",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0147",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0147",
+        "en": "Food QA Item 0147"
+      },
+      "category": "Food",
+      "priceLak": 51000,
+      "stockQty": 36,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0148",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0148",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0148",
+        "en": "Household QA Item 0148"
+      },
+      "category": "Household",
+      "priceLak": 52000,
+      "stockQty": 37,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0149",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0149",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0149",
+        "en": "Health QA Item 0149"
+      },
+      "category": "Health",
+      "priceLak": 53000,
+      "stockQty": 38,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0150",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0150",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0150",
+        "en": "Apparel QA Item 0150"
+      },
+      "category": "Apparel",
+      "priceLak": 54000,
+      "stockQty": 39,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0151",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0151",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0151",
+        "en": "Beverages QA Item 0151"
+      },
+      "category": "Beverages",
+      "priceLak": 5000,
+      "stockQty": 40,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0152",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0152",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0152",
+        "en": "Food QA Item 0152"
+      },
+      "category": "Food",
+      "priceLak": 6000,
+      "stockQty": 41,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0153",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0153",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0153",
+        "en": "Household QA Item 0153"
+      },
+      "category": "Household",
+      "priceLak": 7000,
+      "stockQty": 42,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0154",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0154",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0154",
+        "en": "Health QA Item 0154"
+      },
+      "category": "Health",
+      "priceLak": 8000,
+      "stockQty": 43,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0155",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0155",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0155",
+        "en": "Apparel QA Item 0155"
+      },
+      "category": "Apparel",
+      "priceLak": 9000,
+      "stockQty": 44,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0156",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0156",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0156",
+        "en": "Beverages QA Item 0156"
+      },
+      "category": "Beverages",
+      "priceLak": 10000,
+      "stockQty": 45,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0157",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0157",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0157",
+        "en": "Food QA Item 0157"
+      },
+      "category": "Food",
+      "priceLak": 11000,
+      "stockQty": 46,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0158",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0158",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0158",
+        "en": "Household QA Item 0158"
+      },
+      "category": "Household",
+      "priceLak": 12000,
+      "stockQty": 47,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0159",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0159",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0159",
+        "en": "Health QA Item 0159"
+      },
+      "category": "Health",
+      "priceLak": 13000,
+      "stockQty": 48,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0160",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0160",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0160",
+        "en": "Apparel QA Item 0160"
+      },
+      "category": "Apparel",
+      "priceLak": 14000,
+      "stockQty": 49,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0161",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0161",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0161",
+        "en": "Beverages QA Item 0161"
+      },
+      "category": "Beverages",
+      "priceLak": 15000,
+      "stockQty": 10,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0162",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0162",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0162",
+        "en": "Food QA Item 0162"
+      },
+      "category": "Food",
+      "priceLak": 16000,
+      "stockQty": 11,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0163",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0163",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0163",
+        "en": "Household QA Item 0163"
+      },
+      "category": "Household",
+      "priceLak": 17000,
+      "stockQty": 12,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0164",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0164",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0164",
+        "en": "Health QA Item 0164"
+      },
+      "category": "Health",
+      "priceLak": 18000,
+      "stockQty": 13,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0165",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0165",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0165",
+        "en": "Apparel QA Item 0165"
+      },
+      "category": "Apparel",
+      "priceLak": 19000,
+      "stockQty": 14,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0166",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0166",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0166",
+        "en": "Beverages QA Item 0166"
+      },
+      "category": "Beverages",
+      "priceLak": 20000,
+      "stockQty": 15,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0167",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0167",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0167",
+        "en": "Food QA Item 0167"
+      },
+      "category": "Food",
+      "priceLak": 21000,
+      "stockQty": 16,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0168",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0168",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0168",
+        "en": "Household QA Item 0168"
+      },
+      "category": "Household",
+      "priceLak": 22000,
+      "stockQty": 17,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0169",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0169",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0169",
+        "en": "Health QA Item 0169"
+      },
+      "category": "Health",
+      "priceLak": 23000,
+      "stockQty": 18,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0170",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0170",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0170",
+        "en": "Apparel QA Item 0170"
+      },
+      "category": "Apparel",
+      "priceLak": 24000,
+      "stockQty": 19,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0171",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0171",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0171",
+        "en": "Beverages QA Item 0171"
+      },
+      "category": "Beverages",
+      "priceLak": 25000,
+      "stockQty": 20,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0172",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0172",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0172",
+        "en": "Food QA Item 0172"
+      },
+      "category": "Food",
+      "priceLak": 26000,
+      "stockQty": 21,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0173",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0173",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0173",
+        "en": "Household QA Item 0173"
+      },
+      "category": "Household",
+      "priceLak": 27000,
+      "stockQty": 22,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0174",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0174",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0174",
+        "en": "Health QA Item 0174"
+      },
+      "category": "Health",
+      "priceLak": 28000,
+      "stockQty": 23,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0175",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0175",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0175",
+        "en": "Apparel QA Item 0175"
+      },
+      "category": "Apparel",
+      "priceLak": 29000,
+      "stockQty": 24,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0176",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0176",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0176",
+        "en": "Beverages QA Item 0176"
+      },
+      "category": "Beverages",
+      "priceLak": 30000,
+      "stockQty": 25,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0177",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0177",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0177",
+        "en": "Food QA Item 0177"
+      },
+      "category": "Food",
+      "priceLak": 31000,
+      "stockQty": 26,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0178",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0178",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0178",
+        "en": "Household QA Item 0178"
+      },
+      "category": "Household",
+      "priceLak": 32000,
+      "stockQty": 27,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0179",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0179",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0179",
+        "en": "Health QA Item 0179"
+      },
+      "category": "Health",
+      "priceLak": 33000,
+      "stockQty": 28,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0180",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0180",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0180",
+        "en": "Apparel QA Item 0180"
+      },
+      "category": "Apparel",
+      "priceLak": 34000,
+      "stockQty": 29,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0181",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0181",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0181",
+        "en": "Beverages QA Item 0181"
+      },
+      "category": "Beverages",
+      "priceLak": 35000,
+      "stockQty": 30,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0182",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0182",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0182",
+        "en": "Food QA Item 0182"
+      },
+      "category": "Food",
+      "priceLak": 36000,
+      "stockQty": 31,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0183",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0183",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0183",
+        "en": "Household QA Item 0183"
+      },
+      "category": "Household",
+      "priceLak": 37000,
+      "stockQty": 32,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0184",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0184",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0184",
+        "en": "Health QA Item 0184"
+      },
+      "category": "Health",
+      "priceLak": 38000,
+      "stockQty": 33,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0185",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0185",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0185",
+        "en": "Apparel QA Item 0185"
+      },
+      "category": "Apparel",
+      "priceLak": 39000,
+      "stockQty": 34,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0186",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0186",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0186",
+        "en": "Beverages QA Item 0186"
+      },
+      "category": "Beverages",
+      "priceLak": 40000,
+      "stockQty": 35,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0187",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0187",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0187",
+        "en": "Food QA Item 0187"
+      },
+      "category": "Food",
+      "priceLak": 41000,
+      "stockQty": 36,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0188",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0188",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0188",
+        "en": "Household QA Item 0188"
+      },
+      "category": "Household",
+      "priceLak": 42000,
+      "stockQty": 37,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0189",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0189",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0189",
+        "en": "Health QA Item 0189"
+      },
+      "category": "Health",
+      "priceLak": 43000,
+      "stockQty": 38,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0190",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0190",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0190",
+        "en": "Apparel QA Item 0190"
+      },
+      "category": "Apparel",
+      "priceLak": 44000,
+      "stockQty": 39,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0191",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0191",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0191",
+        "en": "Beverages QA Item 0191"
+      },
+      "category": "Beverages",
+      "priceLak": 45000,
+      "stockQty": 40,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0192",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0192",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0192",
+        "en": "Food QA Item 0192"
+      },
+      "category": "Food",
+      "priceLak": 46000,
+      "stockQty": 41,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0193",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0193",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0193",
+        "en": "Household QA Item 0193"
+      },
+      "category": "Household",
+      "priceLak": 47000,
+      "stockQty": 42,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0194",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0194",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0194",
+        "en": "Health QA Item 0194"
+      },
+      "category": "Health",
+      "priceLak": 48000,
+      "stockQty": 43,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0195",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0195",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0195",
+        "en": "Apparel QA Item 0195"
+      },
+      "category": "Apparel",
+      "priceLak": 49000,
+      "stockQty": 44,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0196",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0196",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0196",
+        "en": "Beverages QA Item 0196"
+      },
+      "category": "Beverages",
+      "priceLak": 50000,
+      "stockQty": 45,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0197",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0197",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0197",
+        "en": "Food QA Item 0197"
+      },
+      "category": "Food",
+      "priceLak": 51000,
+      "stockQty": 46,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0198",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0198",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0198",
+        "en": "Household QA Item 0198"
+      },
+      "category": "Household",
+      "priceLak": 52000,
+      "stockQty": 47,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0199",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0199",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0199",
+        "en": "Health QA Item 0199"
+      },
+      "category": "Health",
+      "priceLak": 53000,
+      "stockQty": 48,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0200",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0200",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0200",
+        "en": "Apparel QA Item 0200"
+      },
+      "category": "Apparel",
+      "priceLak": 54000,
+      "stockQty": 49,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0201",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0201",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0201",
+        "en": "Beverages QA Item 0201"
+      },
+      "category": "Beverages",
+      "priceLak": 5000,
+      "stockQty": 10,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0202",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0202",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0202",
+        "en": "Food QA Item 0202"
+      },
+      "category": "Food",
+      "priceLak": 6000,
+      "stockQty": 11,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0203",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0203",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0203",
+        "en": "Household QA Item 0203"
+      },
+      "category": "Household",
+      "priceLak": 7000,
+      "stockQty": 12,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0204",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0204",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0204",
+        "en": "Health QA Item 0204"
+      },
+      "category": "Health",
+      "priceLak": 8000,
+      "stockQty": 13,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0205",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0205",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0205",
+        "en": "Apparel QA Item 0205"
+      },
+      "category": "Apparel",
+      "priceLak": 9000,
+      "stockQty": 14,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0206",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0206",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0206",
+        "en": "Beverages QA Item 0206"
+      },
+      "category": "Beverages",
+      "priceLak": 10000,
+      "stockQty": 15,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0207",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0207",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0207",
+        "en": "Food QA Item 0207"
+      },
+      "category": "Food",
+      "priceLak": 11000,
+      "stockQty": 16,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0208",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0208",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0208",
+        "en": "Household QA Item 0208"
+      },
+      "category": "Household",
+      "priceLak": 12000,
+      "stockQty": 17,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0209",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0209",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0209",
+        "en": "Health QA Item 0209"
+      },
+      "category": "Health",
+      "priceLak": 13000,
+      "stockQty": 18,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0210",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0210",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0210",
+        "en": "Apparel QA Item 0210"
+      },
+      "category": "Apparel",
+      "priceLak": 14000,
+      "stockQty": 19,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0211",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0211",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0211",
+        "en": "Beverages QA Item 0211"
+      },
+      "category": "Beverages",
+      "priceLak": 15000,
+      "stockQty": 20,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0212",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0212",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0212",
+        "en": "Food QA Item 0212"
+      },
+      "category": "Food",
+      "priceLak": 16000,
+      "stockQty": 21,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0213",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0213",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0213",
+        "en": "Household QA Item 0213"
+      },
+      "category": "Household",
+      "priceLak": 17000,
+      "stockQty": 22,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0214",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0214",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0214",
+        "en": "Health QA Item 0214"
+      },
+      "category": "Health",
+      "priceLak": 18000,
+      "stockQty": 23,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0215",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0215",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0215",
+        "en": "Apparel QA Item 0215"
+      },
+      "category": "Apparel",
+      "priceLak": 19000,
+      "stockQty": 24,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0216",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0216",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0216",
+        "en": "Beverages QA Item 0216"
+      },
+      "category": "Beverages",
+      "priceLak": 20000,
+      "stockQty": 25,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0217",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0217",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0217",
+        "en": "Food QA Item 0217"
+      },
+      "category": "Food",
+      "priceLak": 21000,
+      "stockQty": 26,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0218",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0218",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0218",
+        "en": "Household QA Item 0218"
+      },
+      "category": "Household",
+      "priceLak": 22000,
+      "stockQty": 27,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0219",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0219",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0219",
+        "en": "Health QA Item 0219"
+      },
+      "category": "Health",
+      "priceLak": 23000,
+      "stockQty": 28,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0220",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0220",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0220",
+        "en": "Apparel QA Item 0220"
+      },
+      "category": "Apparel",
+      "priceLak": 24000,
+      "stockQty": 29,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0221",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0221",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0221",
+        "en": "Beverages QA Item 0221"
+      },
+      "category": "Beverages",
+      "priceLak": 25000,
+      "stockQty": 30,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0222",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0222",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0222",
+        "en": "Food QA Item 0222"
+      },
+      "category": "Food",
+      "priceLak": 26000,
+      "stockQty": 31,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0223",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0223",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0223",
+        "en": "Household QA Item 0223"
+      },
+      "category": "Household",
+      "priceLak": 27000,
+      "stockQty": 32,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0224",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0224",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0224",
+        "en": "Health QA Item 0224"
+      },
+      "category": "Health",
+      "priceLak": 28000,
+      "stockQty": 33,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0225",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0225",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0225",
+        "en": "Apparel QA Item 0225"
+      },
+      "category": "Apparel",
+      "priceLak": 29000,
+      "stockQty": 34,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0226",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0226",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0226",
+        "en": "Beverages QA Item 0226"
+      },
+      "category": "Beverages",
+      "priceLak": 30000,
+      "stockQty": 35,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0227",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0227",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0227",
+        "en": "Food QA Item 0227"
+      },
+      "category": "Food",
+      "priceLak": 31000,
+      "stockQty": 36,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0228",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0228",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0228",
+        "en": "Household QA Item 0228"
+      },
+      "category": "Household",
+      "priceLak": 32000,
+      "stockQty": 37,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0229",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0229",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0229",
+        "en": "Health QA Item 0229"
+      },
+      "category": "Health",
+      "priceLak": 33000,
+      "stockQty": 38,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0230",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0230",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0230",
+        "en": "Apparel QA Item 0230"
+      },
+      "category": "Apparel",
+      "priceLak": 34000,
+      "stockQty": 39,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0231",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0231",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0231",
+        "en": "Beverages QA Item 0231"
+      },
+      "category": "Beverages",
+      "priceLak": 35000,
+      "stockQty": 40,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0232",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0232",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0232",
+        "en": "Food QA Item 0232"
+      },
+      "category": "Food",
+      "priceLak": 36000,
+      "stockQty": 41,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0233",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0233",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0233",
+        "en": "Household QA Item 0233"
+      },
+      "category": "Household",
+      "priceLak": 37000,
+      "stockQty": 42,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0234",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0234",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0234",
+        "en": "Health QA Item 0234"
+      },
+      "category": "Health",
+      "priceLak": 38000,
+      "stockQty": 43,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0235",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0235",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0235",
+        "en": "Apparel QA Item 0235"
+      },
+      "category": "Apparel",
+      "priceLak": 39000,
+      "stockQty": 44,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0236",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0236",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0236",
+        "en": "Beverages QA Item 0236"
+      },
+      "category": "Beverages",
+      "priceLak": 40000,
+      "stockQty": 45,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0237",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0237",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0237",
+        "en": "Food QA Item 0237"
+      },
+      "category": "Food",
+      "priceLak": 41000,
+      "stockQty": 46,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0238",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0238",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0238",
+        "en": "Household QA Item 0238"
+      },
+      "category": "Household",
+      "priceLak": 42000,
+      "stockQty": 47,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0239",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0239",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0239",
+        "en": "Health QA Item 0239"
+      },
+      "category": "Health",
+      "priceLak": 43000,
+      "stockQty": 48,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0240",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0240",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0240",
+        "en": "Apparel QA Item 0240"
+      },
+      "category": "Apparel",
+      "priceLak": 44000,
+      "stockQty": 49,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0241",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0241",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0241",
+        "en": "Beverages QA Item 0241"
+      },
+      "category": "Beverages",
+      "priceLak": 45000,
+      "stockQty": 10,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0242",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0242",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0242",
+        "en": "Food QA Item 0242"
+      },
+      "category": "Food",
+      "priceLak": 46000,
+      "stockQty": 11,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0243",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0243",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0243",
+        "en": "Household QA Item 0243"
+      },
+      "category": "Household",
+      "priceLak": 47000,
+      "stockQty": 12,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0244",
+      "storeId": "store_qa_006",
+      "sku": "QA-SKU-0244",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0244",
+        "en": "Health QA Item 0244"
+      },
+      "category": "Health",
+      "priceLak": 48000,
+      "stockQty": 13,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0245",
+      "storeId": "store_qa_007",
+      "sku": "QA-SKU-0245",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0245",
+        "en": "Apparel QA Item 0245"
+      },
+      "category": "Apparel",
+      "priceLak": 49000,
+      "stockQty": 14,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0246",
+      "storeId": "store_qa_001",
+      "sku": "QA-SKU-0246",
+      "title": {
+        "lo": "ເຄື່ອງດື່ມ ທົດສອບ 0246",
+        "en": "Beverages QA Item 0246"
+      },
+      "category": "Beverages",
+      "priceLak": 50000,
+      "stockQty": 15,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0247",
+      "storeId": "store_qa_002",
+      "sku": "QA-SKU-0247",
+      "title": {
+        "lo": "ອາຫານ ທົດສອບ 0247",
+        "en": "Food QA Item 0247"
+      },
+      "category": "Food",
+      "priceLak": 51000,
+      "stockQty": 16,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0248",
+      "storeId": "store_qa_003",
+      "sku": "QA-SKU-0248",
+      "title": {
+        "lo": "ເຄື່ອງໃຊ້ໃນບ້ານ ທົດສອບ 0248",
+        "en": "Household QA Item 0248"
+      },
+      "category": "Household",
+      "priceLak": 52000,
+      "stockQty": 17,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0249",
+      "storeId": "store_qa_004",
+      "sku": "QA-SKU-0249",
+      "title": {
+        "lo": "ສຸຂະພາບ ທົດສອບ 0249",
+        "en": "Health QA Item 0249"
+      },
+      "category": "Health",
+      "priceLak": 53000,
+      "stockQty": 18,
+      "synthetic": true
+    },
+    {
+      "id": "prod_qa_0250",
+      "storeId": "store_qa_005",
+      "sku": "QA-SKU-0250",
+      "title": {
+        "lo": "ເຄື່ອງນຸ່ງ ທົດສອບ 0250",
+        "en": "Apparel QA Item 0250"
+      },
+      "category": "Apparel",
+      "priceLak": 54000,
+      "stockQty": 19,
+      "synthetic": true
+    }
+  ],
+  "invites": [
+    {
+      "inviteCode": "QA-BETA-001",
+      "maxUses": 5,
+      "intendedRole": "ops",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-002",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-003",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-004",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-005",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-006",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-007",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-008",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-009",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    },
+    {
+      "inviteCode": "QA-BETA-010",
+      "maxUses": 5,
+      "intendedRole": "customer",
+      "synthetic": true
+    }
+  ]
+}

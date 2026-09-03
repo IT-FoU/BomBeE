@@ -16,11 +16,19 @@ export function createAppRouter(env: BombeeEnv) {
 
     if (req.method === 'GET' && url.pathname === '/v1/auth/capabilities') {
       sendJson(res, 200, {
-        smsProvider: env.APP_ENV === 'local' ? 'mock' : 'external',
+        smsProvider:
+          env.INTEGRATIONS_MODE === 'mock'
+            ? 'mock'
+            : env.INTEGRATIONS_MODE === 'sandbox'
+              ? 'sandbox'
+              : 'external',
         backofficeIdleSeconds: 3600,
         maxFailedLogins: 5,
         egoPosEnabled: env.EGO_POS_ENABLED,
+        inviteOnlyEnabled: env.INVITE_ONLY_ENABLED,
+        integrationsMode: env.INTEGRATIONS_MODE,
         auditRetentionYears: 5,
+        productionHold: true,
       });
       return;
     }
@@ -32,6 +40,9 @@ export function createAppRouter(env: BombeeEnv) {
         timezone: DISPLAY_TIMEZONE,
         env: env.APP_ENV,
         egoPosEnabled: env.EGO_POS_ENABLED,
+        inviteOnlyEnabled: env.INVITE_ONLY_ENABLED,
+        integrationsMode: env.INTEGRATIONS_MODE,
+        productionHold: true,
       });
       return;
     }

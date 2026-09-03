@@ -21,3 +21,9 @@
 ## Offline copy
 - Each completed job writes `offline_copy_uri` alongside `storage_uri`
 - Offline vault is separate from primary database and cloud object storage
+
+## Staging restore drill (Milestone 12)
+1. On Staging only, run daily_critical then `restoreDrill(jobId)`
+2. Confirm RPO ≤ 24h and record RTO in Ops notes
+3. Attach evidence path/date to `docs/reports/m12-known-issues-risk-acceptance.md`
+4. Do **not** run restore drills against Production while PRODUCTION HOLD is active

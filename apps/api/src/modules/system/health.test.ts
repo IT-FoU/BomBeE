@@ -18,5 +18,8 @@ describe('getHealth', () => {
     expect(health.status).toBe('ok');
     expect(health.egoPosEnabled).toBe(false);
     expect(health.env).toBe('local');
+    expect(health.inviteOnlyEnabled).toBe(false);
+    expect(health.integrationsMode).toBe('mock');
+    expect(health.productionHold).toBe(true);
   });
 });

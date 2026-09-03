@@ -40,4 +40,29 @@ describe('parseEnv', () => {
       }),
     ).toThrow(/must not point at Production/);
   });
+
+  it('defaults invite-only off on local and integrations to mock', () => {
+    const env = parseEnv({ ...base });
+    expect(env.INVITE_ONLY_ENABLED).toBe(false);
+    expect(env.INTEGRATIONS_MODE).toBe('mock');
+  });
+
+  it('defaults invite-only on for staging with sandbox integrations', () => {
+    const env = parseEnv({
+      ...base,
+      APP_ENV: 'staging',
+      NODE_ENV: 'production',
+    });
+    expect(env.INVITE_ONLY_ENABLED).toBe(true);
+    expect(env.INTEGRATIONS_MODE).toBe('sandbox');
+  });
+
+  it('rejects live integrations until Owner approval path is opened', () => {
+    expect(() =>
+      parseEnv({
+        ...base,
+        INTEGRATIONS_MODE: 'live',
+      }),
+    ).toThrow(/Live integrations require written Owner/);
+  });
 });

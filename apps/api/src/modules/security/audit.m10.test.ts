@@ -279,8 +279,15 @@ describe('Milestone 10 security audit', () => {
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
       smsProvider: string;
       egoPosEnabled: boolean;
+      inviteOnlyEnabled: boolean;
+      integrationsMode: string;
+      productionHold: boolean;
     };
-    expect(body.smsProvider).toBe('external');
+    // Phase 1: Production APP_ENV still uses sandbox until Owner opens live credentials
+    expect(body.smsProvider).toBe('sandbox');
+    expect(body.integrationsMode).toBe('sandbox');
     expect(body.egoPosEnabled).toBe(false);
+    expect(body.inviteOnlyEnabled).toBe(true);
+    expect(body.productionHold).toBe(true);
   });
 });

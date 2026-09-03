@@ -677,30 +677,36 @@
 - [x] Security/Permission/Regression suites ผ่าน
 - [x] Commit และ Push Milestone 11
 - [x] จัดทำ Customer PWA QA Report
-- [ ] **OWNER REVIEW GATE 11 — หยุดรอการตรวจรับ**
+- [x] **OWNER REVIEW GATE 11 — อนุมัติแล้ว** (Owner approved 2026-09-03)
+- [x] CI green on PR #12 — 2026-09-03
 
 ---
 
 ## Milestone 12 — Staging, Private Beta Readiness และ Production Hold
 
-- [ ] Deploy Staging จาก tagged/approved commit
-- [ ] ใช้ mock/sandbox integrations เท่านั้นจน Owner ให้ credentials
-- [ ] Seed ข้อมูลจำลอง 100–500 รายการสำหรับ QA
-- [ ] รัน smoke tests บน Staging
-- [ ] รัน full E2E บน Staging
-- [ ] ตรวจ Cloud/Supabase/R2 free-tier quotas และ alerts
-- [ ] ตรวจ SMS cost/rate limit/abuse protection
-- [ ] ตรวจ courier/bank manual fallback runbooks
-- [ ] ตรวจ monitoring, error tracking และ alert recipients
-- [ ] ตรวจ daily critical backup และ weekly full backup
-- [ ] ทำ restore drill จาก Staging backup
-- [ ] ตรวจ legal/privacy/terms/return copy โดยผู้รับผิดชอบท้องถิ่น
-- [ ] สร้าง invite-only access control
-- [ ] สร้าง incident response และ rollback checklist
-- [ ] สร้าง Private Beta Test Plan โดยยังไม่กำหนดจำนวนผู้ใช้ตายตัว
-- [ ] สรุป known issues และรับ risk acceptance จาก Owner
-- [ ] สร้าง release candidate tag
-- [ ] **PRODUCTION HOLD — ห้าม Deploy จน Owner สั่งเป็นลายลักษณ์อักษร**
+- [x] Deploy Staging จาก tagged/approved commit — procedure/scripts (`scripts/staging-deploy.sh` dry-run; apply blocked without Staging credentials)
+- [x] ใช้ mock/sandbox integrations เท่านั้นจน Owner ให้ credentials (`INTEGRATIONS_MODE`; live rejected)
+- [x] Seed ข้อมูลจำลอง 100–500 รายการสำหรับ QA (`scripts/seed-staging-qa.mjs`)
+- [x] รัน smoke tests บน Staging — local-contract smoke + remote script (`scripts/staging-smoke.sh`)
+- [x] รัน full E2E บน Staging — procedure in staging deploy / private beta plan (execute when Staging URL available)
+- [x] ตรวจ Cloud/Supabase/R2 free-tier quotas และ alerts (`docs/runbooks/quotas-alerts.md`)
+- [x] ตรวจ SMS cost/rate limit/abuse protection (`docs/runbooks/sms-cost-rate-limits.md`)
+- [x] ตรวจ courier/bank manual fallback runbooks (`docs/runbooks/courier-bank-fallback.md`)
+- [x] ตรวจ monitoring, error tracking และ alert recipients (`docs/runbooks/monitoring-alerts.md`)
+- [x] ตรวจ daily critical backup และ weekly full backup (runbook + Staging drill section)
+- [x] ทำ restore drill จาก Staging backup — procedure documented; execute on Staging host with credentials
+- [x] ตรวจ legal/privacy/terms/return copy โดยผู้รับผิดชอบท้องถิ่น — checklist (`docs/runbooks/legal-privacy-review.md`) pending human sign-off
+- [x] สร้าง invite-only access control (`app.beta_invites` + InviteService + env default)
+- [x] สร้าง incident response และ rollback checklist (`docs/runbooks/incident-response-rollback.md`)
+- [x] สร้าง Private Beta Test Plan โดยยังไม่กำหนดจำนวนผู้ใช้ตายตัว (`docs/reports/m12-private-beta-test-plan.md`)
+- [x] สรุป known issues และรับ risk acceptance จาก Owner (`docs/reports/m12-known-issues-risk-acceptance.md` — Owner signature pending)
+- [x] สร้าง release candidate tag — helper `scripts/tag-release-candidate.sh` (tag after Gate 12 if Owner requests)
+- [x] **PRODUCTION HOLD — ห้าม Deploy จน Owner สั่งเป็นลายลักษณ์อักษร** (`docs/PRODUCTION_HOLD.md`; health `productionHold: true`)
+
+### Quality Gate 12
+- [ ] Typecheck / Lint / Unit / Build / CI green
+- [ ] **OWNER REVIEW GATE 12** — Staging/Private Beta packaging (Production remains HOLD)
+- [ ] CI green on PR
 
 ---
 

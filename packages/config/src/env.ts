@@ -35,8 +35,26 @@ export const envSchema = z
       .union([z.boolean(), z.enum(['true', 'false'])])
       .transform((value) => value === true || value === 'true')
       .default(false),
+    INVITE_ONLY_ENABLED: z
+      .union([z.boolean(), z.enum(['true', 'false'])])
+      .transform((value) => value === true || value === 'true')
+      .optional(),
+    INTEGRATIONS_MODE: z.enum(['mock', 'sandbox', 'live']).optional(),
     DISPLAY_TIMEZONE: z.string().default('Asia/Vientiane'),
     CURRENCY_CODE: z.literal('LAK').default('LAK'),
+  })
+  .transform((env) => {
+    const inviteOnlyEnabled =
+      env.INVITE_ONLY_ENABLED ??
+      (env.APP_ENV === 'staging' || env.APP_ENV === 'production');
+    const integrationsMode =
+      env.INTEGRATIONS_MODE ??
+      (env.APP_ENV === 'local' ? ('mock' as const) : ('sandbox' as const));
+    return {
+      ...env,
+      INVITE_ONLY_ENABLED: inviteOnlyEnabled,
+      INTEGRATIONS_MODE: integrationsMode,
+    };
   })
   .superRefine((env, ctx) => {
     if (env.EGO_POS_ENABLED) {
@@ -44,6 +62,23 @@ export const envSchema = z
         code: 'custom',
         path: ['EGO_POS_ENABLED'],
         message: 'EGO POS must remain disabled in Phase 1',
+      });
+    }
+
+    if (env.APP_ENV === 'local' && env.INTEGRATIONS_MODE === 'live') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['INTEGRATIONS_MODE'],
+        message: 'Local environment must use mock integrations only',
+      });
+    }
+
+    if (env.INTEGRATIONS_MODE === 'live') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['INTEGRATIONS_MODE'],
+        message:
+          'Live integrations require written Owner credentials approval (Phase 1 hold)',
       });
     }
 

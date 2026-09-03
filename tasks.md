@@ -725,10 +725,10 @@
 - [x] Backup/Restore ผ่านจริง — service restore drill + Staging procedure (hosted Staging drill when credentials available)
 - [x] EGO POS integration ปิดและไม่มี credentials
 - [ ] Staging ผ่าน End-to-End QA — packaging/smoke ready; **hosted Staging E2E pending credentials**
-- [ ] Owner อนุมัติ Production deploy — **PRODUCTION HOLD** (Gate 12 does not authorize)
-- [ ] Production smoke test ผ่านหลัง deploy — N/A until Production deploy ordered
-- [ ] Monitoring/backup/alerts ทำงานหลัง deploy — N/A until Production deploy ordered
-- [x] ส่ง Final Completion Report ให้ Owner — `docs/reports/final-completion-report.md` (STATUS: PARTIAL / Production HOLD)
+- [x] Owner อนุมัติ Production deploy — written order「อนุมัติ deploy production」2026-09-03 (`docs/reports/production-deploy-authorization.md`)
+- [ ] Production smoke test ผ่านหลัง deploy — **BLOCKED**: no Production URL/secrets in agent environment
+- [ ] Monitoring/backup/alerts ทำงานหลัง deploy — **BLOCKED**: awaiting Production runtime
+- [x] ส่ง Final Completion Report ให้ Owner — `docs/reports/final-completion-report.md` (STATUS: AUTHORIZED_BLOCKED)
 
 ---
 

@@ -1,0 +1,89 @@
+name: Production Deploy
+
+# Manual only — requires written Owner authorization + Production secrets.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to deploy (e.g. v0.12.0)
+        required: true
+        type: string
+      confirm:
+        description: Type DEPLOY-PRODUCTION to confirm
+        required: true
+        type: string
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  guard-and-deploy:
+    name: Guard · Quality · Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - name: Confirm Owner intent
+        run: |
+          if [ "${{ inputs.confirm }}" != "DEPLOY-PRODUCTION" ]; then
+            echo "Refusing: confirm input must be DEPLOY-PRODUCTION"
+            exit 2
+          fi
+          if [ "${{ secrets.OWNER_PRODUCTION_DEPLOY_APPROVED }}" != "true" ]; then
+            echo "Refusing: repository secret OWNER_PRODUCTION_DEPLOY_APPROVED must be true"
+            exit 2
+          fi
+
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Quality gates
+        run: |
+          pnpm check
+          bash scripts/check-no-secrets.sh
+          bash scripts/validate-migrations.sh
+        env:
+          APP_ENV: local
+          PUBLIC_API_URL: http://localhost:8787
+          PUBLIC_CUSTOMER_URL: http://localhost:5173
+          PUBLIC_BACKOFFICE_URL: http://localhost:5174
+          EGO_POS_ENABLED: 'false'
+
+      - name: Apply Production deploy command
+        env:
+          OWNER_PRODUCTION_DEPLOY_APPROVED: ${{ secrets.OWNER_PRODUCTION_DEPLOY_APPROVED }}
+          PRODUCTION_TAG: ${{ inputs.tag }}
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PRODUCTION_SUPABASE_URL: ${{ secrets.PRODUCTION_SUPABASE_URL }}
+          PRODUCTION_SUPABASE_ANON_KEY: ${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}
+          PRODUCTION_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PRODUCTION_SUPABASE_SERVICE_ROLE_KEY }}
+          PUBLIC_API_URL: ${{ secrets.PRODUCTION_PUBLIC_API_URL }}
+          PUBLIC_CUSTOMER_URL: ${{ secrets.PRODUCTION_PUBLIC_CUSTOMER_URL }}
+          PUBLIC_BACKOFFICE_URL: ${{ secrets.PRODUCTION_PUBLIC_BACKOFFICE_URL }}
+          PRODUCTION_DEPLOY_COMMAND: ${{ secrets.PRODUCTION_DEPLOY_COMMAND }}
+          EGO_POS_ENABLED: 'false'
+          INTEGRATIONS_MODE: sandbox
+          INVITE_ONLY_ENABLED: 'true'
+          APP_ENV: production
+          NODE_ENV: production
+        run: bash scripts/production-deploy.sh apply

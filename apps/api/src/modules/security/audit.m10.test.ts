@@ -243,6 +243,7 @@ describe('Milestone 10 security audit', () => {
       PUBLIC_CUSTOMER_URL: 'https://shop.example.com',
       PUBLIC_BACKOFFICE_URL: 'https://admin.example.com',
       EGO_POS_ENABLED: 'false',
+      OWNER_PRODUCTION_DEPLOY_APPROVED: 'true',
     });
     expect(prod.EGO_POS_ENABLED).toBe(false);
     expect(() =>
@@ -253,6 +254,7 @@ describe('Milestone 10 security audit', () => {
         PUBLIC_CUSTOMER_URL: 'https://shop.example.com',
         PUBLIC_BACKOFFICE_URL: 'https://admin.example.com',
         EGO_POS_ENABLED: 'true',
+        OWNER_PRODUCTION_DEPLOY_APPROVED: 'true',
       }),
     ).toThrow(/EGO POS must remain disabled/);
 
@@ -282,12 +284,14 @@ describe('Milestone 10 security audit', () => {
       inviteOnlyEnabled: boolean;
       integrationsMode: string;
       productionHold: boolean;
+      productionDeployAuthorized: boolean;
     };
     // Phase 1: Production APP_ENV still uses sandbox until Owner opens live credentials
     expect(body.smsProvider).toBe('sandbox');
     expect(body.integrationsMode).toBe('sandbox');
     expect(body.egoPosEnabled).toBe(false);
     expect(body.inviteOnlyEnabled).toBe(true);
-    expect(body.productionHold).toBe(true);
+    expect(body.productionDeployAuthorized).toBe(true);
+    expect(body.productionHold).toBe(false);
   });
 });

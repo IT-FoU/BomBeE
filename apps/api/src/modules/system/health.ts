@@ -8,11 +8,13 @@ export type HealthResponse = {
   egoPosEnabled: boolean;
   inviteOnlyEnabled: boolean;
   integrationsMode: BombeeEnv['INTEGRATIONS_MODE'];
+  productionDeployAuthorized: boolean;
   productionHold: boolean;
   timestamp: string;
 };
 
 export function getHealth(env: BombeeEnv): HealthResponse {
+  const productionDeployAuthorized = env.OWNER_PRODUCTION_DEPLOY_APPROVED;
   return {
     status: 'ok',
     service: BRAND_NAME,
@@ -20,8 +22,9 @@ export function getHealth(env: BombeeEnv): HealthResponse {
     egoPosEnabled: env.EGO_POS_ENABLED,
     inviteOnlyEnabled: env.INVITE_ONLY_ENABLED,
     integrationsMode: env.INTEGRATIONS_MODE,
-    /** Phase 1: Production deploy remains Owner-gated regardless of APP_ENV. */
-    productionHold: true,
+    productionDeployAuthorized,
+    /** Hold lifts only after written Owner Production deploy approval flag is set. */
+    productionHold: !productionDeployAuthorized,
     timestamp: new Date().toISOString(),
   };
 }

@@ -40,6 +40,10 @@ export const envSchema = z
       .transform((value) => value === true || value === 'true')
       .optional(),
     INTEGRATIONS_MODE: z.enum(['mock', 'sandbox', 'live']).optional(),
+    OWNER_PRODUCTION_DEPLOY_APPROVED: z
+      .union([z.boolean(), z.enum(['true', 'false'])])
+      .transform((value) => value === true || value === 'true')
+      .default(false),
     DISPLAY_TIMEZONE: z.string().default('Asia/Vientiane'),
     CURRENCY_CODE: z.literal('LAK').default('LAK'),
   })
@@ -79,6 +83,15 @@ export const envSchema = z
         path: ['INTEGRATIONS_MODE'],
         message:
           'Live integrations require written Owner credentials approval (Phase 1 hold)',
+      });
+    }
+
+    if (env.APP_ENV === 'production' && !env.OWNER_PRODUCTION_DEPLOY_APPROVED) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OWNER_PRODUCTION_DEPLOY_APPROVED'],
+        message:
+          'Production APP_ENV requires OWNER_PRODUCTION_DEPLOY_APPROVED=true after written Owner deploy order',
       });
     }
 

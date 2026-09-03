@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Production deploy authorization path (Owner「อนุมัติ deploy production」)
+  - `OWNER_PRODUCTION_DEPLOY_APPROVED` env; health hold lifts when set
+  - `scripts/production-deploy.sh` / smoke + manual GitHub workflow
+  - Apply still blocked without Production host/secrets
+
 - Final Completion Report (PARTIAL) — Gates 0–12 approved; Production HOLD
   - Schema/ERD, API contract, RBAC matrix, state diagrams, test/requirements summaries
 

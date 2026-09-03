@@ -28,7 +28,8 @@ export function createAppRouter(env: BombeeEnv) {
         inviteOnlyEnabled: env.INVITE_ONLY_ENABLED,
         integrationsMode: env.INTEGRATIONS_MODE,
         auditRetentionYears: 5,
-        productionHold: true,
+        productionDeployAuthorized: env.OWNER_PRODUCTION_DEPLOY_APPROVED,
+        productionHold: !env.OWNER_PRODUCTION_DEPLOY_APPROVED,
       });
       return;
     }
@@ -42,7 +43,8 @@ export function createAppRouter(env: BombeeEnv) {
         egoPosEnabled: env.EGO_POS_ENABLED,
         inviteOnlyEnabled: env.INVITE_ONLY_ENABLED,
         integrationsMode: env.INTEGRATIONS_MODE,
-        productionHold: true,
+        productionDeployAuthorized: env.OWNER_PRODUCTION_DEPLOY_APPROVED,
+        productionHold: !env.OWNER_PRODUCTION_DEPLOY_APPROVED,
       });
       return;
     }

@@ -1,45 +1,38 @@
 # Final Completion Report — BomBee Market Phase 1
 
 ```text
-STATUS: PARTIAL — blocked on Production authorization
+STATUS: AUTHORIZED_BLOCKED — Production ordered but not live
 DATE: 2026-09-03
 GATES 0–12: ALL OWNER-APPROVED
-PRODUCTION: HOLD (not deployed; not authorized by Gate 12)
-RC TAG: rc-v0.12.0
-PRIMARY PR (M12): https://github.com/IT-FoU/BomBeE/pull/13
+PRODUCTION AUTHORIZATION: YES —「อนุมัติ deploy production」
+PRODUCTION LIVE URL: none (secrets/host missing)
+RC / RELEASE: rc-v0.12.0 → v0.12.0 (tag when pushed)
 ```
 
-## Completed (non-Production)
+## Completed
 
 | Checklist item | Evidence |
 | --- | --- |
-| Owner Review Gates 0–12 approved | `tasks.md` |
-| requirements alignment | `docs/reports/requirements-alignment.md` |
-| Schema/ERD current | `docs/schema-erd-summary.md` + 18 migrations |
-| API contract equivalent | `docs/api-contract.md` |
-| Role/permission matrix + tests | `docs/rbac-permission-matrix.md` |
-| Order/payment/inventory/settlement diagrams | `docs/state-diagrams.md` |
-| Test reports / coverage summary | `docs/reports/test-coverage-summary.md` |
+| Owner Review Gates 0–12 | `tasks.md` |
+| Requirements / schema / API / RBAC / diagrams / tests | `docs/*` Final Completion package |
 | Security Critical/High clear | `docs/reports/security-findings-m10.md` |
-| Financial + inventory reconcile (test suites) | M6/M4/M9/M10 tests |
-| Backup/restore drill (service + runbook) | M9 + `docs/runbooks/backup-restore.md` |
-| EGO POS off / no credentials | env schema + ego service |
-| Staging packaging / invite-only / RC | M12 + Gate 12 approval |
+| EGO POS off | env schema |
+| Owner อนุมัติ Production deploy | `docs/reports/production-deploy-authorization.md` |
+| Production deploy packaging | `scripts/production-deploy.sh`, `.github/workflows/production-deploy.yml` |
 
-## Blocked until written Owner Production order
+## Blocked (Owner/Ops action required)
 
-| Checklist item | Why blocked |
+| Item | Blocker |
 | --- | --- |
-| Staging live End-to-End QA on hosted URL | Needs Staging credentials in secret store (procedure ready) |
-| Owner อนุมัติ Production deploy | Gate 12 explicitly excluded this |
-| Production smoke after deploy | No Production deploy |
-| Monitoring/backup/alerts after Production deploy | No Production deploy |
-| Declare project “เสร็จ” | Final checklist incomplete without Production items |
+| Production apply | No `PRODUCTION_DATABASE_URL` / Supabase / host / `PRODUCTION_DEPLOY_COMMAND` in agent or GitHub secrets |
+| Production smoke | No Production API URL |
+| Monitoring after deploy | No Production runtime |
+| Staging hosted E2E | Staging credentials also absent |
+| Project “เสร็จ” | Cannot declare complete until Production smoke + monitoring pass |
 
-## Explicit non-actions taken
-- Did **not** deploy Production
-- Did **not** enable `INTEGRATIONS_MODE=live`
-- Did **not** open unrestricted signup on Production
-
-## What Owner must write to proceed to Production
-A separate message that clearly orders Production deploy (not merely 「อนุมัติ」 for a milestone gate), after Staging live E2E evidence and secret-store credentials are ready.
+## Owner next steps
+1. Create hosting (or provide `PRODUCTION_DEPLOY_COMMAND`)
+2. Add GitHub Environment `production` secrets listed in `docs/runbooks/production-deploy.md`
+3. Set `OWNER_PRODUCTION_DEPLOY_APPROVED=true` in that secret store
+4. Run Actions → **Production Deploy** with confirm `DEPLOY-PRODUCTION` and tag `v0.12.0`
+5. Reply with Production URL for smoke verification

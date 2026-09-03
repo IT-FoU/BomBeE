@@ -57,6 +57,27 @@ describe('parseEnv', () => {
     expect(env.INTEGRATIONS_MODE).toBe('sandbox');
   });
 
+  it('rejects production APP_ENV without Owner deploy approval flag', () => {
+    expect(() =>
+      parseEnv({
+        ...base,
+        APP_ENV: 'production',
+        NODE_ENV: 'production',
+      }),
+    ).toThrow(/OWNER_PRODUCTION_DEPLOY_APPROVED/);
+  });
+
+  it('accepts production when Owner deploy approval flag is set', () => {
+    const env = parseEnv({
+      ...base,
+      APP_ENV: 'production',
+      NODE_ENV: 'production',
+      OWNER_PRODUCTION_DEPLOY_APPROVED: 'true',
+    });
+    expect(env.OWNER_PRODUCTION_DEPLOY_APPROVED).toBe(true);
+    expect(env.INVITE_ONLY_ENABLED).toBe(true);
+  });
+
   it('rejects live integrations until Owner approval path is opened', () => {
     expect(() =>
       parseEnv({

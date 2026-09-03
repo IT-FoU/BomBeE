@@ -30,7 +30,7 @@ SECURITY / DATA / MONEY / STOCK IMPACT:
 KNOWN ISSUES:
 - See Medium/Low in security-findings-m10.md
 COMMIT:
-- (pending)
+- f345448 — feat: Milestone 10 backoffice QA and security audit
 DEPLOYMENT:
 - ไม่ได้ deploy
 NEXT ACTION:

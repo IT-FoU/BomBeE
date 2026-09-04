@@ -66,6 +66,9 @@ import {
   listRecoveryRequests,
   listReviews,
   mockCreateReview,
+  listSupplierResponses,
+  submitSupplierResponse,
+  approveSupplierResponse,
   listTikTokLinks,
   mockSubmitTikTokLink,
   moderateTikTokLink,
@@ -100,6 +103,7 @@ import {
   type DeletionRequestRow,
   type RecoveryRequestRow,
   type ReviewRow,
+  type SupplierResponseRow,
   type TikTokLinkRow,
   type RecallRow,
   type QualityEventRow,
@@ -189,6 +193,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [recoveryRequests, setRecoveryRequests] = useState<RecoveryRequestRow[]>([]);
   const [privacyNote, setPrivacyNote] = useState('');
   const [productReviews, setProductReviews] = useState<ReviewRow[]>([]);
+  const [supplierResponses, setSupplierResponses] = useState<SupplierResponseRow[]>([]);
   const [tiktokLinks, setTiktokLinks] = useState<TikTokLinkRow[]>([]);
   const [contentNote, setContentNote] = useState('');
   const [recallRows, setRecallRows] = useState<RecallRow[]>([]);
@@ -229,6 +234,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           deletionRows,
           recoveryRows,
           reviewRows,
+          responseRows,
           tiktokRows,
           recallList,
           qualityBundle,
@@ -254,6 +260,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listDeletionRequests(50),
           listRecoveryRequests(50),
           listReviews(50),
+          listSupplierResponses(50),
           listTikTokLinks(50),
           listRecalls(50),
           listStoreQuality(50),
@@ -282,6 +289,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setDeletionRequests(deletionRows);
         setRecoveryRequests(recoveryRows);
         setProductReviews(reviewRows);
+        setSupplierResponses(responseRows);
         setTiktokLinks(tiktokRows);
         setRecallRows(recallList);
         setQualityEvents(qualityBundle.events);
@@ -2301,8 +2309,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ເນື້ອຫາ</span>
             </h2>
             <p className="lede">
-              Product reviews and TikTok links — mock seed verified reviews; moderate pending
-              TikTok submissions.
+              Product reviews and TikTok links — mock seed verified reviews; edit window 7d;
+              supplier replies need approval; moderate pending TikTok submissions.
             </p>
             {contentNote ? (
               <p className="lede" role="status">
@@ -2316,6 +2324,78 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   ★{row.rating} · {row.status}
                   {row.verifiedPurchase ? ' · verified' : ''}
                   {row.bodyEn ? ` — ${row.bodyEn}` : ''} · {row.reviewId.slice(0, 8)}…
+                  {' '}
+                  <button
+                    type="button"
+                    className="cta"
+                    disabled={formBusy}
+                    onClick={() => {
+                      setFormBusy(true);
+                      setContentNote('');
+                      void (async () => {
+                        try {
+                          const result = await submitSupplierResponse(
+                            row.reviewId,
+                            'Thanks for shopping with us!',
+                          );
+                          if (result.responses) setSupplierResponses(result.responses);
+                          else setSupplierResponses(await listSupplierResponses(50));
+                          setContentNote(
+                            `Supplier reply ${result.responseId.slice(0, 8)}… (${result.status})`,
+                          );
+                        } catch (err) {
+                          setFormError(
+                            err instanceof Error ? err.message : 'supplier_response_failed',
+                          );
+                        } finally {
+                          setFormBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    Supplier reply
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="Supplier responses">
+              {supplierResponses.length === 0 ? <li>No supplier responses yet</li> : null}
+              {supplierResponses.map((row) => (
+                <li key={row.responseId}>
+                  {row.status} · review {row.reviewId.slice(0, 8)}… — {row.body}
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setContentNote('');
+                          void (async () => {
+                            try {
+                              const result = await approveSupplierResponse(row.responseId);
+                              if (result.responses) setSupplierResponses(result.responses);
+                              setContentNote(
+                                `Approved reply ${row.responseId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'supplier_response_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve reply
+                      </button>
+                    </>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -2436,6 +2516,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 void (async () => {
                   try {
                     setProductReviews(await listReviews(50));
+                    setSupplierResponses(await listSupplierResponses(50));
                     setTiktokLinks(await listTikTokLinks(50));
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : 'content_list_failed');

@@ -1148,6 +1148,69 @@ export async function mockCreateReview(input: {
   return (await res.json()) as { reviewId: string; reviews: ReviewRow[] };
 }
 
+export type SupplierResponseRow = {
+  responseId: string;
+  reviewId: string;
+  storeId: string;
+  body: string;
+  status: string;
+  createdAt: string;
+  approvedAt: string | null;
+  approvedBy: string | null;
+};
+
+export async function listSupplierResponses(
+  limit = 50,
+): Promise<SupplierResponseRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/reviews/responses?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`supplier_responses_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { responses: SupplierResponseRow[] };
+  return body.responses;
+}
+
+export async function submitSupplierResponse(
+  reviewId: string,
+  bodyText: string,
+): Promise<{ responseId: string; status: string; responses?: SupplierResponseRow[] }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/reviews/${encodeURIComponent(reviewId)}/supplier-response`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ body: bodyText }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `supplier_response_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    responseId: string;
+    status: string;
+    responses?: SupplierResponseRow[];
+  };
+}
+
+export async function approveSupplierResponse(
+  responseId: string,
+): Promise<{ responses?: SupplierResponseRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/reviews/responses/${encodeURIComponent(responseId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `supplier_response_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as { responses?: SupplierResponseRow[]; status?: string };
+}
+
 export async function listTikTokLinks(limit = 50): Promise<TikTokLinkRow[]> {
   const res = await fetch(`${apiBaseUrl()}/v1/tiktok-links?limit=${limit}`);
   if (!res.ok) {

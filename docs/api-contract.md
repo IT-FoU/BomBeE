@@ -93,9 +93,13 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/privacy/deletion-requests/:id/approve` | Approve + anonymize (orders retained) |
 | GET | `/v1/reviews` | List product reviews (optional `productId`) |
 | POST | `/v1/reviews` | Create verified-purchase review (Bearer; delivered child) |
+| PATCH | `/v1/reviews/:id` | Edit own review within 7 days (Bearer; versions retained) |
+| GET | `/v1/reviews/responses` | List supplier review responses (optional `reviewId`) |
 | GET | `/v1/tiktok-links` | List TikTok link submissions |
 | POST | `/v1/tiktok-links` | Customer submit TikTok URL (HTTPS allowlist) |
 | POST | `/v1/ops/reviews/mock-create` | Local/mock delivered order + verified review |
+| POST | `/v1/ops/reviews/:id/supplier-response` | Local/mock submit supplier reply (pending approval) |
+| POST | `/v1/ops/reviews/responses/:id/approve` | Local/mock approve supplier reply |
 | POST | `/v1/ops/tiktok-links/mock-submit` | Local/mock submit TikTok (`as` staff/supplier/customer) |
 | POST | `/v1/ops/tiktok-links/:id/moderate` | Local/mock approve or reject TikTok |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |

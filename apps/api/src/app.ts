@@ -3078,6 +3078,60 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const reviewEditMatch = url.pathname.match(/^\/v1\/reviews\/([^/]+)$/);
+    if (req.method === 'PATCH' && reviewEditMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const reviewId = decodeURIComponent(reviewEditMatch[1]!);
+      const body = await readJsonBody<{
+        rating?: number;
+        bodyLo?: string;
+        body_lo?: string;
+        bodyEn?: string;
+        body_en?: string;
+      }>(req);
+      const rating = body.rating;
+      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+        sendJson(res, 400, { error: 'invalid_review' });
+        return;
+      }
+      try {
+        const edited = await services.content.editReview({
+          reviewId,
+          customerIdentityId: session.identityId,
+          rating,
+          bodyLo: body.bodyLo ?? body.body_lo,
+          bodyEn: body.bodyEn ?? body.body_en,
+        });
+        const reviews = await services.content.listReviews({ limit: 50 });
+        sendJson(res, 200, { ok: true, reviewId, ...edited, reviews });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'review_edit_failed';
+        const status =
+          message === 'not_review_owner'
+            ? 403
+            : message === 'review_edit_window_exceeded'
+              ? 409
+              : message === 'review_not_found'
+                ? 404
+                : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/reviews/responses') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const reviewId = url.searchParams.get('reviewId')?.trim() || undefined;
+      const responses = await services.content.listSupplierResponses({ reviewId, limit });
+      sendJson(res, 200, { ok: true, responses });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/tiktok-links') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
@@ -3190,6 +3244,80 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'review_mock_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const supplierResponseMatch = url.pathname.match(
+      /^\/v1\/ops\/reviews\/([^/]+)\/supplier-response$/,
+    );
+    if (req.method === 'POST' && supplierResponseMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const reviewId = decodeURIComponent(supplierResponseMatch[1]!);
+      const body = await readJsonBody<{
+        body?: string;
+        storeId?: string;
+        store_id?: string;
+      }>(req);
+      const responseBody = body.body?.trim();
+      if (!responseBody) {
+        sendJson(res, 400, { error: 'body_required' });
+        return;
+      }
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const store = await services.db.query<{ store_id: string }>(
+            `SELECT pv.store_id
+             FROM app.product_reviews r
+             JOIN app.product_variants pv ON pv.product_id = r.product_id
+             WHERE r.id = $1
+             LIMIT 1`,
+            [reviewId],
+          );
+          storeId = store.rows[0]?.store_id;
+        }
+        if (!storeId) {
+          sendJson(res, 404, { error: 'review_store_not_found' });
+          return;
+        }
+        const created = await services.content.submitSupplierResponse({
+          reviewId,
+          storeId,
+          body: responseBody,
+        });
+        const responses = await services.content.listSupplierResponses({ limit: 50 });
+        sendJson(res, 201, { ok: true, ...created, responses });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'supplier_response_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const approveResponseMatch = url.pathname.match(
+      /^\/v1\/ops\/reviews\/responses\/([^/]+)\/approve$/,
+    );
+    if (req.method === 'POST' && approveResponseMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const responseId = decodeURIComponent(approveResponseMatch[1]!);
+      try {
+        const approverIdentityId = await resolveOpsActor(services);
+        await services.content.approveSupplierResponse({
+          responseId,
+          approverIdentityId,
+        });
+        const responses = await services.content.listSupplierResponses({ limit: 50 });
+        sendJson(res, 200, { ok: true, responseId, status: 'approved', responses });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'supplier_response_approve_failed';
         sendJson(res, 400, { error: message });
       }
       return;

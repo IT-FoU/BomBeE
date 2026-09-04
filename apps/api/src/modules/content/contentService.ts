@@ -294,4 +294,42 @@ export class ContentService {
       publishedAt: r.published_at,
     }));
   }
+
+  async listSupplierResponses(input: { reviewId?: string; limit?: number } = {}) {
+    const capped = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      review_id: string;
+      store_id: string;
+      body: string;
+      status: string;
+      created_at: string;
+      approved_at: string | null;
+      approved_by: string | null;
+    }>(
+      input.reviewId
+        ? `SELECT id, review_id, store_id, body, status,
+                  created_at::text, approved_at::text, approved_by
+           FROM app.product_review_responses
+           WHERE review_id = $1
+           ORDER BY created_at DESC
+           LIMIT $2`
+        : `SELECT id, review_id, store_id, body, status,
+                  created_at::text, approved_at::text, approved_by
+           FROM app.product_review_responses
+           ORDER BY created_at DESC
+           LIMIT $1`,
+      input.reviewId ? [input.reviewId, capped] : [capped],
+    );
+    return rows.rows.map((r) => ({
+      responseId: r.id,
+      reviewId: r.review_id,
+      storeId: r.store_id,
+      body: r.body,
+      status: r.status,
+      createdAt: r.created_at,
+      approvedAt: r.approved_at,
+      approvedBy: r.approved_by,
+    }));
+  }
 }

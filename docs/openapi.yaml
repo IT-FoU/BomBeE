@@ -1220,6 +1220,39 @@ paths:
           description: Unauthorized
         '409':
           description: Not delivered or window exceeded
+  /v1/reviews/{reviewId}:
+    patch:
+      summary: Edit own review within 7 days
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review updated with new version
+        '403':
+          description: Not review owner
+        '409':
+          description: Edit window exceeded
+  /v1/reviews/responses:
+    get:
+      summary: List supplier review responses
+      parameters:
+        - in: query
+          name: reviewId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Responses array
   /v1/tiktok-links:
     get:
       summary: List TikTok link submissions
@@ -1241,6 +1274,34 @@ paths:
       responses:
         '201':
           description: Review created
+        '403':
+          description: Mock ops disabled
+  /v1/ops/reviews/{reviewId}/supplier-response:
+    post:
+      summary: Submit supplier reply (pending approval)
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Response pending
+        '403':
+          description: Mock ops disabled
+  /v1/ops/reviews/responses/{responseId}/approve:
+    post:
+      summary: Approve supplier review response
+      parameters:
+        - in: path
+          name: responseId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approved
         '403':
           description: Mock ops disabled
   /v1/ops/tiktok-links/mock-submit:

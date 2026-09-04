@@ -132,6 +132,53 @@ describe('content reviews/tiktok HTTP', () => {
       created.res,
     );
     expect(created.res.statusCode).toBe(201);
+    const ownReviewId = created.body().reviewId as string;
+
+    const edited = mockRes();
+    await router(
+      mockReq(
+        'PATCH',
+        `/v1/reviews/${ownReviewId}`,
+        { rating: 4, bodyEn: 'Edited water pack note' },
+        { authorization: `Bearer ${token}` },
+      ),
+      edited.res,
+    );
+    expect(edited.res.statusCode).toBe(200);
+    expect(edited.body().versionNo).toBe(2);
+    expect(
+      (edited.body().reviews as Array<{ reviewId: string; rating: number; bodyEn: string | null }>).some(
+        (r) => r.reviewId === ownReviewId && r.rating === 4 && r.bodyEn === 'Edited water pack note',
+      ),
+    ).toBe(true);
+
+    const reply = mockRes();
+    await router(
+      mockReq('POST', `/v1/ops/reviews/${reviewId}/supplier-response`, {
+        body: 'Thanks for your feedback!',
+      }),
+      reply.res,
+    );
+    expect(reply.res.statusCode).toBe(201);
+    const responseId = reply.body().responseId as string;
+    expect(reply.body().status).toBe('pending');
+
+    const approved = mockRes();
+    await router(
+      mockReq('POST', `/v1/ops/reviews/responses/${responseId}/approve`, {}),
+      approved.res,
+    );
+    expect(approved.res.statusCode).toBe(200);
+    expect(approved.body().status).toBe('approved');
+
+    const responses = mockRes();
+    await router(mockReq('GET', '/v1/reviews/responses'), responses.res);
+    expect(responses.res.statusCode).toBe(200);
+    expect(
+      (responses.body().responses as Array<{ responseId: string; status: string }>).some(
+        (r) => r.responseId === responseId && r.status === 'approved',
+      ),
+    ).toBe(true);
 
     const tt = mockRes();
     await router(

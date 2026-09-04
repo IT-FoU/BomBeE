@@ -70,6 +70,27 @@ export async function createReview(
   return (await res.json()) as { reviewId: string; status: string; reviews?: ReviewRow[] };
 }
 
+export async function editReview(
+  sessionToken: string,
+  reviewId: string,
+  input: { rating: number; bodyEn?: string; bodyLo?: string },
+): Promise<{ reviewId: string; versionNo: number; reviews?: ReviewRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/reviews/${encodeURIComponent(reviewId)}`, {
+    method: 'PATCH',
+    headers: authHeaders(sessionToken),
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `review_edit_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    reviewId: string;
+    versionNo: number;
+    reviews?: ReviewRow[];
+  };
+}
+
 export async function listTikTokLinks(limit = 50): Promise<TikTokLinkRow[]> {
   const res = await fetch(`${apiBaseUrl()}/v1/tiktok-links?limit=${limit}`);
   if (!res.ok) {

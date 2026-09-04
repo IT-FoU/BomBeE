@@ -29,6 +29,7 @@ import {
 } from './lib/privacyApi';
 import {
   createReview,
+  editReview,
   listReviews,
   submitTikTokLink,
   type ReviewRow,
@@ -125,6 +126,7 @@ export function App() {
   const [phoneChangeOldCode, setPhoneChangeOldCode] = useState('');
   const [phoneChangeNewCode, setPhoneChangeNewCode] = useState('');
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [lastReviewId, setLastReviewId] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewBody, setReviewBody] = useState('Great product');
   const [tiktokUrl, setTiktokUrl] = useState('https://www.tiktok.com/@bombee/video/1234567890');
@@ -1245,6 +1247,7 @@ export function App() {
                     });
                     if (result.reviews) setReviews(result.reviews);
                     else setReviews(await listReviews(50));
+                    setLastReviewId(result.reviewId);
                     setContentNote(`Review ${result.reviewId.slice(0, 8)}… (${result.status})`);
                   } catch (err) {
                     setContentNote(err instanceof Error ? err.message : 'review_failed');
@@ -1255,6 +1258,36 @@ export function App() {
               }}
             >
               Submit review
+            </button>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || contentBusy || !online || !lastReviewId}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token || !lastReviewId) return;
+                setContentBusy(true);
+                setContentNote('');
+                void (async () => {
+                  try {
+                    const result = await editReview(token, lastReviewId, {
+                      rating: reviewRating,
+                      bodyEn: reviewBody.trim() || undefined,
+                    });
+                    if (result.reviews) setReviews(result.reviews);
+                    else setReviews(await listReviews(50));
+                    setContentNote(
+                      `Edited review ${result.reviewId.slice(0, 8)}… (v${result.versionNo})`,
+                    );
+                  } catch (err) {
+                    setContentNote(err instanceof Error ? err.message : 'review_edit_failed');
+                  } finally {
+                    setContentBusy(false);
+                  }
+                })();
+              }}
+            >
+              Edit last review
             </button>
             <label>
               TikTok URL

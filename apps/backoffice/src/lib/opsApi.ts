@@ -906,3 +906,41 @@ export async function listStaffDirectory(
     staff: StaffDirectoryRow[];
   };
 }
+
+export type DashboardKpis = {
+  source: string;
+  orders: number;
+  salesLak: number;
+  paymentReceiptsLak: number;
+  refundsLak: number;
+  settlementsNetLak: number;
+  stockOnHand: number;
+  supportOpen: number;
+  supportBreached: number;
+  storesSuspended: number;
+};
+
+export type PaymentsReconcile = {
+  totalRequests: number;
+  mismatchCount: number;
+  ok: boolean;
+};
+
+export async function fetchDashboardKpis(storeId?: string): Promise<DashboardKpis> {
+  const qs = storeId ? `?store_id=${encodeURIComponent(storeId)}` : '';
+  const res = await fetch(`${apiBaseUrl()}/v1/reports/dashboard${qs}`);
+  if (!res.ok) {
+    throw new Error(`dashboard_kpis_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { kpis: DashboardKpis };
+  return body.kpis;
+}
+
+export async function fetchPaymentsReconcile(): Promise<PaymentsReconcile> {
+  const res = await fetch(`${apiBaseUrl()}/v1/reports/payments/reconcile`);
+  if (!res.ok) {
+    throw new Error(`payments_reconcile_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { reconcile: PaymentsReconcile };
+  return body.reconcile;
+}

@@ -60,6 +60,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/integrations` | Integration Center status (mode flags, checklist, EGO store rows) |
 | POST | `/v1/ops/integrations/ego/mock-ensure` | Local/mock ensure disabled EGO profiles for active stores |
 | GET | `/v1/staff` | Role catalog defaults + staff directory (local ops, read-only) |
+| GET | `/v1/reports/dashboard` | Live dashboard KPIs (local ops; optional `store_id`) |
+| GET | `/v1/reports/payments/reconcile` | Payment request vs allocation/receipt reconcile |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

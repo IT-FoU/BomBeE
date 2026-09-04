@@ -600,6 +600,34 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/reports/dashboard') {
+      const storeId = url.searchParams.get('store_id')?.trim() || undefined;
+      try {
+        const kpis = await services.reports.dashboardKpis({
+          actorRoles: ['owner', 'operations'],
+          storeId,
+        });
+        sendJson(res, 200, { ok: true, kpis });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'dashboard_kpis_failed';
+        sendJson(res, message.startsWith('forbidden_') ? 403 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/reports/payments/reconcile') {
+      try {
+        const reconcile = await services.reports.reconcilePayments({
+          actorRoles: ['finance', 'owner'],
+        });
+        sendJson(res, 200, { ok: true, reconcile });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'payments_reconcile_failed';
+        sendJson(res, message.startsWith('forbidden_') ? 403 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/exports/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

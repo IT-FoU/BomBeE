@@ -55,6 +55,8 @@ import {
   listIntegrations,
   mockEnsureEgoProfiles,
   listStaffDirectory,
+  fetchDashboardKpis,
+  fetchPaymentsReconcile,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -73,6 +75,8 @@ import {
   type IntegrationsStatus,
   type StaffDirectoryRow,
   type StaffRoleCatalogRow,
+  type DashboardKpis,
+  type PaymentsReconcile,
 } from './lib/opsApi';
 
 const navItems = [
@@ -143,6 +147,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [integrationsNote, setIntegrationsNote] = useState('');
   const [staffRoles, setStaffRoles] = useState<StaffRoleCatalogRow[]>([]);
   const [staffDirectory, setStaffDirectory] = useState<StaffDirectoryRow[]>([]);
+  const [dashboardKpis, setDashboardKpis] = useState<DashboardKpis | null>(null);
+  const [paymentsReconcile, setPaymentsReconcile] = useState<PaymentsReconcile | null>(null);
+  const [dashboardNote, setDashboardNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -170,6 +177,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           notificationBundle,
           integrationsStatus,
           staffBundle,
+          kpis,
+          reconcile,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -186,6 +195,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listNotifications(50),
           listIntegrations(),
           listStaffDirectory(50),
+          fetchDashboardKpis(),
+          fetchPaymentsReconcile(),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -204,6 +215,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setIntegrations(integrationsStatus);
         setStaffRoles(staffBundle.roles);
         setStaffDirectory(staffBundle.staff);
+        setDashboardKpis(kpis);
+        setPaymentsReconcile(reconcile);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -277,7 +290,59 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </div>
           </section>
           <section aria-labelledby="qa-heading" id="dashboard">
-            <h2 id="qa-heading">Responsive QA surfaces</h2>
+            <h2 id="qa-heading">
+              <span lang="en">Dashboard</span>
+              {' / '}
+              <span lang="lo">ແຜງຄວບຄຸມ</span>
+            </h2>
+            <p className="lede">
+              Live local KPIs from reports (orders, stock, support) plus payment reconcile.
+            </p>
+            {dashboardNote ? (
+              <p className="lede" role="status">
+                {dashboardNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Dashboard KPIs">
+              {dashboardKpis ? (
+                <>
+                  <li>
+                    source={dashboardKpis.source} · orders={dashboardKpis.orders} · sales=
+                    {formatLak(LAK(dashboardKpis.salesLak), locale === 'lo' ? 'lo-LA' : 'en-US')}
+                  </li>
+                  <li>
+                    receipts=
+                    {formatLak(
+                      LAK(dashboardKpis.paymentReceiptsLak),
+                      locale === 'lo' ? 'lo-LA' : 'en-US',
+                    )}{' '}
+                    · refunds=
+                    {formatLak(LAK(dashboardKpis.refundsLak), locale === 'lo' ? 'lo-LA' : 'en-US')} ·
+                    settlements=
+                    {formatLak(
+                      LAK(dashboardKpis.settlementsNetLak),
+                      locale === 'lo' ? 'lo-LA' : 'en-US',
+                    )}
+                  </li>
+                  <li>
+                    stock on hand={dashboardKpis.stockOnHand} · support open=
+                    {dashboardKpis.supportOpen} · breached={dashboardKpis.supportBreached} ·
+                    stores suspended={dashboardKpis.storesSuspended}
+                  </li>
+                </>
+              ) : (
+                <li>KPIs pending API</li>
+              )}
+              {paymentsReconcile ? (
+                <li>
+                  payment reconcile: {paymentsReconcile.ok ? 'ok' : 'mismatch'} · requests=
+                  {paymentsReconcile.totalRequests} · mismatches=
+                  {paymentsReconcile.mismatchCount}
+                </li>
+              ) : (
+                <li>Reconcile pending API</li>
+              )}
+            </ul>
             <ul className="roles" aria-label="Viewport checklist">
               <li>Desktop shell</li>
               <li>Tablet sticky nav</li>
@@ -285,6 +350,34 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <li>Lo/En overflow wrap</li>
               <li>All {APP_ROLES.length} roles listed</li>
             </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setDashboardNote('');
+                void (async () => {
+                  try {
+                    const [kpis, reconcile] = await Promise.all([
+                      fetchDashboardKpis(),
+                      fetchPaymentsReconcile(),
+                    ]);
+                    setDashboardKpis(kpis);
+                    setPaymentsReconcile(reconcile);
+                    setDashboardNote(
+                      reconcile.ok ? 'Dashboard refreshed · reconcile ok' : 'Reconcile has mismatches',
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'dashboard_refresh_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh dashboard
+            </button>
           </section>
           <section aria-labelledby="integrations-heading" id="integrations">
             <h2 id="integrations-heading">

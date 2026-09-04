@@ -820,6 +820,27 @@ paths:
       responses:
         '200':
           description: Roles array + staff directory
+  /v1/reports/dashboard:
+    get:
+      summary: Live dashboard KPIs (local ops)
+      parameters:
+        - in: query
+          name: store_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: KPI object
+        '403':
+          description: Forbidden for actor roles
+  /v1/reports/payments/reconcile:
+    get:
+      summary: Payment request vs allocation/receipt reconcile
+      responses:
+        '200':
+          description: Reconcile summary
+        '403':
+          description: Forbidden for actor roles
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

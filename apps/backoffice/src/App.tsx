@@ -23,6 +23,13 @@ import {
   listOrders,
   listSettlementBatches,
   listStores,
+  listStoreDocuments,
+  fetchStoreOnboarding,
+  mockUploadStoreDocument,
+  verifyStoreDocument,
+  issueStoreDocumentSignedAccess,
+  mockEnsureStoreFulfillment,
+  activateStore,
   mockCreateSettlementBatch,
   mockRemitCodShipment,
   opsConfirmChildren,
@@ -100,6 +107,8 @@ import {
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
+  type StoreDocumentRow,
+  type StoreOnboarding,
   type OpsCatalogProduct,
   type CatalogImportBatchRow,
   type OpsOrderRow,
@@ -185,6 +194,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [formBusy, setFormBusy] = useState(false);
   const [storeDraftName, setStoreDraftName] = useState('');
   const [storeDrafts, setStoreDrafts] = useState<IssuedStore[]>([]);
+  const [storeDocuments, setStoreDocuments] = useState<StoreDocumentRow[]>([]);
+  const [storeOnboarding, setStoreOnboarding] = useState<StoreOnboarding | null>(null);
+  const [onboardNote, setOnboardNote] = useState('');
   const [codShipments, setCodShipments] = useState<CodShipmentRow[]>([]);
   const [opsOrders, setOpsOrders] = useState<OpsOrderRow[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<OpsCatalogProduct[]>([]);
@@ -254,6 +266,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         const [
           invites,
           stores,
+          storeDocs,
           cod,
           orders,
           products,
@@ -287,6 +300,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         ] = await Promise.all([
           listInvites(),
           listStores(),
+          listStoreDocuments(50),
           listCodShipments(),
           listOrders(30),
           listCatalogProducts(50),
@@ -320,6 +334,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
+        setStoreDocuments(storeDocs);
         setCodShipments(cod);
         setOpsOrders(orders);
         setCatalogProducts(products);
@@ -775,8 +790,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ຮ້ານ</span>
             </h2>
             <p className="lede">
-              Create a local store draft (PGlite; not Production). Contracts are immutable
-              versions; payout account changes need Owner + 2FA with a 48h hold.
+              Create a local store draft (PGlite; not Production). Complete onboarding docs +
+              fulfillment to activate. Contracts are immutable versions; payout account changes
+              need Owner + 2FA with a 48h hold.
             </p>
             <form
               className="ops-form"
@@ -791,6 +807,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                     const store = await createStoreDraft({ name });
                     setStoreDrafts((rows) => [store, ...rows.filter((r) => r.id !== store.id)]);
                     setStoreDraftName('');
+                    setOnboardNote(`Draft ${store.code} · ${store.status}`);
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : 'store_failed');
                   } finally {
@@ -812,14 +829,209 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 Create store draft
               </button>
             </form>
+            {onboardNote ? (
+              <p className="lede" role="status">
+                {onboardNote}
+              </p>
+            ) : null}
             <ul className="roles" aria-label="Store drafts">
               {storeDrafts.length === 0 ? <li>No store drafts yet</li> : null}
               {storeDrafts.map((store) => (
                 <li key={store.id}>
                   {store.name} · {store.code} · {store.status}
+                  {store.status === 'onboarding' || store.status === 'draft' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setOnboardNote('');
+                          void (async () => {
+                            try {
+                              const types = [
+                                'owner_id',
+                                'store_info',
+                                'bank_account',
+                                'contract',
+                              ] as const;
+                              let lastDocs = storeDocuments;
+                              let firstDocId = '';
+                              for (const docType of types) {
+                                const uploaded = await mockUploadStoreDocument(store.id, {
+                                  docType,
+                                });
+                                lastDocs = uploaded.documents;
+                                if (docType === 'owner_id') firstDocId = uploaded.documentId;
+                                const verified = await verifyStoreDocument(
+                                  uploaded.documentId,
+                                  store.id,
+                                );
+                                if (verified.documents) lastDocs = verified.documents;
+                                if (verified.onboarding) setStoreOnboarding(verified.onboarding);
+                              }
+                              setStoreDocuments(lastDocs);
+                              await mockEnsureStoreFulfillment(store.id);
+                              if (firstDocId) {
+                                const access = await issueStoreDocumentSignedAccess(firstDocId);
+                                setOnboardNote(
+                                  `Onboarded docs for ${store.code} · token ${access.token.slice(0, 8)}…`,
+                                );
+                              } else {
+                                setOnboardNote(`Onboarded docs for ${store.code}`);
+                              }
+                              const onboarding = await fetchStoreOnboarding(store.id);
+                              setStoreOnboarding(onboarding);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'store_onboard_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Mock complete onboarding
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setOnboardNote('');
+                          void (async () => {
+                            try {
+                              const result = await activateStore(store.id);
+                              if (result.stores) setStoreDrafts(result.stores);
+                              if (result.onboarding) setStoreOnboarding(result.onboarding);
+                              if (!result.ok) {
+                                setOnboardNote(
+                                  `Activate blocked: ${result.error ?? 'not_ready'}`,
+                                );
+                                return;
+                              }
+                              setOnboardNote(`Activated ${store.code}`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'store_activate_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Activate
+                      </button>
+                    </>
+                  ) : null}
                 </li>
               ))}
             </ul>
+            {storeOnboarding ? (
+              <p className="lede">
+                Checklist · owner {storeOnboarding.checklist.ownerIdOk ? 'ok' : '—'} · info{' '}
+                {storeOnboarding.checklist.storeInfoOk ? 'ok' : '—'} · bank{' '}
+                {storeOnboarding.checklist.bankAccountOk ? 'ok' : '—'} · contract{' '}
+                {storeOnboarding.checklist.contractOk ? 'ok' : '—'} · fulfillment{' '}
+                {storeOnboarding.activeFulfillmentCount}
+                {storeOnboarding.activation.ok
+                  ? ' · ready'
+                  : ` · blocked (${storeOnboarding.activation.reason})`}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Store documents">
+              {storeDocuments.length === 0 ? <li>No store documents yet</li> : null}
+              {storeDocuments.slice(0, 12).map((row) => (
+                <li key={row.documentId}>
+                  {row.status} · {row.docType} · store {row.storeId.slice(0, 8)}…
+                  {row.status === 'uploaded' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          void (async () => {
+                            try {
+                              const result = await verifyStoreDocument(
+                                row.documentId,
+                                row.storeId,
+                              );
+                              if (result.documents) setStoreDocuments(result.documents);
+                              if (result.onboarding) setStoreOnboarding(result.onboarding);
+                              setOnboardNote(`Verified ${row.docType}`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'store_doc_verify_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Verify
+                      </button>
+                    </>
+                  ) : null}{' '}
+                  <button
+                    type="button"
+                    className="cta"
+                    disabled={formBusy}
+                    onClick={() => {
+                      setFormBusy(true);
+                      setFormError('');
+                      void (async () => {
+                        try {
+                          const access = await issueStoreDocumentSignedAccess(row.documentId);
+                          setOnboardNote(
+                            `Signed access ${access.token.slice(0, 8)}… exp ${access.expiresAt}`,
+                          );
+                        } catch (err) {
+                          setFormError(
+                            err instanceof Error ? err.message : 'store_doc_signed_failed',
+                          );
+                        } finally {
+                          setFormBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    Signed URL
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setStoreDrafts(await listStores());
+                    setStoreDocuments(await listStoreDocuments(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'stores_refresh_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh stores & docs
+            </button>
             {payoutNote ? (
               <p className="lede" role="status">
                 {payoutNote}

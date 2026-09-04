@@ -163,6 +163,104 @@ paths:
           description: Invalid payload
         '409':
           description: Code taken
+  /v1/stores/documents:
+    get:
+      summary: List store onboarding documents
+      parameters:
+        - in: query
+          name: storeId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Documents array
+  /v1/stores/{storeId}/onboarding:
+    get:
+      summary: Store onboarding checklist and activation gate
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Checklist, documents, fulfillment, activation
+        '404':
+          description: Store not found
+  /v1/ops/stores/{storeId}/documents/mock-upload:
+    post:
+      summary: Local mock upload onboarding document
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Document uploaded
+        '403':
+          description: Mock ops disabled
+  /v1/ops/stores/documents/{documentId}/verify:
+    post:
+      summary: Verify store document and update checklist
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Verified
+        '404':
+          description: Document not found
+  /v1/ops/stores/documents/{documentId}/signed-access:
+    post:
+      summary: Issue short-lived signed access token
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token + expiry
+        '404':
+          description: Document not found
+  /v1/ops/stores/{storeId}/fulfillment/mock-ensure:
+    post:
+      summary: Ensure one active fulfillment location
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location ensured
+  /v1/ops/stores/{storeId}/activate:
+    post:
+      summary: Activate store when onboarding ready
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Store active
+        '409':
+          description: Onboarding incomplete or blocked
   /v1/stores/contracts:
     get:
       summary: List store contract versions

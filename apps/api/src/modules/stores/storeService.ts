@@ -177,12 +177,97 @@ export class StoreService {
        FROM private.store_onboarding_checklists WHERE store_id = $1`,
       [storeId],
     );
-    const c = row.rows[0]!;
+    const c = row.rows[0];
+    if (!c) {
+      return {
+        ownerIdOk: false,
+        storeInfoOk: false,
+        bankAccountOk: false,
+        contractOk: false,
+      };
+    }
     return {
       ownerIdOk: c.owner_id_ok,
       storeInfoOk: c.store_info_ok,
       bankAccountOk: c.bank_account_ok,
       contractOk: c.contract_ok,
+    };
+  }
+
+  async listDocuments(input: { storeId?: string; limit?: number } = {}) {
+    const capped = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      doc_type: string;
+      storage_key: string;
+      status: string;
+      expires_at: string | null;
+      verified_at: string | null;
+      created_at: string;
+    }>(
+      input.storeId
+        ? `SELECT id, store_id, doc_type, storage_key, status,
+                  expires_at::text, verified_at::text, created_at::text
+           FROM private.store_documents
+           WHERE store_id = $1
+           ORDER BY created_at DESC
+           LIMIT $2`
+        : `SELECT id, store_id, doc_type, storage_key, status,
+                  expires_at::text, verified_at::text, created_at::text
+           FROM private.store_documents
+           ORDER BY created_at DESC
+           LIMIT $1`,
+      input.storeId ? [input.storeId, capped] : [capped],
+    );
+    return rows.rows.map((r) => ({
+      documentId: r.id,
+      storeId: r.store_id,
+      docType: r.doc_type,
+      storageKey: r.storage_key,
+      status: r.status,
+      expiresAt: r.expires_at,
+      verifiedAt: r.verified_at,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async countActiveFulfillment(storeId: string): Promise<number> {
+    const fulfillment = await this.db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM app.fulfillment_locations
+       WHERE store_id = $1 AND active = true AND archived_at IS NULL`,
+      [storeId],
+    );
+    return fulfillment.rows[0]?.n ?? 0;
+  }
+
+  async getOnboarding(storeId: string, today = new Date().toISOString().slice(0, 10)) {
+    const store = await this.db.query<{ status: string }>(
+      `SELECT status::text AS status FROM app.stores WHERE id = $1`,
+      [storeId],
+    );
+    if (!store.rows[0]) return null;
+    const checklist = await this.getChecklist(storeId);
+    const documents = await this.listDocuments({ storeId, limit: 50 });
+    const activeFulfillmentCount = await this.countActiveFulfillment(storeId);
+    const expired = await this.db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM private.store_documents
+       WHERE store_id = $1 AND status = 'verified'
+         AND expires_at IS NOT NULL AND expires_at < $2::date`,
+      [storeId, today],
+    );
+    const activation = canActivateStore({
+      checklist,
+      hasActiveFulfillment: activeFulfillmentCount === 1,
+      hasExpiredRequiredDocs: (expired.rows[0]?.n ?? 0) > 0,
+    });
+    return {
+      storeId,
+      status: store.rows[0].status,
+      checklist,
+      documents,
+      activeFulfillmentCount,
+      activation,
     };
   }
 

@@ -249,6 +249,27 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/stores/documents') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const storeId = url.searchParams.get('storeId')?.trim() || undefined;
+      const documents = await services.stores.listDocuments({ storeId, limit });
+      sendJson(res, 200, { ok: true, documents });
+      return;
+    }
+
+    const storeOnboardingMatch = url.pathname.match(/^\/v1\/stores\/([^/]+)\/onboarding$/);
+    if (req.method === 'GET' && storeOnboardingMatch) {
+      const storeId = decodeURIComponent(storeOnboardingMatch[1]!);
+      const onboarding = await services.stores.getOnboarding(storeId);
+      if (!onboarding) {
+        sendJson(res, 404, { error: 'store_not_found' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...onboarding });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/stores/contracts/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });
@@ -1296,6 +1317,255 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         sendJson(res, 200, { ok: true, storeId, status: 'active', events, suspensions });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'store_reactivate_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const storeDocUploadMatch = url.pathname.match(
+      /^\/v1\/ops\/stores\/([^/]+)\/documents\/mock-upload$/,
+    );
+    if (req.method === 'POST' && storeDocUploadMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const storeId = decodeURIComponent(storeDocUploadMatch[1]!);
+      const body = await readJsonBody<{
+        docType?: 'owner_id' | 'store_info' | 'bank_account' | 'contract';
+        doc_type?: 'owner_id' | 'store_info' | 'bank_account' | 'contract';
+        storageKey?: string;
+        storage_key?: string;
+        expiresAt?: string;
+        expires_at?: string;
+        scheduleExpiryAlert?: boolean;
+        schedule_expiry_alert?: boolean;
+      }>(req);
+      const docType = body.docType ?? body.doc_type ?? 'owner_id';
+      const allowed = ['owner_id', 'store_info', 'bank_account', 'contract'] as const;
+      if (!(allowed as readonly string[]).includes(docType)) {
+        sendJson(res, 400, { error: 'invalid_doc_type' });
+        return;
+      }
+      try {
+        const store = await services.db.query<{ id: string }>(
+          `SELECT id FROM app.stores WHERE id = $1`,
+          [storeId],
+        );
+        if (!store.rows[0]) {
+          sendJson(res, 404, { error: 'store_not_found' });
+          return;
+        }
+        const storageKey =
+          body.storageKey?.trim() ||
+          body.storage_key?.trim() ||
+          `private/${storeId}/${docType}-${crypto.randomUUID().slice(0, 8)}.pdf`;
+        const expiresAt = body.expiresAt ?? body.expires_at ?? '2027-12-31';
+        const documentId = await services.stores.uploadDocument({
+          storeId,
+          docType,
+          storageKey,
+          expiresAt,
+        });
+        if (body.scheduleExpiryAlert ?? body.schedule_expiry_alert ?? true) {
+          await services.stores.scheduleDocumentExpiryAlerts(documentId, expiresAt);
+        }
+        const documents = await services.stores.listDocuments({ storeId, limit: 50 });
+        const onboarding = await services.stores.getOnboarding(storeId);
+        sendJson(res, 201, {
+          ok: true,
+          documentId,
+          storeId,
+          docType,
+          storageKey,
+          status: 'uploaded',
+          documents,
+          onboarding,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'document_upload_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const storeDocVerifyMatch = url.pathname.match(
+      /^\/v1\/ops\/stores\/documents\/([^/]+)\/verify$/,
+    );
+    if (req.method === 'POST' && storeDocVerifyMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const documentId = decodeURIComponent(storeDocVerifyMatch[1]!);
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const doc = await services.db.query<{ store_id: string }>(
+            `SELECT store_id FROM private.store_documents WHERE id = $1`,
+            [documentId],
+          );
+          storeId = doc.rows[0]?.store_id;
+        }
+        if (!storeId) {
+          sendJson(res, 404, { error: 'document_not_found' });
+          return;
+        }
+        await services.stores.verifyDocument(documentId, storeId);
+        const documents = await services.stores.listDocuments({ storeId, limit: 50 });
+        const onboarding = await services.stores.getOnboarding(storeId);
+        sendJson(res, 200, {
+          ok: true,
+          documentId,
+          storeId,
+          status: 'verified',
+          documents,
+          onboarding,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'document_verify_failed';
+        sendJson(res, message === 'document_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    const storeDocSignedMatch = url.pathname.match(
+      /^\/v1\/ops\/stores\/documents\/([^/]+)\/signed-access$/,
+    );
+    if (req.method === 'POST' && storeDocSignedMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const documentId = decodeURIComponent(storeDocSignedMatch[1]!);
+      const body = await readJsonBody<{
+        reason?: string;
+      }>(req);
+      const reason = body.reason?.trim() || 'local mock document review';
+      try {
+        const doc = await services.db.query<{
+          store_id: string;
+          storage_key: string;
+        }>(
+          `SELECT store_id, storage_key FROM private.store_documents WHERE id = $1`,
+          [documentId],
+        );
+        if (!doc.rows[0]) {
+          sendJson(res, 404, { error: 'document_not_found' });
+          return;
+        }
+        const actorIdentityId = await resolveOpsActor(services);
+        const access = await services.stores.issueSignedAccess({
+          storageKey: doc.rows[0].storage_key,
+          actorIdentityId,
+          documentId,
+          reason,
+        });
+        sendJson(res, 200, {
+          ok: true,
+          documentId,
+          storeId: doc.rows[0].store_id,
+          token: access.token,
+          expiresAt: access.expiresAt,
+          reason,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'signed_access_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const storeFulfillmentMatch = url.pathname.match(
+      /^\/v1\/ops\/stores\/([^/]+)\/fulfillment\/mock-ensure$/,
+    );
+    if (req.method === 'POST' && storeFulfillmentMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const storeId = decodeURIComponent(storeFulfillmentMatch[1]!);
+      const body = await readJsonBody<{
+        name?: string;
+        addressLine?: string;
+        address_line?: string;
+      }>(req);
+      try {
+        const store = await services.db.query<{ id: string }>(
+          `SELECT id FROM app.stores WHERE id = $1`,
+          [storeId],
+        );
+        if (!store.rows[0]) {
+          sendJson(res, 404, { error: 'store_not_found' });
+          return;
+        }
+        const existing = await services.stores.countActiveFulfillment(storeId);
+        let locationId: string | null = null;
+        if (existing === 0) {
+          locationId = await services.stores.addFulfillmentLocation({
+            storeId,
+            name: body.name?.trim() || 'Main',
+            addressLine: body.addressLine?.trim() || body.address_line?.trim() || 'Vientiane',
+            active: true,
+          });
+        } else {
+          const loc = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.fulfillment_locations
+             WHERE store_id = $1 AND active = true AND archived_at IS NULL
+             LIMIT 1`,
+            [storeId],
+          );
+          locationId = loc.rows[0]?.id ?? null;
+        }
+        const onboarding = await services.stores.getOnboarding(storeId);
+        sendJson(res, 200, {
+          ok: true,
+          storeId,
+          locationId,
+          ensured: existing === 0,
+          onboarding,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'fulfillment_ensure_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const storeActivateMatch = url.pathname.match(/^\/v1\/ops\/stores\/([^/]+)\/activate$/);
+    if (req.method === 'POST' && storeActivateMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const storeId = decodeURIComponent(storeActivateMatch[1]!);
+      try {
+        const result = await services.stores.activateIfReady(storeId);
+        const onboarding = await services.stores.getOnboarding(storeId);
+        const stores = await services.stores.listStores();
+        if (!result.ok) {
+          sendJson(res, 409, {
+            ok: false,
+            error: result.reason,
+            storeId,
+            onboarding,
+            stores,
+          });
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          storeId,
+          status: 'active',
+          onboarding,
+          stores,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'store_activate_failed';
         sendJson(res, 400, { error: message });
       }
       return;

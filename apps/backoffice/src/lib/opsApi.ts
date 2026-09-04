@@ -80,6 +80,186 @@ export async function listStores(): Promise<IssuedStore[]> {
   return body.stores;
 }
 
+export type StoreDocumentRow = {
+  documentId: string;
+  storeId: string;
+  docType: string;
+  storageKey: string;
+  status: string;
+  expiresAt: string | null;
+  verifiedAt: string | null;
+  createdAt: string;
+};
+
+export type StoreOnboarding = {
+  storeId: string;
+  status: string;
+  checklist: {
+    ownerIdOk: boolean;
+    storeInfoOk: boolean;
+    bankAccountOk: boolean;
+    contractOk: boolean;
+  };
+  documents: StoreDocumentRow[];
+  activeFulfillmentCount: number;
+  activation: { ok: true } | { ok: false; reason: string };
+};
+
+export async function listStoreDocuments(
+  limit = 50,
+  storeId?: string,
+): Promise<StoreDocumentRow[]> {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (storeId) qs.set('storeId', storeId);
+  const res = await fetch(`${apiBaseUrl()}/v1/stores/documents?${qs}`);
+  if (!res.ok) {
+    throw new Error(`store_documents_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { documents: StoreDocumentRow[] };
+  return body.documents;
+}
+
+export async function fetchStoreOnboarding(storeId: string): Promise<StoreOnboarding> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/stores/${encodeURIComponent(storeId)}/onboarding`,
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_onboarding_failed_${res.status}`);
+  }
+  return (await res.json()) as StoreOnboarding;
+}
+
+export async function mockUploadStoreDocument(
+  storeId: string,
+  input: {
+    docType?: 'owner_id' | 'store_info' | 'bank_account' | 'contract';
+    expiresAt?: string;
+  } = {},
+): Promise<{
+  documentId: string;
+  documents: StoreDocumentRow[];
+  onboarding?: StoreOnboarding;
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/stores/${encodeURIComponent(storeId)}/documents/mock-upload`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_doc_upload_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    documentId: string;
+    documents: StoreDocumentRow[];
+    onboarding?: StoreOnboarding;
+  };
+}
+
+export async function verifyStoreDocument(
+  documentId: string,
+  storeId?: string,
+): Promise<{
+  documents?: StoreDocumentRow[];
+  onboarding?: StoreOnboarding;
+  status?: string;
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/stores/documents/${encodeURIComponent(documentId)}/verify`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(storeId ? { storeId } : {}),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_doc_verify_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    documents?: StoreDocumentRow[];
+    onboarding?: StoreOnboarding;
+    status?: string;
+  };
+}
+
+export async function issueStoreDocumentSignedAccess(
+  documentId: string,
+  reason?: string,
+): Promise<{ token: string; expiresAt: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/stores/documents/${encodeURIComponent(documentId)}/signed-access`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: reason ?? 'BO mock document review' }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_doc_signed_failed_${res.status}`);
+  }
+  return (await res.json()) as { token: string; expiresAt: string };
+}
+
+export async function mockEnsureStoreFulfillment(
+  storeId: string,
+): Promise<{ locationId?: string; onboarding?: StoreOnboarding }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/stores/${encodeURIComponent(storeId)}/fulfillment/mock-ensure`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_fulfillment_failed_${res.status}`);
+  }
+  return (await res.json()) as { locationId?: string; onboarding?: StoreOnboarding };
+}
+
+export async function activateStore(
+  storeId: string,
+): Promise<{
+  ok: boolean;
+  status?: string;
+  error?: string;
+  stores?: IssuedStore[];
+  onboarding?: StoreOnboarding;
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/stores/${encodeURIComponent(storeId)}/activate`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  const body = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    status?: string;
+    error?: string;
+    stores?: IssuedStore[];
+    onboarding?: StoreOnboarding;
+  };
+  if (!res.ok && res.status !== 409) {
+    throw new Error(body.error ?? `store_activate_failed_${res.status}`);
+  }
+  return {
+    ok: Boolean(body.ok),
+    status: body.status,
+    error: body.error,
+    stores: body.stores,
+    onboarding: body.onboarding,
+  };
+}
+
 export type CodShipmentRow = {
   codShipmentId: string;
   childOrderId: string;

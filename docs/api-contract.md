@@ -17,6 +17,13 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/invites` | Create beta invite |
 | GET | `/v1/stores` | List stores |
 | POST | `/v1/stores` | Create store draft (`onboarding`) |
+| GET | `/v1/stores/documents` | List store onboarding documents (optional `storeId`) |
+| GET | `/v1/stores/:storeId/onboarding` | Checklist + docs + fulfillment + activation gate |
+| POST | `/v1/ops/stores/:storeId/documents/mock-upload` | Local/mock upload onboarding document |
+| POST | `/v1/ops/stores/documents/:documentId/verify` | Verify document + checklist flag |
+| POST | `/v1/ops/stores/documents/:documentId/signed-access` | Issue short-lived signed access token |
+| POST | `/v1/ops/stores/:storeId/fulfillment/mock-ensure` | Ensure one active fulfillment location |
+| POST | `/v1/ops/stores/:storeId/activate` | Activate store when checklist+fulfillment ready |
 | GET | `/v1/stores/contracts` | List store contract versions (optional `storeId`) |
 | POST | `/v1/ops/stores/contracts/mock-create` | Local/mock immutable contract version |
 | GET | `/v1/payouts/requests` | List payout change requests + account versions |

@@ -165,4 +165,54 @@ export class PricingService {
     );
     return row.rows[0]!.id;
   }
+
+  async listPriceRequests(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      price_version_id: string;
+      variant_id: string;
+      cost_lak: number;
+      selling_price_lak: number;
+      margin_lak: number;
+      below_cost: boolean;
+      version_status: string;
+      request_status: string;
+      maker_identity_id: string;
+      approver_identity_id: string | null;
+      requires_owner: boolean;
+      requires_2fa: boolean;
+      reason: string | null;
+      created_at: string;
+      decided_at: string | null;
+    }>(
+      `SELECT r.id, r.price_version_id, v.variant_id, v.cost_lak, v.selling_price_lak,
+              v.margin_lak, v.below_cost, v.status AS version_status, r.status AS request_status,
+              r.maker_identity_id, r.approver_identity_id, r.requires_owner, r.requires_2fa,
+              v.reason, r.created_at::text, r.decided_at::text
+       FROM finance.price_change_requests r
+       JOIN finance.price_versions v ON v.id = r.price_version_id
+       ORDER BY r.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      requestId: r.id,
+      priceVersionId: r.price_version_id,
+      variantId: r.variant_id,
+      costLak: Number(r.cost_lak),
+      sellingPriceLak: Number(r.selling_price_lak),
+      marginLak: Number(r.margin_lak),
+      belowCost: r.below_cost,
+      versionStatus: r.version_status,
+      status: r.request_status,
+      makerIdentityId: r.maker_identity_id,
+      approverIdentityId: r.approver_identity_id,
+      requiresOwner: r.requires_owner,
+      requires2fa: r.requires_2fa,
+      reason: r.reason,
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+    }));
+  }
 }

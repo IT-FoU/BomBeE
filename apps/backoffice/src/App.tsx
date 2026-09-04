@@ -42,6 +42,9 @@ import {
   mockCreateRefund,
   approveRefund,
   mockPayRefund,
+  listPriceRequests,
+  mockProposePrice,
+  approvePriceRequest,
   listAuditEvents,
   mockAuditEvent,
   listExports,
@@ -89,6 +92,7 @@ import {
   type ReturnRequestRow,
   type PromotionRow,
   type RefundApprovalRow,
+  type PriceRequestRow,
   type AuditEventRow,
   type ExportRequestRow,
   type NotificationInboxRow,
@@ -172,6 +176,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [promoNote, setPromoNote] = useState('');
   const [refunds, setRefunds] = useState<RefundApprovalRow[]>([]);
   const [refundNote, setRefundNote] = useState('');
+  const [priceRequests, setPriceRequests] = useState<PriceRequestRow[]>([]);
+  const [pricingNote, setPricingNote] = useState('');
   const [auditEvents, setAuditEvents] = useState<AuditEventRow[]>([]);
   const [auditNote, setAuditNote] = useState('');
   const [exportRequests, setExportRequests] = useState<ExportRequestRow[]>([]);
@@ -223,6 +229,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           returns,
           promos,
           refundRows,
+          priceRows,
           auditRows,
           exportRows,
           notificationBundle,
@@ -249,6 +256,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listReturns(50),
           listPromotions(50),
           listRefunds(50),
+          listPriceRequests(50),
           listAuditEvents(50),
           listExports(50),
           listNotifications(50),
@@ -275,6 +283,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setReturnRequests(returns);
         setPromotions(promos);
         setRefunds(refundRows);
+        setPriceRequests(priceRows);
         setAuditEvents(auditRows);
         setExportRequests(exportRows);
         setNotificationInbox(notificationBundle.inbox);
@@ -1710,12 +1719,17 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ອະນຸມັດ</span>
             </h2>
             <p className="lede">
-              Local refund approvals — mock create from paid delivered children, approve
-              (maker-checker), then mock-pay via ledger.
+              Local refund and price approvals — mock create refunds or price changes, approve
+              (maker-checker; below-cost needs Owner + 2FA locally), then mock-pay refunds.
             </p>
             {refundNote ? (
               <p className="lede" role="status">
                 {refundNote}
+              </p>
+            ) : null}
+            {pricingNote ? (
+              <p className="lede" role="status">
+                {pricingNote}
               </p>
             ) : null}
             <ul className="roles" aria-label="Refund approvals">
@@ -1832,6 +1846,113 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh refunds
+            </button>
+            <ul className="roles" aria-label="Price change requests">
+              {priceRequests.length === 0 ? <li>No price requests yet</li> : null}
+              {priceRequests.map((row) => (
+                <li key={row.requestId}>
+                  {row.status} · sell {formatLak(LAK(row.sellingPriceLak))} / cost{' '}
+                  {formatLak(LAK(row.costLak))}
+                  {row.belowCost ? ' · below-cost' : ''} · variant {row.variantId.slice(0, 8)}…
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setPricingNote('');
+                          void (async () => {
+                            try {
+                              const result = await approvePriceRequest(row.requestId);
+                              if (result.requests) setPriceRequests(result.requests);
+                              setPricingNote(`Approved price ${row.requestId.slice(0, 8)}…`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'price_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve price
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setPricingNote('');
+                void (async () => {
+                  try {
+                    const result = await mockProposePrice({ sellingPriceLak: 9000 });
+                    setPriceRequests(result.requests);
+                    setPricingNote(`Proposed ${result.requestId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'price_propose_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock propose price
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setPricingNote('');
+                void (async () => {
+                  try {
+                    const result = await mockProposePrice({ belowCost: true });
+                    setPriceRequests(result.requests);
+                    setPricingNote(
+                      `Below-cost ${result.requestId.slice(0, 8)}… (Owner+2FA)`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'price_propose_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock below-cost price
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setPriceRequests(await listPriceRequests(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'pricing_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh prices
             </button>
           </section>
           <section aria-labelledby="audit-heading" id="audit">

@@ -958,6 +958,203 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/pricing/requests') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const requests = await services.pricing.listPriceRequests(limit);
+      sendJson(res, 200, { ok: true, requests });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/pricing/mock-propose') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        variantId?: string;
+        variant_id?: string;
+        costLak?: number;
+        cost_lak?: number;
+        sellingPriceLak?: number;
+        selling_price_lak?: number;
+        compareAtPriceLak?: number;
+        compare_at_price_lak?: number;
+        reason?: string;
+        belowCost?: boolean;
+        below_cost?: boolean;
+      }>(req);
+      try {
+        let variantId = (body.variantId ?? body.variant_id)?.trim();
+        if (!variantId) {
+          const variant = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.product_variants
+             WHERE status = 'active'
+             ORDER BY created_at
+             LIMIT 1`,
+          );
+          variantId = variant.rows[0]?.id;
+        }
+        if (!variantId) {
+          sendJson(res, 409, { error: 'no_active_variant' });
+          return;
+        }
+        const active = await services.pricing.activePrice(variantId);
+        const wantBelow = body.belowCost ?? body.below_cost ?? false;
+        const costLak =
+          typeof body.costLak === 'number'
+            ? Math.floor(body.costLak)
+            : typeof body.cost_lak === 'number'
+              ? Math.floor(body.cost_lak)
+              : active
+                ? Number(active.cost_lak)
+                : 5000;
+        let sellingPriceLak =
+          typeof body.sellingPriceLak === 'number'
+            ? Math.floor(body.sellingPriceLak)
+            : typeof body.selling_price_lak === 'number'
+              ? Math.floor(body.selling_price_lak)
+              : active
+                ? Number(active.selling_price_lak) + 500
+                : 7000;
+        if (wantBelow) {
+          sellingPriceLak = Math.max(1, costLak - 100);
+        }
+        if (costLak <= 0 || sellingPriceLak <= 0) {
+          sendJson(res, 400, { error: 'invalid_price' });
+          return;
+        }
+        const maker = await services.identity.ensureStaff(
+          'staff:local-catalog-maker',
+          'Catalog Maker',
+          '+8562087000001',
+        );
+        const proposed = await services.pricing.proposePrice({
+          variantId,
+          costLak,
+          sellingPriceLak,
+          compareAtPriceLak:
+            typeof body.compareAtPriceLak === 'number'
+              ? Math.floor(body.compareAtPriceLak)
+              : typeof body.compare_at_price_lak === 'number'
+                ? Math.floor(body.compare_at_price_lak)
+                : undefined,
+          reason:
+            body.reason?.trim() ||
+            (wantBelow || sellingPriceLak < costLak
+              ? 'local_mock_below_cost_clearance'
+              : undefined),
+          makerIdentityId: maker.identityId,
+        });
+        const requests = await services.pricing.listPriceRequests(50);
+        sendJson(res, 201, { ok: true, ...proposed, variantId, requests });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'price_propose_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const priceApproveMatch = url.pathname.match(/^\/v1\/ops\/pricing\/([^/]+)\/approve$/);
+    if (req.method === 'POST' && priceApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const requestId = decodeURIComponent(priceApproveMatch[1]!);
+      const body = await readJsonBody<{
+        stepUpVerified?: boolean;
+        step_up_verified?: boolean;
+      }>(req);
+      try {
+        const reqRow = await services.db.query<{
+          maker_identity_id: string;
+          requires_owner: boolean;
+          requires_2fa: boolean;
+          status: string;
+        }>(
+          `SELECT maker_identity_id, requires_owner, requires_2fa, status
+           FROM finance.price_change_requests WHERE id = $1`,
+          [requestId],
+        );
+        if (!reqRow.rows[0]) {
+          sendJson(res, 404, { error: 'price_request_not_found' });
+          return;
+        }
+        if (reqRow.rows[0].status !== 'pending') {
+          sendJson(res, 409, { error: 'not_pending' });
+          return;
+        }
+        const makerIdentityId = reqRow.rows[0].maker_identity_id;
+        let approverIdentityId: string;
+        let actorRoles: string[];
+        if (reqRow.rows[0].requires_owner) {
+          const owner = await services.identity.ensureStaff(
+            'staff:local-catalog-owner',
+            'Catalog Owner',
+            '+8562087000002',
+          );
+          if (owner.identityId === makerIdentityId) {
+            sendJson(res, 409, { error: 'self_approval' });
+            return;
+          }
+          approverIdentityId = owner.identityId;
+          actorRoles = ['owner'];
+        } else {
+          approverIdentityId = await resolveOpsApprover(services, makerIdentityId);
+          // Prefer owner when available for local approvals.
+          const owner = await services.db.query<{ id: string }>(
+            `SELECT id FROM security.auth_identities
+             WHERE subject = 'staff:local-catalog-owner' AND id <> $1
+             LIMIT 1`,
+            [makerIdentityId],
+          );
+          if (owner.rows[0]) {
+            approverIdentityId = owner.rows[0].id;
+            actorRoles = ['owner'];
+          } else {
+            actorRoles = ['catalog', 'admin'];
+          }
+        }
+        const stepUpVerified =
+          body.stepUpVerified ??
+          body.step_up_verified ??
+          (reqRow.rows[0].requires_2fa ? true : false);
+        const approved = await services.pricing.approvePrice({
+          requestId,
+          approverIdentityId,
+          actorRoles,
+          stepUpVerified,
+        });
+        if (!approved.ok) {
+          const status =
+            approved.reason === 'not_found'
+              ? 404
+              : approved.reason === 'not_pending' || approved.reason === 'self_approval'
+                ? 409
+                : approved.reason === 'owner_required' ||
+                    approved.reason === '2fa_required' ||
+                    approved.reason === 'not_authorized'
+                  ? 403
+                  : 400;
+          sendJson(res, status, { error: approved.reason });
+          return;
+        }
+        const requests = await services.pricing.listPriceRequests(50);
+        sendJson(res, 200, {
+          ok: true,
+          requestId,
+          status: 'approved',
+          priceVersionId: approved.priceVersionId,
+          requests,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'price_approve_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/audit/events') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

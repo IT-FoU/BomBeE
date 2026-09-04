@@ -726,6 +726,42 @@ paths:
       responses:
         '200':
           description: Refunds array
+  /v1/pricing/requests:
+    get:
+      summary: List price change requests (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Price requests array
+  /v1/ops/pricing/mock-propose:
+    post:
+      summary: Local mock propose price change
+      responses:
+        '201':
+          description: Pending price request
+        '403':
+          description: Mock ops disabled
+  /v1/ops/pricing/{requestId}/approve:
+    post:
+      summary: Approve price change (maker-checker)
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approved
+        '403':
+          description: Owner or 2FA required
+        '409':
+          description: Not pending or self-approval
   /v1/ops/refunds/mock-create:
     post:
       summary: Local/mock refund request for paid delivered child

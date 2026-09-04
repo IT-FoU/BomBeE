@@ -608,6 +608,74 @@ export async function mockPayRefund(
   };
 }
 
+export type PriceRequestRow = {
+  requestId: string;
+  priceVersionId: string;
+  variantId: string;
+  costLak: number;
+  sellingPriceLak: number;
+  marginLak: number;
+  belowCost: boolean;
+  versionStatus: string;
+  status: string;
+  makerIdentityId: string;
+  approverIdentityId: string | null;
+  requiresOwner: boolean;
+  requires2fa: boolean;
+  reason: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+};
+
+export async function listPriceRequests(limit = 50): Promise<PriceRequestRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/pricing/requests?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`pricing_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { requests: PriceRequestRow[] };
+  return body.requests;
+}
+
+export async function mockProposePrice(input: {
+  sellingPriceLak?: number;
+  costLak?: number;
+  belowCost?: boolean;
+  reason?: string;
+} = {}): Promise<{ requestId: string; belowCost: boolean; requests: PriceRequestRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/pricing/mock-propose`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `price_propose_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    requestId: string;
+    belowCost: boolean;
+    requests: PriceRequestRow[];
+  };
+}
+
+export async function approvePriceRequest(
+  requestId: string,
+): Promise<{ requests?: PriceRequestRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/pricing/${encodeURIComponent(requestId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ stepUpVerified: true }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `price_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as { requests?: PriceRequestRow[]; status?: string };
+}
+
 export type AuditEventRow = {
   eventId: string;
   actorIdentityId: string | null;

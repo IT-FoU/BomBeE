@@ -5,6 +5,7 @@ import type { BombeeEnv } from '@bombee/config';
 import { createTestDatabase } from '../db/migrate.js';
 import { AuditService } from '../modules/audit/service.js';
 import { CatalogService } from '../modules/catalog/catalogService.js';
+import { PricingService } from '../modules/catalog/pricingService.js';
 import { ExportService } from '../modules/exports/service.js';
 import { DeliveryService } from '../modules/fulfillment/deliveryService.js';
 import { ReturnService } from '../modules/fulfillment/returnService.js';
@@ -43,6 +44,7 @@ export type ApiServices = {
   invites: InviteService;
   stores: StoreService;
   catalog: CatalogService;
+  pricing: PricingService;
   orders: OrderService;
   payments: PaymentService;
   inventory: InventoryService;
@@ -74,6 +76,7 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
   const stores = new StoreService(db);
   const quality = new QualityService(db);
   const catalog = new CatalogService(db);
+  const pricing = new PricingService(db);
   const orders = new OrderService(db);
   const payments = new PaymentService(db, new ManualBankAdapter());
   const inventory = new InventoryService(db);
@@ -104,6 +107,7 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     invites,
     stores,
     catalog,
+    pricing,
     orders,
     payments,
     inventory,

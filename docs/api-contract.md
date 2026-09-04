@@ -55,6 +55,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/promotions/mock-create` | Local/mock create active promotion |
 | POST | `/v1/ops/promotions/:id/pause` | Local/mock pause active promotion |
 | GET | `/v1/refunds` | List refund approvals (local ops) |
+| GET | `/v1/pricing/requests` | List price change requests (local ops) |
+| POST | `/v1/ops/pricing/mock-propose` | Local/mock propose price (optional `belowCost`) |
+| POST | `/v1/ops/pricing/:requestId/approve` | Approve price (maker≠approver; below-cost Owner+2FA) |
 | POST | `/v1/ops/refunds/mock-create` | Local/mock refund request+approval for paid delivered child |
 | POST | `/v1/ops/refunds/:approvalId/approve` | Local/mock approve (distinct finance actor) |
 | POST | `/v1/ops/refunds/:approvalId/mock-pay` | Local/mock ledger pay |

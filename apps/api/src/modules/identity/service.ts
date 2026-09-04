@@ -196,6 +196,48 @@ export class IdentityService {
     return sessionId;
   }
 
+  async getSession(sessionId: string, now = Date.now()) {
+    const row = await this.db.query<{
+      id: string;
+      auth_identity_id: string;
+      audience: string;
+      expires_at: string;
+      revoked_at: string | null;
+      phone_e164: string | null;
+      display_name: string | null;
+    }>(
+      `SELECT s.id, s.auth_identity_id, s.audience, s.expires_at::text, s.revoked_at::text,
+              i.phone_e164, coalesce(c.display_name, st.display_name) AS display_name
+       FROM security.sessions s
+       JOIN security.auth_identities i ON i.id = s.auth_identity_id
+       LEFT JOIN app.customer_profiles c ON c.auth_identity_id = i.id
+       LEFT JOIN app.staff_profiles st ON st.auth_identity_id = i.id
+       WHERE s.id = $1`,
+      [sessionId],
+    );
+    const session = row.rows[0];
+    if (!session) return null;
+    if (session.revoked_at) return null;
+    if (Date.parse(session.expires_at) < now) return null;
+    return {
+      sessionId: session.id,
+      identityId: session.auth_identity_id,
+      audience: session.audience,
+      expiresAt: session.expires_at,
+      phoneE164: session.phone_e164,
+      displayName: session.display_name,
+    };
+  }
+
+  async revokeSession(sessionId: string, reason: string) {
+    await this.db.query(
+      `UPDATE security.sessions
+       SET revoked_at = timezone('utc', now()), revoke_reason = $2
+       WHERE id = $1 AND revoked_at IS NULL`,
+      [sessionId, reason],
+    );
+  }
+
   async revokeAllSessions(authIdentityId: string, reason: string) {
     await this.db.query(
       `UPDATE security.sessions

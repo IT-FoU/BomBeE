@@ -69,3 +69,36 @@ paths:
           description: Session issued
         '401':
           description: Invalid/expired OTP
+  /v1/auth/me:
+    get:
+      summary: Current session profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session + identity summary
+        '401':
+          description: Missing or invalid session
+  /v1/auth/logout:
+    post:
+      summary: Revoke session
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessionToken:
+                  type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session revoked
+        '400':
+          description: Missing token
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

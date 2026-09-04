@@ -19,7 +19,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | ID | Item | Notes |
 | --- | --- | --- |
 | P2-B1 | Backoffice interactive forms beyond shell | **Done (invite + store drafts)** |
-| P2-B2 | Customer OTP against real API (still mock SMS locally) | **Done (in progress PR)** — `/v1/auth/otp/*` + customer client |
+| P2-B2 | Customer OTP against real API (still mock SMS locally) | **Done** — `/v1/auth/otp/*`, `/v1/auth/me`, `/v1/auth/logout` + customer client + vite proxy |
 | P2-B3 | Legal Lo/En copy human review | **Copy expanded in PWA**; human sign-off still KI-12-03 |
 | P2-B4 | Expand OpenAPI from `docs/api-contract.md` | **Done (auth+health)** — `docs/openapi.yaml` |
 | P2-B5 | Performance budgets in CI (bundle size check) | **Done** — `scripts/check-customer-bundle-budget.mjs` in CI |

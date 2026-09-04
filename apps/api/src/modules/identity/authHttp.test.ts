@@ -83,6 +83,40 @@ describe('auth HTTP OTP routes', () => {
     const verified = verifyRes.body();
     expect(verified.ok).toBe(true);
     expect(typeof verified.sessionToken).toBe('string');
+
+    const me = mockRes();
+    await router(
+      {
+        ...mockReq('GET', '/v1/auth/me'),
+        headers: {
+          host: 'localhost',
+          authorization: `Bearer ${verified.sessionToken}`,
+        },
+      } as IncomingMessage,
+      me.res,
+    );
+    expect(me.res.statusCode).toBe(200);
+    expect(me.body().identityId).toBe(verified.identityId);
+
+    const logout = mockRes();
+    await router(
+      mockReq('POST', '/v1/auth/logout', { sessionToken: verified.sessionToken }),
+      logout.res,
+    );
+    expect(logout.res.statusCode).toBe(200);
+
+    const meAfter = mockRes();
+    await router(
+      {
+        ...mockReq('GET', '/v1/auth/me'),
+        headers: {
+          host: 'localhost',
+          authorization: `Bearer ${verified.sessionToken}`,
+        },
+      } as IncomingMessage,
+      meAfter.res,
+    );
+    expect(meAfter.res.statusCode).toBe(401);
   });
 
   it('rejects invalid phone on OTP request', async () => {

@@ -139,6 +139,37 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/auth/me') {
+      const auth = req.headers.authorization ?? '';
+      const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : '';
+      if (!token) {
+        sendJson(res, 401, { error: 'missing_token' });
+        return;
+      }
+      const session = await services.identity.getSession(token);
+      if (!session) {
+        sendJson(res, 401, { error: 'invalid_session' });
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...session });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/auth/logout') {
+      const body = await readJsonBody<{ sessionToken?: string }>(req);
+      const auth = req.headers.authorization ?? '';
+      const token =
+        body.sessionToken?.trim() ||
+        (auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : '');
+      if (!token) {
+        sendJson(res, 400, { error: 'missing_token' });
+        return;
+      }
+      await services.identity.revokeSession(token, 'logout');
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/') {
       sendJson(res, 200, {
         name: BRAND_NAME,
@@ -160,9 +191,8 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
-  res.writeHead(status, {
-    'content-type': 'application/json; charset=utf-8',
-    'content-length': Buffer.byteLength(payload),
-  });
+  res.statusCode = status;
+  res.setHeader('content-type', 'application/json; charset=utf-8');
+  res.setHeader('content-length', String(Buffer.byteLength(payload)));
   res.end(payload);
 }

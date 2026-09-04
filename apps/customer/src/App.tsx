@@ -6,7 +6,7 @@ import { BRANDS, CATEGORIES, PRODUCTS, STORES, productTitle, type CatalogProduct
 import { cartTotals, groupCartByStore, loadCart, saveCart, type CartLine } from './lib/cart';
 import { evaluateCodUx, parentChildSummary } from './lib/checkout';
 import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './lib/offline';
-import { requestCustomerOtp, verifyCustomerOtp } from './lib/authApi';
+import { requestCustomerOtp, verifyCustomerOtp, fetchSessionMe, logoutSession } from './lib/authApi';
 
 type Route =
   | 'home'
@@ -57,6 +57,7 @@ export function App() {
   const [otpHint, setOtpHint] = useState('');
   const [otpError, setOtpError] = useState('');
   const [otpBusy, setOtpBusy] = useState(false);
+  const [sessionLabel, setSessionLabel] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'qr' | 'cod'>('qr');
   const [selectedQrStores, setSelectedQrStores] = useState<string[]>(['store-a', 'store-c']);
@@ -738,6 +739,7 @@ export function App() {
                     const verified = await verifyCustomerOtp(otpPhone.trim(), otpCode.trim());
                     sessionStorage.setItem('bombee_session', verified.sessionToken);
                     setLoggedIn(true);
+                    setSessionLabel(verified.identityId);
                     go('account');
                   } catch (err) {
                     // Offline / API-down fallback for fixture demos only in local shell
@@ -763,7 +765,49 @@ export function App() {
           <section className="page">
             <h1>{locale === 'lo' ? 'ໂປຣໄຟລ໌' : 'Profile'}</h1>
             <p>{loggedIn ? otpPhone || '+85620…' : 'Guest'}</p>
+            {sessionLabel ? <p className="muted">Session: {sessionLabel}</p> : null}
             <p>Language: {locale}</p>
+            <button
+              type="button"
+              className="cta ghost"
+              onClick={() => {
+                void (async () => {
+                  const token = sessionStorage.getItem('bombee_session');
+                  if (!token) return;
+                  try {
+                    const me = await fetchSessionMe(token);
+                    setSessionLabel(`${me.displayName ?? 'user'} · ${me.phoneE164 ?? ''}`);
+                    setLoggedIn(true);
+                  } catch (err) {
+                    setSessionLabel(err instanceof Error ? err.message : 'session_error');
+                  }
+                })();
+              }}
+            >
+              Refresh session
+            </button>
+            <button
+              type="button"
+              className="cta ghost"
+              onClick={() => {
+                void (async () => {
+                  const token = sessionStorage.getItem('bombee_session');
+                  if (token) {
+                    try {
+                      await logoutSession(token);
+                    } catch {
+                      /* ignore offline */
+                    }
+                  }
+                  sessionStorage.removeItem('bombee_session');
+                  setLoggedIn(false);
+                  setSessionLabel('');
+                  go('home');
+                })();
+              }}
+            >
+              Log out
+            </button>
             <h2>Addresses</h2>
             <ul>
               <li>Home — Ban Hatsady (default)</li>

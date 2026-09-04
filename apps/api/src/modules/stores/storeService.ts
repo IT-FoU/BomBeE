@@ -335,9 +335,14 @@ export class StoreService {
       [storeId],
     );
     await this.db.query(
+      `UPDATE private.store_suspensions SET active = false
+       WHERE store_id = $1 AND active = true`,
+      [storeId],
+    );
+    await this.db.query(
       `INSERT INTO private.store_suspensions
-        (store_id, reason_code, reason_detail, suspended_by)
-       VALUES ($1, 'document_expired', 'required document expired', $2)`,
+        (store_id, reason_code, reason_detail, suspended_by, active)
+       VALUES ($1, 'document_expired', 'required document expired', $2, true)`,
       [storeId, actorIdentityId ?? null],
     );
   }
@@ -350,5 +355,91 @@ export class StoreService {
        VALUES ($1, $2)`,
       [documentId, alertAt.toISOString()],
     );
+  }
+
+  async listDocumentExpiryAlerts(limit = 50, filter: 'all' | 'due' | 'expired' = 'all') {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = await this.db.query<{
+      id: string;
+      document_id: string;
+      store_id: string;
+      store_name: string;
+      store_status: string;
+      doc_type: string;
+      document_status: string;
+      expires_at: string | null;
+      alert_at: string;
+      sent_at: string | null;
+      created_at: string;
+    }>(
+      `SELECT a.id, a.document_id, d.store_id, s.name AS store_name, s.status AS store_status,
+              d.doc_type, d.status AS document_status, d.expires_at::text,
+              a.alert_at::text, a.sent_at::text, a.created_at::text
+       FROM private.document_expiry_alerts a
+       JOIN private.store_documents d ON d.id = a.document_id
+       JOIN app.stores s ON s.id = d.store_id
+       WHERE (
+         $2::text = 'all'
+         OR ($2::text = 'due' AND a.sent_at IS NULL AND a.alert_at <= timezone('utc', now()))
+         OR ($2::text = 'expired' AND d.expires_at IS NOT NULL AND d.expires_at < $3::date)
+       )
+       ORDER BY a.alert_at ASC
+       LIMIT $1`,
+      [capped, filter, today],
+    );
+    return rows.rows.map((r) => ({
+      alertId: r.id,
+      documentId: r.document_id,
+      storeId: r.store_id,
+      storeName: r.store_name,
+      storeStatus: r.store_status,
+      docType: r.doc_type,
+      documentStatus: r.document_status,
+      expiresAt: r.expires_at,
+      alertAt: r.alert_at,
+      sentAt: r.sent_at,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async evaluateExpiredDocuments(input: {
+    today?: string;
+    storeId?: string;
+    actorIdentityId?: string;
+    now?: Date;
+  } = {}) {
+    const today = input.today ?? (input.now ?? new Date()).toISOString().slice(0, 10);
+    const nowIso = (input.now ?? new Date()).toISOString();
+    const expired = await this.db.query<{
+      store_id: string;
+      document_id: string;
+    }>(
+      `SELECT DISTINCT d.store_id, d.id AS document_id
+       FROM private.store_documents d
+       WHERE d.status = 'verified'
+         AND d.expires_at IS NOT NULL
+         AND d.expires_at < $1::date
+         AND ($2::uuid IS NULL OR d.store_id = $2::uuid)`,
+      [today, input.storeId ?? null],
+    );
+    const suspendedStoreIds = new Set<string>();
+    for (const row of expired.rows) {
+      if (!suspendedStoreIds.has(row.store_id)) {
+        await this.suspendForExpiredDocuments(row.store_id, input.actorIdentityId);
+        suspendedStoreIds.add(row.store_id);
+      }
+      await this.db.query(
+        `UPDATE private.document_expiry_alerts
+         SET sent_at = coalesce(sent_at, $2::timestamptz)
+         WHERE document_id = $1 AND sent_at IS NULL`,
+        [row.document_id, nowIso],
+      );
+    }
+    return {
+      today,
+      suspendedStoreIds: [...suspendedStoreIds],
+      expiredDocumentCount: expired.rows.length,
+    };
   }
 }

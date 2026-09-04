@@ -179,6 +179,50 @@ paths:
       responses:
         '200':
           description: Documents array
+  /v1/stores/document-expiry-alerts:
+    get:
+      summary: List document expiry alerts
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: filter
+          schema:
+            type: string
+            enum: [all, due, expired]
+            default: all
+      responses:
+        '200':
+          description: Alerts array
+  /v1/ops/stores/documents/mock-evaluate-expiry:
+    post:
+      summary: Local/mock evaluate expired verified docs and suspend store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                document_id:
+                  type: string
+                today:
+                  type: string
+                  format: date
+                expires_at:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Store suspended when expired docs found
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Document not found
   /v1/stores/{storeId}/onboarding:
     get:
       summary: Store onboarding checklist and activation gate

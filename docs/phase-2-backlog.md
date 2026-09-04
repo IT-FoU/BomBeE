@@ -79,6 +79,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B59 | Packing SLA late list + mock-evaluate | **Done** — packing-deadlines list/mock-evaluate; Fulfillment BO |
 | P2-B60 | Support ticket SLA escalated list + mock-evaluate | **Done** — escalated filter + mock-evaluate-sla; Support BO |
 | P2-B61 | COD restore + mock-failure + redelivery fee HTTP | **Done** — profiles/fees list; mock-failure/restore/require; Payments BO |
+| P2-B62 | Store document expiry alerts list + mock-evaluate suspend | **Done** — alerts list/mock-evaluate; Stores BO |
 
 ## C — Hard rules that stay
 

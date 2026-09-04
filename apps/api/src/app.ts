@@ -258,6 +258,114 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/stores/document-expiry-alerts') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const filterRaw = url.searchParams.get('filter')?.trim() || 'all';
+      const filter =
+        filterRaw === 'due' || filterRaw === 'expired' ? filterRaw : 'all';
+      const alerts = await services.stores.listDocumentExpiryAlerts(limit, filter);
+      sendJson(res, 200, { ok: true, alerts });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/stores/documents/mock-evaluate-expiry') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        documentId?: string;
+        document_id?: string;
+        today?: string;
+        expiresAt?: string;
+        expires_at?: string;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        let documentId = (body.documentId ?? body.document_id)?.trim();
+        const today =
+          body.today?.trim() || new Date().toISOString().slice(0, 10);
+        const expiresAt =
+          body.expiresAt?.trim() ||
+          body.expires_at?.trim() ||
+          new Date(Date.parse(`${today}T00:00:00.000Z`) - 24 * 60 * 60_000)
+            .toISOString()
+            .slice(0, 10);
+
+        if (documentId) {
+          const doc = await services.db.query<{
+            store_id: string;
+            status: string;
+          }>(`SELECT store_id, status FROM private.store_documents WHERE id = $1`, [
+            documentId,
+          ]);
+          if (!doc.rows[0]) {
+            sendJson(res, 404, { error: 'document_not_found' });
+            return;
+          }
+          storeId = doc.rows[0].store_id;
+          await services.db.query(
+            `UPDATE private.store_documents SET expires_at = $2::date WHERE id = $1`,
+            [documentId, expiresAt],
+          );
+          if (doc.rows[0].status !== 'verified') {
+            await services.stores.verifyDocument(documentId, storeId);
+          }
+        } else {
+          if (!storeId) {
+            const existing = await services.db.query<{ id: string }>(
+              `SELECT id FROM app.stores ORDER BY created_at DESC LIMIT 1`,
+            );
+            storeId = existing.rows[0]?.id;
+          }
+          if (!storeId) {
+            storeId = await services.stores.createStore({
+              code: `EXP${Date.now().toString().slice(-6)}`,
+              name: 'Doc Expiry QA Mart',
+            });
+          }
+          documentId = await services.stores.uploadDocument({
+            storeId,
+            docType: 'owner_id',
+            storageKey: `private/${storeId}/owner_id-expiry-${crypto.randomUUID().slice(0, 8)}.pdf`,
+            expiresAt,
+          });
+          await services.stores.verifyDocument(documentId, storeId);
+          await services.stores.scheduleDocumentExpiryAlerts(documentId, expiresAt);
+        }
+
+        const actorIdentityId = await resolveOpsActor(services);
+        const evaluated = await services.stores.evaluateExpiredDocuments({
+          today,
+          storeId,
+          actorIdentityId,
+        });
+        const alerts = await services.stores.listDocumentExpiryAlerts(50);
+        const store = await services.db.query<{
+          id: string;
+          status: string;
+          can_accept_orders: boolean;
+        }>(`SELECT id, status, can_accept_orders FROM app.stores WHERE id = $1`, [storeId]);
+        sendJson(res, 200, {
+          ok: true,
+          ...evaluated,
+          storeId,
+          documentId,
+          expiresAt,
+          storeStatus: store.rows[0]?.status,
+          canAcceptOrders: store.rows[0]?.can_accept_orders,
+          alerts,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'doc_expiry_evaluate_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     const storeOnboardingMatch = url.pathname.match(/^\/v1\/stores\/([^/]+)\/onboarding$/);
     if (req.method === 'GET' && storeOnboardingMatch) {
       const storeId = decodeURIComponent(storeOnboardingMatch[1]!);

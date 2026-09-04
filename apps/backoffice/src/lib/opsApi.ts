@@ -119,6 +119,68 @@ export async function listStoreDocuments(
   return body.documents;
 }
 
+export type DocumentExpiryAlertRow = {
+  alertId: string;
+  documentId: string;
+  storeId: string;
+  storeName: string;
+  storeStatus: string;
+  docType: string;
+  documentStatus: string;
+  expiresAt: string | null;
+  alertAt: string;
+  sentAt: string | null;
+  createdAt: string;
+};
+
+export async function listDocumentExpiryAlerts(
+  limit = 50,
+  filter: 'all' | 'due' | 'expired' = 'all',
+): Promise<DocumentExpiryAlertRow[]> {
+  const qs = new URLSearchParams({ limit: String(limit), filter });
+  const res = await fetch(`${apiBaseUrl()}/v1/stores/document-expiry-alerts?${qs}`);
+  if (!res.ok) {
+    throw new Error(`doc_expiry_alerts_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { alerts: DocumentExpiryAlertRow[] };
+  return body.alerts;
+}
+
+export async function mockEvaluateDocumentExpiry(input: {
+  storeId?: string;
+  documentId?: string;
+  today?: string;
+  expiresAt?: string;
+} = {}): Promise<{
+  storeId: string;
+  documentId?: string;
+  storeStatus?: string;
+  suspendedStoreIds?: string[];
+  alerts?: DocumentExpiryAlertRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/stores/documents/mock-evaluate-expiry`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      store_id: input.storeId,
+      document_id: input.documentId,
+      today: input.today,
+      expires_at: input.expiresAt,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `doc_expiry_evaluate_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    storeId: string;
+    documentId?: string;
+    storeStatus?: string;
+    suspendedStoreIds?: string[];
+    alerts?: DocumentExpiryAlertRow[];
+  };
+}
+
 export async function fetchStoreOnboarding(storeId: string): Promise<StoreOnboarding> {
   const res = await fetch(
     `${apiBaseUrl()}/v1/stores/${encodeURIComponent(storeId)}/onboarding`,

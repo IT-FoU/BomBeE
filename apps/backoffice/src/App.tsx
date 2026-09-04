@@ -38,6 +38,8 @@ import {
   listSettlementBatches,
   listStores,
   listStoreDocuments,
+  listDocumentExpiryAlerts,
+  mockEvaluateDocumentExpiry,
   fetchStoreOnboarding,
   mockUploadStoreDocument,
   verifyStoreDocument,
@@ -138,6 +140,7 @@ import {
   type IssuedInvite,
   type IssuedStore,
   type StoreDocumentRow,
+  type DocumentExpiryAlertRow,
   type StoreOnboarding,
   type OpsCatalogProduct,
   type CatalogImportBatchRow,
@@ -232,6 +235,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [storeDraftName, setStoreDraftName] = useState('');
   const [storeDrafts, setStoreDrafts] = useState<IssuedStore[]>([]);
   const [storeDocuments, setStoreDocuments] = useState<StoreDocumentRow[]>([]);
+  const [docExpiryAlerts, setDocExpiryAlerts] = useState<DocumentExpiryAlertRow[]>([]);
   const [storeOnboarding, setStoreOnboarding] = useState<StoreOnboarding | null>(null);
   const [onboardNote, setOnboardNote] = useState('');
   const [codShipments, setCodShipments] = useState<CodShipmentRow[]>([]);
@@ -319,6 +323,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           invites,
           stores,
           storeDocs,
+          expiryAlertRows,
           cod,
           codProfileRows,
           redeliveryFeeRows,
@@ -362,6 +367,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listInvites(),
           listStores(),
           listStoreDocuments(50),
+          listDocumentExpiryAlerts(50),
           listCodShipments(),
           listCodProfiles(50),
           listRedeliveryFees(50),
@@ -405,6 +411,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setIssuedInvites(invites);
         setStoreDrafts(stores);
         setStoreDocuments(storeDocs);
+        setDocExpiryAlerts(expiryAlertRows);
         setCodShipments(cod);
         setCodProfiles(codProfileRows);
         setRedeliveryFees(redeliveryFeeRows);
@@ -1153,6 +1160,45 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 </li>
               ))}
             </ul>
+            <ul className="roles" aria-label="Document expiry alerts">
+              {docExpiryAlerts.length === 0 ? <li>No document expiry alerts yet</li> : null}
+              {docExpiryAlerts.slice(0, 12).map((row) => (
+                <li key={row.alertId}>
+                  {row.storeName} · {row.docType} · expires {row.expiresAt ?? '—'} · store{' '}
+                  {row.storeStatus}
+                  {row.sentAt ? ' · alert sent' : ''}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setOnboardNote('');
+                void (async () => {
+                  try {
+                    const result = await mockEvaluateDocumentExpiry({});
+                    if (result.alerts) setDocExpiryAlerts(result.alerts);
+                    setStoreDrafts(await listStores());
+                    setStoreDocuments(await listStoreDocuments(50));
+                    setOnboardNote(
+                      `Doc expiry evaluate · store ${result.storeId.slice(0, 8)}… · ${result.storeStatus ?? ''} · suspended ${result.suspendedStoreIds?.length ?? 0}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'doc_expiry_evaluate_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock evaluate doc expiry
+            </button>{' '}
             <button
               type="button"
               className="cta"
@@ -1163,6 +1209,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   try {
                     setStoreDrafts(await listStores());
                     setStoreDocuments(await listStoreDocuments(50));
+                    setDocExpiryAlerts(await listDocumentExpiryAlerts(50));
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : 'stores_refresh_failed');
                   } finally {

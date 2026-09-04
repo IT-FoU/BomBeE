@@ -8,7 +8,7 @@ import { evaluateCodUx, parentChildSummary } from './lib/checkout';
 import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './lib/offline';
 import { requestCustomerOtp, verifyCustomerOtp, fetchSessionMe, logoutSession } from './lib/authApi';
 import { loadCatalogProducts } from './lib/catalogApi';
-import { checkoutLocalCart, fetchOrderView, mockAdvanceFulfillment } from './lib/checkoutApi';
+import { checkoutLocalCart, fetchOrderView, mockAdvanceFulfillment, mockDeliverFulfillment } from './lib/checkoutApi';
 import {
   confirmChildrenMock,
   createQrPayment,
@@ -292,6 +292,28 @@ export function App() {
         setOrderStatus(String(result.order.combined.status));
       } catch (err) {
         setTrackError(err instanceof Error ? err.message : 'fulfillment_failed');
+      } finally {
+        setTrackBusy(false);
+      }
+    })();
+  }
+
+  function deliverTracking() {
+    assertOnlineForMutation(online, 'fulfillment');
+    const token = sessionStorage.getItem('bombee_session');
+    if (!token || !apiOrderId) {
+      setTrackError('Sign in and place an API order first');
+      return;
+    }
+    setTrackBusy(true);
+    setTrackError('');
+    void (async () => {
+      try {
+        const result = await mockDeliverFulfillment(token, apiOrderId);
+        setTrackingChildren(result.order.byStore);
+        setOrderStatus(String(result.order.combined.status));
+      } catch (err) {
+        setTrackError(err instanceof Error ? err.message : 'deliver_failed');
       } finally {
         setTrackBusy(false);
       }
@@ -862,6 +884,14 @@ export function App() {
                     onClick={() => advanceTracking()}
                   >
                     Mock advance fulfillment
+                  </button>
+                  <button
+                    type="button"
+                    className="cta ghost"
+                    disabled={trackBusy}
+                    onClick={() => deliverTracking()}
+                  >
+                    Mock POD / deliver
                   </button>
                 </div>
                 {trackError ? <p className="error">{trackError}</p> : null}

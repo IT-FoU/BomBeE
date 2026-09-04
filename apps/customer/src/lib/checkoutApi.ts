@@ -125,3 +125,35 @@ export async function mockAdvanceFulfillment(
   }
   return (await res.json()) as FulfillmentAdvanceResult;
 }
+
+export type FulfillmentDeliverResult = {
+  ok: true;
+  children: Array<{
+    childOrderId: string;
+    from: string;
+    to: string;
+    steps: string[];
+    deliveryId?: string;
+  }>;
+  order: {
+    combined: OrderView['combined'];
+    byStore: OrderView['byStore'];
+  };
+};
+
+/** Local/mock: POD signature + mark in_transit children delivered. */
+export async function mockDeliverFulfillment(
+  sessionToken: string,
+  parentId: string,
+): Promise<FulfillmentDeliverResult> {
+  const res = await fetch(`${apiBaseUrl()}/v1/orders/${parentId}/fulfillment/mock-deliver`, {
+    method: 'POST',
+    headers: authHeaders(sessionToken),
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `fulfillment_deliver_failed_${res.status}`);
+  }
+  return (await res.json()) as FulfillmentDeliverResult;
+}

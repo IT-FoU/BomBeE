@@ -178,6 +178,80 @@ export class ReservationService {
     }
   }
 
+  /** Ship/handoff: drop reserved + on_hand via allocate, mark reservation consumed. */
+  async consume(input: {
+    reservationId: string;
+    correlationId: string;
+    reason?: string;
+  }) {
+    await this.db.query(`BEGIN`);
+    try {
+      const res = await this.db.query<{
+        id: string;
+        balance_id: string;
+        quantity: number;
+        status: string;
+      }>(
+        `SELECT id, balance_id, quantity, status
+         FROM private.inventory_reservations WHERE id = $1 FOR UPDATE`,
+        [input.reservationId],
+      );
+      const current = res.rows[0];
+      if (!current) {
+        await this.db.query(`ROLLBACK`);
+        return { ok: false as const, reason: 'not_found' };
+      }
+      if (current.status === 'consumed') {
+        await this.db.query(`COMMIT`);
+        return { ok: true as const, idempotentReplay: true as const, status: 'consumed' as const };
+      }
+      if (current.status !== 'active') {
+        await this.db.query(`ROLLBACK`);
+        return { ok: false as const, reason: `not_active:${current.status}` };
+      }
+
+      const bal = await this.inventory._lockBalance(current.balance_id);
+      if (bal.on_hand < current.quantity || bal.reserved < current.quantity) {
+        await this.db.query(`ROLLBACK`);
+        return { ok: false as const, reason: 'insufficient_for_consume' };
+      }
+      await this.db.query(
+        `UPDATE private.inventory_balances
+         SET on_hand = $2, reserved = $3, updated_at = timezone('utc', now())
+         WHERE id = $1`,
+        [
+          current.balance_id,
+          bal.on_hand - current.quantity,
+          bal.reserved - current.quantity,
+        ],
+      );
+      await this.inventory._appendTx({
+        balanceId: current.balance_id,
+        txType: 'allocate',
+        quantity: -current.quantity,
+        correlationId: input.correlationId,
+        reason: input.reason ?? 'ship_consume',
+      });
+      await this.db.query(
+        `UPDATE private.inventory_reservations
+         SET status = 'consumed', released_at = timezone('utc', now())
+         WHERE id = $1`,
+        [current.id],
+      );
+      await this.db.query(`COMMIT`);
+      return {
+        ok: true as const,
+        idempotentReplay: false as const,
+        status: 'consumed' as const,
+        quantity: current.quantity,
+        balanceId: current.balance_id,
+      };
+    } catch (error) {
+      await this.db.query(`ROLLBACK`);
+      throw error;
+    }
+  }
+
   async expireDue(now = Date.now()) {
     const due = await this.db.query<{ id: string }>(
       `SELECT id FROM private.inventory_reservations

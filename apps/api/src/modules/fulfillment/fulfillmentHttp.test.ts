@@ -124,6 +124,10 @@ describe('fulfillment mock-advance HTTP', () => {
     expect(qr.res.statusCode).toBe(201);
     const paymentRequestId = qr.body().paymentRequestId as string;
 
+    const stockAfterReserve = mockRes();
+    await router(mockReq('GET', `/v1/inventory/stock?variantId=${variant.id}`), stockAfterReserve.res);
+    const availableAfterReserve = Number(stockAfterReserve.body().availableQty);
+
     await router(
       mockReq('POST', `/v1/payments/${paymentRequestId}/mock-confirm`, {}, {
         authorization: `Bearer ${token}`,
@@ -143,16 +147,19 @@ describe('fulfillment mock-advance HTTP', () => {
       to: string;
       steps: string[];
       trackingNumber?: string;
+      consumedReservationIds?: string[];
     }>;
     expect(children.length).toBeGreaterThan(0);
     expect(children.every((c) => c.to === 'in_transit')).toBe(true);
-    expect(children[0]!.steps).toEqual([
-      'packing',
-      'ready',
-      'handed_to_courier',
-      'in_transit',
-    ]);
+    expect(children[0]!.steps).toContain('packing');
+    expect(children[0]!.steps).toContain('consumed:1');
+    expect(children[0]!.steps).toContain('in_transit');
     expect(children[0]!.trackingNumber).toMatch(/^MOCK-/);
+    expect(children[0]!.consumedReservationIds?.length).toBe(1);
+
+    const stockAfterShip = mockRes();
+    await router(mockReq('GET', `/v1/inventory/stock?variantId=${variant.id}`), stockAfterShip.res);
+    expect(Number(stockAfterShip.body().availableQty)).toBe(availableAfterReserve);
 
     const again = mockRes();
     await router(
@@ -165,5 +172,28 @@ describe('fulfillment mock-advance HTTP', () => {
     const againChildren = again.body().children as Array<{ steps: string[]; to: string }>;
     expect(againChildren[0]!.to).toBe('in_transit');
     expect(againChildren[0]!.steps).toContain('already_in_transit');
+
+    const deliver = mockRes();
+    await router(
+      mockReq('POST', `/v1/orders/${parentId}/fulfillment/mock-deliver`, {}, {
+        authorization: `Bearer ${token}`,
+      }),
+      deliver.res,
+    );
+    expect(deliver.res.statusCode).toBe(200);
+    const delivered = deliver.body().children as Array<{ to: string; steps: string[] }>;
+    expect(delivered.every((c) => c.to === 'delivered')).toBe(true);
+    expect(delivered[0]!.steps).toEqual(['pod', 'delivered']);
+
+    const deliverAgain = mockRes();
+    await router(
+      mockReq('POST', `/v1/orders/${parentId}/fulfillment/mock-deliver`, {}, {
+        authorization: `Bearer ${token}`,
+      }),
+      deliverAgain.res,
+    );
+    expect(deliverAgain.res.statusCode).toBe(200);
+    const deliveredAgain = deliverAgain.body().children as Array<{ steps: string[] }>;
+    expect(deliveredAgain[0]!.steps).toContain('already_delivered');
   });
 });

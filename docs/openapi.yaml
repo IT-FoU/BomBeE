@@ -347,7 +347,7 @@ paths:
           description: Mock ops disabled
   /v1/orders/{parentId}/fulfillment/mock-advance:
     post:
-      summary: Local/mock advance paid children through packing to in_transit
+      summary: Local/mock advance paid children through packing to in_transit (consumes reservations at handoff)
       security:
         - bearerAuth: []
       parameters:
@@ -359,6 +359,22 @@ paths:
       responses:
         '200':
           description: Per-child steps + updated order views
+        '403':
+          description: Mock ops disabled or not owner
+  /v1/orders/{parentId}/fulfillment/mock-deliver:
+    post:
+      summary: Local/mock POD + mark in_transit children delivered
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Per-child POD steps + updated order views
         '403':
           description: Mock ops disabled or not owner
 components:

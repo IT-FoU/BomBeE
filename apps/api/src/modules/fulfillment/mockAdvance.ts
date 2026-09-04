@@ -8,9 +8,46 @@ export type MockAdvanceChildResult = {
   to: string;
   steps: string[];
   trackingNumber?: string;
+  consumedReservationIds?: string[];
 };
 
-/** Local/mock: advance paid children awaiting_payment → … → in_transit. */
+export type MockDeliverChildResult = {
+  childOrderId: string;
+  from: string;
+  to: string;
+  steps: string[];
+  deliveryId?: string;
+};
+
+async function consumeReservationsForChild(
+  services: ApiServices,
+  childOrderId: string,
+  correlationId: string,
+): Promise<string[]> {
+  const rows = await services.db.query<{ id: string; status: string }>(
+    `SELECT r.id, r.status
+     FROM app.order_items oi
+     JOIN finance.payment_allocations pa ON pa.child_order_id = oi.child_order_id
+     JOIN private.inventory_reservations r
+       ON r.idempotency_key = ('qr:' || pa.payment_request_id::text || ':' || oi.id::text)
+     WHERE oi.child_order_id = $1
+       AND oi.status = 'active'`,
+    [childOrderId],
+  );
+  const consumed: string[] = [];
+  for (const row of rows.rows) {
+    if (row.status !== 'active' && row.status !== 'consumed') continue;
+    const result = await services.reservations.consume({
+      reservationId: row.id,
+      correlationId,
+      reason: 'ship_handoff',
+    });
+    if (result.ok) consumed.push(row.id);
+  }
+  return consumed;
+}
+
+/** Local/mock: advance paid children awaiting_payment → … → in_transit (consume at handoff). */
 export async function mockAdvanceFulfillment(
   services: ApiServices,
   parentId: string,
@@ -53,8 +90,14 @@ export async function mockAdvanceFulfillment(
     let status = child.status as ChildStatus;
     const from = status;
     let trackingNumber: string | undefined;
+    let consumedReservationIds: string[] | undefined;
 
-    while (status === 'awaiting_payment' || status === 'packing' || status === 'ready' || status === 'handed_to_courier') {
+    while (
+      status === 'awaiting_payment' ||
+      status === 'packing' ||
+      status === 'ready' ||
+      status === 'handed_to_courier'
+    ) {
       if (status === 'awaiting_payment') {
         const now = new Date();
         await services.delivery.schedulePackingDeadline(child.id, now);
@@ -132,7 +175,11 @@ export async function mockAdvanceFulfillment(
       }
 
       if (status === 'handed_to_courier') {
-        const delivery = await services.db.query<{ id: string; tracking_number: string; status: string }>(
+        const delivery = await services.db.query<{
+          id: string;
+          tracking_number: string;
+          status: string;
+        }>(
           `SELECT id, tracking_number, status FROM app.shipment_deliveries
            WHERE child_order_id = $1
            ORDER BY created_at DESC LIMIT 1`,
@@ -151,12 +198,21 @@ export async function mockAdvanceFulfillment(
             actorIdentityId,
           });
         }
+        const correlationId = crypto.randomUUID();
+        consumedReservationIds = await consumeReservationsForChild(
+          services,
+          child.id,
+          correlationId,
+        );
+        if (consumedReservationIds.length > 0) {
+          steps.push(`consumed:${consumedReservationIds.length}`);
+        }
         const result = await services.orders.transitionChild({
           childOrderId: child.id,
           toStatus: 'in_transit',
           actorIdentityId,
           reason: 'local_mock_fulfillment',
-          correlationId: crypto.randomUUID(),
+          correlationId,
         });
         if (!result.ok) {
           steps.push(`failed:${result.reason}`);
@@ -178,6 +234,104 @@ export async function mockAdvanceFulfillment(
       to: status,
       steps,
       ...(trackingNumber ? { trackingNumber } : {}),
+      ...(consumedReservationIds?.length ? { consumedReservationIds } : {}),
+    });
+  }
+
+  return results;
+}
+
+/** Local/mock: POD + delivered for in_transit children. */
+export async function mockDeliverFulfillment(
+  services: ApiServices,
+  parentId: string,
+  actorIdentityId: string,
+): Promise<MockDeliverChildResult[]> {
+  const children = await services.db.query<{
+    id: string;
+    status: string;
+    payment_received: boolean;
+  }>(
+    `SELECT id, status, payment_received
+     FROM app.child_orders
+     WHERE parent_order_id = $1
+     ORDER BY child_order_number`,
+    [parentId],
+  );
+
+  const results: MockDeliverChildResult[] = [];
+
+  for (const child of children.rows) {
+    const from = child.status;
+    if (child.status === 'delivered') {
+      results.push({
+        childOrderId: child.id,
+        from,
+        to: 'delivered',
+        steps: ['already_delivered'],
+      });
+      continue;
+    }
+    if (child.status !== 'in_transit') {
+      results.push({
+        childOrderId: child.id,
+        from,
+        to: child.status,
+        steps: ['skipped_not_in_transit'],
+      });
+      continue;
+    }
+
+    const delivery = await services.db.query<{ id: string }>(
+      `SELECT id FROM app.shipment_deliveries
+       WHERE child_order_id = $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [child.id],
+    );
+    const row = delivery.rows[0];
+    if (!row) {
+      results.push({
+        childOrderId: child.id,
+        from,
+        to: child.status,
+        steps: ['failed:delivery_missing'],
+      });
+      continue;
+    }
+
+    const steps: string[] = [];
+    await services.delivery.recordPod({
+      deliveryId: row.id,
+      podMethod: 'signature',
+      evidenceKey: `mock/pod/${child.id}.png`,
+      deliveredAt: new Date(),
+    });
+    steps.push('pod');
+
+    const result = await services.orders.transitionChild({
+      childOrderId: child.id,
+      toStatus: 'delivered',
+      actorIdentityId,
+      reason: 'local_mock_pod',
+      correlationId: crypto.randomUUID(),
+    });
+    if (!result.ok) {
+      results.push({
+        childOrderId: child.id,
+        from,
+        to: child.status,
+        steps: [...steps, `failed:${result.reason}`],
+        deliveryId: row.id,
+      });
+      continue;
+    }
+    steps.push('delivered');
+    results.push({
+      childOrderId: child.id,
+      from,
+      to: 'delivered',
+      steps,
+      deliveryId: row.id,
     });
   }
 

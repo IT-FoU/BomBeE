@@ -69,11 +69,13 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/settlements/:batchId/dispute` | Local/mock dispute a line (`child_order_id` optional → first line) |
 | POST | `/v1/ops/settlements/:batchId/hold-line` | Local/mock hold a line (`child_order_id` optional → first unheld); recomputes held/net |
 | GET | `/v1/support/tickets` | List support tickets (local ops; `escalated=true` optional) |
-| POST | `/v1/ops/support/tickets/mock-evaluate-sla` | Local/mock evaluate SLA breaches + escalate |
 | GET | `/v1/me/support/tickets` | List own support tickets (Bearer) |
 | POST | `/v1/me/support/tickets` | Open support ticket (Bearer) |
 | POST | `/v1/me/support/tickets/:id/confirm-close` | Customer confirm-close after resolve |
+| POST | `/v1/me/support/tickets/:id/reopen` | Customer reopen a closed ticket |
 | POST | `/v1/ops/support/tickets/mock-create` | Local/mock open ticket (seeded customer) |
+| POST | `/v1/ops/support/tickets/mock-evaluate-sla` | Local/mock evaluate SLA breaches + escalate |
+| POST | `/v1/ops/support/tickets/mock-auto-close` | Local/mock auto-close stale `resolved_pending_confirm` |
 | POST | `/v1/ops/support/tickets/:id/reply` | Local/mock staff reply → `awaiting_customer` |
 | POST | `/v1/ops/support/tickets/:id/resolve` | Local/mock preliminary resolve |
 | GET | `/v1/returns` | List return requests (local ops) |

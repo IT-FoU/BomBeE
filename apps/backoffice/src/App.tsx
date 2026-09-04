@@ -65,6 +65,7 @@ import {
   replySupportTicket,
   resolveSupportTicket,
   mockEvaluateSupportSla,
+  mockAutoCloseSupportTicket,
   listReturns,
   mockCreateReturn,
   approveReturn,
@@ -2542,8 +2543,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ສະໜັບສະໜູນ</span>
             </h2>
             <p className="lede">
-              Local support tickets — mock create, staff reply, preliminary resolve, and SLA
-              evaluate/escalate.
+              Local support tickets — mock create, staff reply, preliminary resolve, SLA
+              evaluate/escalate, and stale auto-close.
             </p>
             {supportNote ? (
               <p className="lede" role="status">
@@ -2683,6 +2684,35 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Mock evaluate SLA
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setSupportNote('');
+                void (async () => {
+                  try {
+                    const result = await mockAutoCloseSupportTicket({
+                      now: new Date(Date.now() + 5 * 24 * 60 * 60_000).toISOString(),
+                    });
+                    if (result.tickets) setSupportTickets(result.tickets);
+                    setSupportNote(
+                      `Auto-close ${result.ticketId.slice(0, 8)}… · closed=${String(result.closed)}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'support_auto_close_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock auto-close stale
             </button>{' '}
             <button
               type="button"

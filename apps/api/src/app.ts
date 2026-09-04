@@ -1703,6 +1703,43 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const supportReopenMatch = url.pathname.match(
+      /^\/v1\/me\/support\/tickets\/([^/]+)\/reopen$/,
+    );
+    if (req.method === 'POST' && supportReopenMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const ticketId = decodeURIComponent(supportReopenMatch[1]!);
+      const body = await readJsonBody<{ body?: string }>(req);
+      try {
+        await services.support.reopen(
+          ticketId,
+          session.identityId,
+          body.body?.trim() || 'Still need help',
+        );
+        const tickets = await services.support.listTicketsForCustomer(
+          session.identityId,
+          50,
+        );
+        sendJson(res, 200, { ok: true, ticketId, status: 'reopened', tickets });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'support_reopen_failed';
+        const status =
+          message === 'not_ticket_owner'
+            ? 403
+            : message === 'ticket_not_found'
+              ? 404
+              : message === 'ticket_not_closed'
+                ? 409
+                : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/returns') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
@@ -4039,6 +4076,68 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'support_sla_evaluate_failed';
+        sendJson(res, message === 'ticket_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/support/tickets/mock-auto-close') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        ticketId?: string;
+        ticket_id?: string;
+        now?: string;
+      }>(req);
+      try {
+        let ticketId = (body.ticketId ?? body.ticket_id)?.trim();
+        const now = body.now ? new Date(body.now) : new Date();
+        if (Number.isNaN(now.getTime())) {
+          sendJson(res, 400, { error: 'invalid_now' });
+          return;
+        }
+        if (!ticketId) {
+          const pending = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.support_tickets
+             WHERE status = 'resolved_pending_confirm'
+             ORDER BY created_at DESC
+             LIMIT 1`,
+          );
+          ticketId = pending.rows[0]?.id;
+        }
+        if (!ticketId) {
+          const customerIdentityId = await services.identity.ensureCustomer(
+            '+8562097008800',
+            'Local Support Customer',
+          );
+          const created = await services.support.openTicket({
+            customerIdentityId,
+            channel: 'in_app',
+            subject: 'Local auto-close ticket',
+            body: 'Opened for mock auto-close.',
+            urgency: 'general',
+            now: new Date(now.getTime() - 5 * 24 * 60 * 60_000),
+          });
+          ticketId = created.ticketId;
+          await services.support.markPreliminaryResolved(
+            ticketId,
+            new Date(now.getTime() - 4 * 24 * 60 * 60_000),
+          );
+        }
+        const result = await services.support.autoCloseIfStale(ticketId, now);
+        const tickets = await services.support.listTickets(50);
+        sendJson(res, 200, {
+          ok: true,
+          ticketId,
+          closed: result.closed,
+          status: result.closed ? 'closed' : undefined,
+          now: now.toISOString(),
+          tickets,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'support_auto_close_failed';
         sendJson(res, message === 'ticket_not_found' ? 404 : 400, { error: message });
       }
       return;

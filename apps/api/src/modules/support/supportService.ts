@@ -184,6 +184,12 @@ export class SupportService {
   }
 
   async reopen(ticketId: string, customerIdentityId: string, body: string) {
+    const ticket = await this.assertTicketOwner(ticketId, customerIdentityId);
+    if (ticket.status !== 'closed') {
+      throw new Error('ticket_not_closed');
+    }
+    const message = body.trim();
+    if (!message) throw new Error('body_required');
     await this.db.query(
       `UPDATE app.support_tickets SET status = 'reopened', closed_at = NULL WHERE id = $1`,
       [ticketId],
@@ -191,8 +197,9 @@ export class SupportService {
     await this.db.query(
       `INSERT INTO app.support_messages (ticket_id, sender_type, sender_identity_id, body)
        VALUES ($1,'customer',$2,$3)`,
-      [ticketId, customerIdentityId, body],
+      [ticketId, customerIdentityId, message],
     );
+    return { ok: true as const, status: 'reopened' as const };
   }
 
   async listTickets(limit = 50, escalatedOnly = false) {

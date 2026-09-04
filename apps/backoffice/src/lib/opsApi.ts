@@ -1213,6 +1213,33 @@ export async function mockEvaluateSupportSla(input: {
   };
 }
 
+export async function mockAutoCloseSupportTicket(input: {
+  ticketId?: string;
+  now?: string;
+} = {}): Promise<{
+  ticketId: string;
+  closed: boolean;
+  tickets?: SupportTicketRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/support/tickets/mock-auto-close`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      ticket_id: input.ticketId,
+      now: input.now,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `support_auto_close_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    ticketId: string;
+    closed: boolean;
+    tickets?: SupportTicketRow[];
+  };
+}
+
 export async function replySupportTicket(
   ticketId: string,
   body: string,

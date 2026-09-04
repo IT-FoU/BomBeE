@@ -38,6 +38,7 @@ import {
   confirmCloseMySupportTicket,
   listMySupportTickets,
   openMySupportTicket,
+  reopenMySupportTicket,
   type MySupportTicket,
 } from './lib/supportApi';
 import { listMyReturns, requestMyReturn, type MyReturnRow } from './lib/returnsApi';
@@ -1911,6 +1912,41 @@ export function App() {
                             }}
                           >
                             Confirm close
+                          </button>
+                        </>
+                      ) : null}
+                      {t.status === 'closed' ? (
+                        <>
+                          {' '}
+                          <button
+                            type="button"
+                            className="cta ghost"
+                            disabled={supportBusy || !online}
+                            onClick={() => {
+                              const token = sessionStorage.getItem('bombee_session');
+                              if (!token) return;
+                              setSupportBusy(true);
+                              void (async () => {
+                                try {
+                                  assertOnlineForMutation(online, 'support_reopen');
+                                  const result = await reopenMySupportTicket(
+                                    token,
+                                    t.ticketId,
+                                    'Still need help with this issue',
+                                  );
+                                  if (result.tickets) setMyTickets(result.tickets);
+                                  setSupportNote(`Reopened ${t.ticketId.slice(0, 8)}…`);
+                                } catch (err) {
+                                  setSupportNote(
+                                    err instanceof Error ? err.message : 'support_reopen_failed',
+                                  );
+                                } finally {
+                                  setSupportBusy(false);
+                                }
+                              })();
+                            }}
+                          >
+                            Reopen
                           </button>
                         </>
                       ) : null}

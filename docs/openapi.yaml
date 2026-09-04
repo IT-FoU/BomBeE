@@ -957,6 +957,34 @@ paths:
           description: Unauthorized
         '403':
           description: Not ticket owner
+  /v1/me/support/tickets/{ticketId}/reopen:
+    post:
+      summary: Customer reopen a closed support ticket
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: ticketId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+      responses:
+        '200':
+          description: Reopened
+        '401':
+          description: Unauthorized
+        '403':
+          description: Not ticket owner
+        '409':
+          description: Ticket not closed
   /v1/ops/support/tickets/mock-create:
     post:
       summary: Local/mock open a support ticket
@@ -999,6 +1027,25 @@ paths:
           description: Mock ops disabled
         '404':
           description: Ticket not found
+  /v1/ops/support/tickets/mock-auto-close:
+    post:
+      summary: Local/mock auto-close stale resolved_pending_confirm tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  type: string
+                now:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: closed true/false for the ticket
+        '403':
+          description: Mock ops disabled
   /v1/ops/support/tickets/{ticketId}/reply:
     post:
       summary: Local/mock staff reply

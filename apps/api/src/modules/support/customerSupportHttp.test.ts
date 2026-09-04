@@ -148,5 +148,48 @@ describe('customer support HTTP', () => {
       forbidden.res,
     );
     expect(forbidden.res.statusCode).toBe(403);
+
+    const otherReopen = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/me/support/tickets/${ticketId}/reopen`,
+        { body: 'not mine' },
+        { authorization: `Bearer ${otherToken}` },
+      ),
+      otherReopen.res,
+    );
+    expect(otherReopen.res.statusCode).toBe(403);
+
+    const reopened = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/me/support/tickets/${ticketId}/reopen`,
+        { body: 'Still broken' },
+        { authorization: `Bearer ${token}` },
+      ),
+      reopened.res,
+    );
+    expect(reopened.res.statusCode).toBe(200);
+    expect(reopened.body().status).toBe('reopened');
+    expect(
+      (reopened.body().tickets as Array<{ ticketId: string; status: string }>).some(
+        (t) => t.ticketId === ticketId && t.status === 'reopened',
+      ),
+    ).toBe(true);
+
+    const notClosed = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/me/support/tickets/${ticketId}/reopen`,
+        { body: 'again' },
+        { authorization: `Bearer ${token}` },
+      ),
+      notClosed.res,
+    );
+    expect(notClosed.res.statusCode).toBe(409);
+    expect(notClosed.body().error).toBe('ticket_not_closed');
   });
 });

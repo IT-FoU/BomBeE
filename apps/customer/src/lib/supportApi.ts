@@ -83,3 +83,23 @@ export async function confirmCloseMySupportTicket(
   }
   return (await res.json()) as { tickets?: MySupportTicket[]; status?: string };
 }
+
+export async function reopenMySupportTicket(
+  sessionToken: string,
+  ticketId: string,
+  body = 'Still need help',
+): Promise<{ tickets?: MySupportTicket[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/me/support/tickets/${encodeURIComponent(ticketId)}/reopen`,
+    {
+      method: 'POST',
+      headers: authHeaders(sessionToken),
+      body: JSON.stringify({ body }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `support_reopen_failed_${res.status}`);
+  }
+  return (await res.json()) as { tickets?: MySupportTicket[]; status?: string };
+}

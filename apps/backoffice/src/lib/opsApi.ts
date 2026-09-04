@@ -1167,6 +1167,60 @@ export async function resolveDeliveryClaim(
   return (await res.json()) as { claims?: DeliveryClaimRow[]; status?: string };
 }
 
+export type PackingDeadlineRow = {
+  packingDeadlineId: string;
+  childOrderId: string;
+  confirmedAt: string;
+  dueAt: string;
+  packedAt: string | null;
+  late: boolean;
+  alertedAt: string | null;
+  childStatus: string;
+};
+
+export async function listPackingDeadlines(
+  limit = 50,
+  lateOnly = false,
+): Promise<PackingDeadlineRow[]> {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (lateOnly) qs.set('late', 'true');
+  const res = await fetch(`${apiBaseUrl()}/v1/packing-deadlines?${qs.toString()}`);
+  if (!res.ok) {
+    throw new Error(`packing_deadlines_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { deadlines: PackingDeadlineRow[] };
+  return body.deadlines;
+}
+
+export async function mockEvaluatePackingDeadline(input: {
+  childOrderId?: string;
+  hoursAgo?: number;
+  now?: string;
+} = {}): Promise<{
+  childOrderId: string;
+  late: boolean;
+  deadlines?: PackingDeadlineRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/packing-deadlines/mock-evaluate`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      child_order_id: input.childOrderId,
+      hours_ago: input.hoursAgo,
+      now: input.now,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `packing_evaluate_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    childOrderId: string;
+    late: boolean;
+    deadlines?: PackingDeadlineRow[];
+  };
+}
+
 export type PromotionRow = {
   promotionId: string;
   code: string;

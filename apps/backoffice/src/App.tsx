@@ -63,6 +63,8 @@ import {
   listDeliveryClaims,
   mockOpenDeliveryClaim,
   resolveDeliveryClaim,
+  listPackingDeadlines,
+  mockEvaluatePackingDeadline,
   listPromotions,
   mockCreatePromotion,
   pausePromotion,
@@ -142,6 +144,7 @@ import {
   type SupportTicketRow,
   type ReturnRequestRow,
   type DeliveryClaimRow,
+  type PackingDeadlineRow,
   type PromotionRow,
   type RefundApprovalRow,
   type PriceRequestRow,
@@ -245,6 +248,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [returnRequests, setReturnRequests] = useState<ReturnRequestRow[]>([]);
   const [returnNote, setReturnNote] = useState('');
   const [deliveryClaims, setDeliveryClaims] = useState<DeliveryClaimRow[]>([]);
+  const [packingDeadlines, setPackingDeadlines] = useState<PackingDeadlineRow[]>([]);
   const [fulfillmentNote, setFulfillmentNote] = useState('');
   const [promotions, setPromotions] = useState<PromotionRow[]>([]);
   const [promoNote, setPromoNote] = useState('');
@@ -318,6 +322,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           tickets,
           returns,
           claimRows,
+          packingRows,
           promos,
           refundRows,
           priceRows,
@@ -358,6 +363,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listSupportTickets(50),
           listReturns(50),
           listDeliveryClaims(50),
+          listPackingDeadlines(50),
           listPromotions(50),
           listRefunds(50),
           listPriceRequests(50),
@@ -398,6 +404,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setSupportTickets(tickets);
         setReturnRequests(returns);
         setDeliveryClaims(claimRows);
+        setPackingDeadlines(packingRows);
         setPromotions(promos);
         setRefunds(refundRows);
         setPriceRequests(priceRows);
@@ -1829,14 +1836,72 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ຈັດສົ່ງ</span>
             </h2>
             <p className="lede">
-              Orders still use Confirm / Advance / Deliver. Here: lost/damaged delivery claims
-              (mock open + resolve/reject).
+              Orders still use Confirm / Advance / Deliver. Here: packing SLA deadlines and
+              lost/damaged delivery claims.
             </p>
             {fulfillmentNote ? (
               <p className="lede" role="status">
                 {fulfillmentNote}
               </p>
             ) : null}
+            <ul className="roles" aria-label="Packing deadlines">
+              {packingDeadlines.length === 0 ? <li>No packing deadlines yet</li> : null}
+              {packingDeadlines.map((row) => (
+                <li key={row.packingDeadlineId}>
+                  {row.late ? 'LATE' : 'ok'} · due {row.dueAt.slice(0, 16)} · child{' '}
+                  {row.childOrderId.slice(0, 8)}… · {row.childStatus}
+                  {row.packedAt ? ` · packed ${row.packedAt.slice(0, 16)}` : ' · unpacked'}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setFulfillmentNote('');
+                void (async () => {
+                  try {
+                    const result = await mockEvaluatePackingDeadline({ hoursAgo: 25 });
+                    if (result.deadlines) setPackingDeadlines(result.deadlines);
+                    setFulfillmentNote(
+                      `Evaluated packing ${result.childOrderId.slice(0, 8)}… · late=${String(result.late)}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'packing_evaluate_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock evaluate packing SLA
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setPackingDeadlines(await listPackingDeadlines(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'packing_deadlines_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh packing
+            </button>
             <ul className="roles" aria-label="Delivery claims">
               {deliveryClaims.length === 0 ? <li>No delivery claims yet</li> : null}
               {deliveryClaims.map((claim) => (

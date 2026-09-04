@@ -117,6 +117,39 @@ export class DeliveryService {
     return { late };
   }
 
+  async listPackingDeadlines(limit = 50, lateOnly = false) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      child_order_id: string;
+      confirmed_at: string;
+      due_at: string;
+      packed_at: string | null;
+      late: boolean;
+      alerted_at: string | null;
+      child_status: string;
+    }>(
+      `SELECT p.id, p.child_order_id, p.confirmed_at::text, p.due_at::text,
+              p.packed_at::text, p.late, p.alerted_at::text, co.status AS child_status
+       FROM app.packing_deadlines p
+       JOIN app.child_orders co ON co.id = p.child_order_id
+       WHERE ($2::boolean = false OR p.late = true)
+       ORDER BY p.due_at ASC
+       LIMIT $1`,
+      [capped, lateOnly],
+    );
+    return rows.rows.map((r) => ({
+      packingDeadlineId: r.id,
+      childOrderId: r.child_order_id,
+      confirmedAt: r.confirmed_at,
+      dueAt: r.due_at,
+      packedAt: r.packed_at,
+      late: r.late,
+      alertedAt: r.alerted_at,
+      childStatus: r.child_status,
+    }));
+  }
+
   async createDelivery(input: {
     childOrderId: string;
     courierId: string;

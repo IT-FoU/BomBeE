@@ -1567,6 +1567,84 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/packing-deadlines') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const lateParam = url.searchParams.get('late');
+      const lateOnly = lateParam === '1' || lateParam === 'true';
+      const deadlines = await services.delivery.listPackingDeadlines(limit, lateOnly);
+      sendJson(res, 200, { ok: true, deadlines });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/packing-deadlines/mock-evaluate') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        childOrderId?: string;
+        child_order_id?: string;
+        now?: string;
+        hoursAgo?: number;
+        hours_ago?: number;
+      }>(req);
+      try {
+        let childOrderId = (body.childOrderId ?? body.child_order_id)?.trim();
+        if (!childOrderId) {
+          const existing = await services.db.query<{ child_order_id: string }>(
+            `SELECT child_order_id FROM app.packing_deadlines
+             ORDER BY due_at DESC LIMIT 1`,
+          );
+          childOrderId = existing.rows[0]?.child_order_id;
+        }
+        if (!childOrderId) {
+          const child = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.child_orders ORDER BY created_at DESC LIMIT 1`,
+          );
+          childOrderId = child.rows[0]?.id;
+        }
+        if (!childOrderId) {
+          sendJson(res, 409, { error: 'no_eligible_child' });
+          return;
+        }
+        const now = body.now ? new Date(body.now) : new Date();
+        if (Number.isNaN(now.getTime())) {
+          sendJson(res, 400, { error: 'invalid_now' });
+          return;
+        }
+        const hoursAgoRaw = body.hoursAgo ?? body.hours_ago ?? 25;
+        const hoursAgo =
+          typeof hoursAgoRaw === 'number' && Number.isFinite(hoursAgoRaw)
+            ? Math.max(hoursAgoRaw, 1)
+            : 25;
+        const confirmedAt = new Date(now.getTime() - hoursAgo * 60 * 60_000);
+        await services.delivery.schedulePackingDeadline(childOrderId, confirmedAt);
+        // Clear packed_at so evaluate reflects an overdue unpacked SLA when prior
+        // mock-advance packed on time relative to the old clock.
+        await services.db.query(
+          `UPDATE app.packing_deadlines
+           SET packed_at = NULL, late = false, alerted_at = NULL
+           WHERE child_order_id = $1`,
+          [childOrderId],
+        );
+        const evaluated = await services.delivery.evaluateLatePacking(childOrderId, now);
+        const deadlines = await services.delivery.listPackingDeadlines(50);
+        sendJson(res, 200, {
+          ok: true,
+          childOrderId,
+          late: evaluated.late,
+          confirmedAt: confirmedAt.toISOString(),
+          now: now.toISOString(),
+          deadlines,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'packing_evaluate_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/me/returns') {
       const session = await requireCustomerSession(req, services);
       if (!session) {

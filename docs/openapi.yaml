@@ -1044,6 +1044,47 @@ paths:
           description: Claim not found
         '409':
           description: Claim not open
+  /v1/packing-deadlines:
+    get:
+      summary: List packing SLA deadlines (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: late
+          schema:
+            type: boolean
+          description: When true, only late deadlines
+      responses:
+        '200':
+          description: Deadlines array
+  /v1/ops/packing-deadlines/mock-evaluate:
+    post:
+      summary: Local/mock schedule overdue packing confirm and evaluate late flag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                hours_ago:
+                  type: number
+                  default: 25
+                now:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Evaluated; deadlines returned
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No eligible child order
   /v1/me/returns:
     get:
       summary: List own return requests

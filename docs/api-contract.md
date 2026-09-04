@@ -34,6 +34,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/settlements/:batchId/approve` | Local/mock approve (distinct finance actor; maker-checker) |
 | POST | `/v1/ops/settlements/:batchId/dispute` | Local/mock dispute a line (`child_order_id` optional → first line) |
 | GET | `/v1/support/tickets` | List support tickets (local ops) |
+| GET | `/v1/me/support/tickets` | List own support tickets (Bearer) |
+| POST | `/v1/me/support/tickets` | Open support ticket (Bearer) |
+| POST | `/v1/me/support/tickets/:id/confirm-close` | Customer confirm-close after resolve |
 | POST | `/v1/ops/support/tickets/mock-create` | Local/mock open ticket (seeded customer) |
 | POST | `/v1/ops/support/tickets/:id/reply` | Local/mock staff reply → `awaiting_customer` |
 | POST | `/v1/ops/support/tickets/:id/resolve` | Local/mock preliminary resolve |

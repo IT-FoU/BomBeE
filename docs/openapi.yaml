@@ -426,6 +426,43 @@ paths:
       responses:
         '200':
           description: Tickets array
+  /v1/me/support/tickets:
+    get:
+      summary: List own support tickets
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Tickets array
+        '401':
+          description: Unauthorized
+    post:
+      summary: Open support ticket
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Ticket opened
+        '401':
+          description: Unauthorized
+  /v1/me/support/tickets/{ticketId}/confirm-close:
+    post:
+      summary: Customer confirm-close after preliminary resolve
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: ticketId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Closed
+        '401':
+          description: Unauthorized
+        '403':
+          description: Not ticket owner
   /v1/ops/support/tickets/mock-create:
     post:
       summary: Local/mock open a support ticket

@@ -31,6 +31,12 @@ import {
   type ReviewRow,
 } from './lib/contentApi';
 import {
+  confirmCloseMySupportTicket,
+  listMySupportTickets,
+  openMySupportTicket,
+  type MySupportTicket,
+} from './lib/supportApi';
+import {
   confirmChildrenMock,
   createCodPayment,
   createQrPayment,
@@ -116,6 +122,14 @@ export function App() {
   const [tiktokUrl, setTiktokUrl] = useState('https://www.tiktok.com/@bombee/video/1234567890');
   const [contentNote, setContentNote] = useState('');
   const [contentBusy, setContentBusy] = useState(false);
+  const [myTickets, setMyTickets] = useState<MySupportTicket[]>([]);
+  const [supportSubject, setSupportSubject] = useState('Order help');
+  const [supportBody, setSupportBody] = useState('Need help with my recent order');
+  const [supportChannel, setSupportChannel] = useState<'in_app' | 'whatsapp' | 'phone'>(
+    'in_app',
+  );
+  const [supportNote, setSupportNote] = useState('');
+  const [supportBusy, setSupportBusy] = useState(false);
   const [qrPayment, setQrPayment] = useState<QrPayment | null>(null);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [payBusy, setPayBusy] = useState(false);
@@ -1515,11 +1529,141 @@ export function App() {
         {route === 'support' && (
           <section className="page">
             <h1>Support</h1>
-            <ul>
-              <li>In-app ticket</li>
-              <li>WhatsApp / message reference</li>
-              <li>Phone log</li>
-            </ul>
+            <p className="muted">
+              Open an in-app ticket (WhatsApp/phone channels accepted as tags for local QA).
+            </p>
+            {!loggedIn ? (
+              <p className="muted">Sign in with OTP to manage tickets.</p>
+            ) : (
+              <>
+                <label>
+                  Subject
+                  <input
+                    value={supportSubject}
+                    onChange={(e) => setSupportSubject(e.target.value)}
+                    aria-label="Support subject"
+                  />
+                </label>
+                <label>
+                  Message
+                  <input
+                    value={supportBody}
+                    onChange={(e) => setSupportBody(e.target.value)}
+                    aria-label="Support message"
+                  />
+                </label>
+                <label>
+                  Channel
+                  <select
+                    value={supportChannel}
+                    onChange={(e) =>
+                      setSupportChannel(e.target.value as 'in_app' | 'whatsapp' | 'phone')
+                    }
+                    aria-label="Support channel"
+                  >
+                    <option value="in_app">In-app</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="phone">Phone</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="cta ghost"
+                  disabled={supportBusy || !online}
+                  onClick={() => {
+                    const token = sessionStorage.getItem('bombee_session');
+                    if (!token) return;
+                    setSupportBusy(true);
+                    setSupportNote('');
+                    void (async () => {
+                      try {
+                        assertOnlineForMutation(online, 'support_open');
+                        const result = await openMySupportTicket(token, {
+                          subject: supportSubject.trim() || 'Help',
+                          body: supportBody.trim() || 'Need assistance',
+                          channel: supportChannel,
+                        });
+                        if (result.tickets) setMyTickets(result.tickets);
+                        else setMyTickets(await listMySupportTickets(token));
+                        setSupportNote(`Opened ${result.ticketId.slice(0, 8)}…`);
+                      } catch (err) {
+                        setSupportNote(err instanceof Error ? err.message : 'support_open_failed');
+                      } finally {
+                        setSupportBusy(false);
+                      }
+                    })();
+                  }}
+                >
+                  Open ticket
+                </button>{' '}
+                <button
+                  type="button"
+                  className="cta ghost"
+                  disabled={supportBusy}
+                  onClick={() => {
+                    const token = sessionStorage.getItem('bombee_session');
+                    if (!token) return;
+                    setSupportBusy(true);
+                    void (async () => {
+                      try {
+                        setMyTickets(await listMySupportTickets(token));
+                        setSupportNote(`Loaded tickets`);
+                      } catch (err) {
+                        setSupportNote(
+                          err instanceof Error ? err.message : 'support_list_failed',
+                        );
+                      } finally {
+                        setSupportBusy(false);
+                      }
+                    })();
+                  }}
+                >
+                  Refresh tickets
+                </button>
+                {supportNote ? <p className="muted">{supportNote}</p> : null}
+                <ul aria-label="My support tickets">
+                  {myTickets.length === 0 ? <li className="muted">No tickets yet</li> : null}
+                  {myTickets.map((t) => (
+                    <li key={t.ticketId}>
+                      {t.status} · {t.channel} · {t.subject} · {t.ticketId.slice(0, 8)}…
+                      {t.status === 'resolved_pending_confirm' ? (
+                        <>
+                          {' '}
+                          <button
+                            type="button"
+                            className="cta ghost"
+                            disabled={supportBusy || !online}
+                            onClick={() => {
+                              const token = sessionStorage.getItem('bombee_session');
+                              if (!token) return;
+                              setSupportBusy(true);
+                              void (async () => {
+                                try {
+                                  const result = await confirmCloseMySupportTicket(
+                                    token,
+                                    t.ticketId,
+                                  );
+                                  if (result.tickets) setMyTickets(result.tickets);
+                                  setSupportNote(`Closed ${t.ticketId.slice(0, 8)}…`);
+                                } catch (err) {
+                                  setSupportNote(
+                                    err instanceof Error ? err.message : 'support_close_failed',
+                                  );
+                                } finally {
+                                  setSupportBusy(false);
+                                }
+                              })();
+                            }}
+                          >
+                            Confirm close
+                          </button>
+                        </>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </section>
         )}
 

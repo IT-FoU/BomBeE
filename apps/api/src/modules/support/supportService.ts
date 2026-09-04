@@ -230,4 +230,52 @@ export class SupportService {
       createdAt: r.created_at,
     }));
   }
+
+  async listTicketsForCustomer(customerIdentityId: string, limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      subject: string;
+      status: string;
+      urgency: string;
+      channel: string;
+      customer_identity_id: string;
+      message_count: number;
+      first_response_due_at: string;
+      resolution_due_at: string;
+      created_at: string;
+    }>(
+      `SELECT t.id, t.subject, t.status, t.urgency, t.channel, t.customer_identity_id,
+              (SELECT count(*)::int FROM app.support_messages m WHERE m.ticket_id = t.id) AS message_count,
+              t.first_response_due_at::text, t.resolution_due_at::text, t.created_at::text
+       FROM app.support_tickets t
+       WHERE t.customer_identity_id = $1
+       ORDER BY t.created_at DESC
+       LIMIT $2`,
+      [customerIdentityId, capped],
+    );
+    return rows.rows.map((r) => ({
+      ticketId: r.id,
+      subject: r.subject,
+      status: r.status,
+      urgency: r.urgency,
+      channel: r.channel,
+      customerIdentityId: r.customer_identity_id,
+      messageCount: Number(r.message_count),
+      firstResponseDueAt: r.first_response_due_at,
+      resolutionDueAt: r.resolution_due_at,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async assertTicketOwner(ticketId: string, customerIdentityId: string) {
+    const row = await this.db.query<{ customer_identity_id: string; status: string }>(
+      `SELECT customer_identity_id, status FROM app.support_tickets WHERE id = $1`,
+      [ticketId],
+    );
+    const t = row.rows[0];
+    if (!t) throw new Error('ticket_not_found');
+    if (t.customer_identity_id !== customerIdentityId) throw new Error('not_ticket_owner');
+    return t;
+  }
 }

@@ -529,6 +529,104 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/me/support/tickets') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const tickets = await services.support.listTicketsForCustomer(
+        session.identityId,
+        limit,
+      );
+      sendJson(res, 200, { ok: true, tickets });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/me/support/tickets') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{
+        subject?: string;
+        body?: string;
+        channel?: 'in_app' | 'whatsapp' | 'phone';
+        urgency?: 'general' | 'urgent';
+        externalRef?: string;
+        external_ref?: string;
+      }>(req);
+      const subject = body.subject?.trim();
+      const message = body.body?.trim();
+      if (!subject || !message) {
+        sendJson(res, 400, { error: 'subject_and_body_required' });
+        return;
+      }
+      const channel = body.channel ?? 'in_app';
+      if (!['in_app', 'whatsapp', 'phone'].includes(channel)) {
+        sendJson(res, 400, { error: 'invalid_channel' });
+        return;
+      }
+      const urgency = body.urgency ?? 'general';
+      if (!['general', 'urgent'].includes(urgency)) {
+        sendJson(res, 400, { error: 'invalid_urgency' });
+        return;
+      }
+      try {
+        const created = await services.support.openTicket({
+          customerIdentityId: session.identityId,
+          channel,
+          subject,
+          body: message,
+          urgency,
+          externalRef: body.externalRef ?? body.external_ref,
+        });
+        const tickets = await services.support.listTicketsForCustomer(
+          session.identityId,
+          50,
+        );
+        sendJson(res, 201, { ok: true, ...created, tickets });
+      } catch (err) {
+        const messageText = err instanceof Error ? err.message : 'support_open_failed';
+        sendJson(res, 400, { error: messageText });
+      }
+      return;
+    }
+
+    const supportConfirmCloseMatch = url.pathname.match(
+      /^\/v1\/me\/support\/tickets\/([^/]+)\/confirm-close$/,
+    );
+    if (req.method === 'POST' && supportConfirmCloseMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const ticketId = decodeURIComponent(supportConfirmCloseMatch[1]!);
+      try {
+        await services.support.assertTicketOwner(ticketId, session.identityId);
+        await services.support.customerConfirmClose(ticketId);
+        const tickets = await services.support.listTicketsForCustomer(
+          session.identityId,
+          50,
+        );
+        sendJson(res, 200, { ok: true, ticketId, status: 'closed', tickets });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'support_close_failed';
+        const status =
+          message === 'not_ticket_owner'
+            ? 403
+            : message === 'ticket_not_found'
+              ? 404
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/returns') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

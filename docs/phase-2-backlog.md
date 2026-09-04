@@ -57,6 +57,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B37 | Image search HTTP + customer wiring | **Done** — catalog/image search endpoints, seed barcode, customer image-search panel |
 | P2-B38 | Customer privacy addresses + deletion | **Done** — `/v1/me/privacy|addresses|marketing-opt-in|deletion-request`, ops approve anonymize; Privacy BO |
 | P2-B39 | Product reviews + TikTok HTTP | **Done** — `/v1/reviews`, `/v1/tiktok-links`, ops mock-create/moderate; Content BO; customer after-sales |
+| P2-B40 | Customer support tickets (me) | **Done** — `/v1/me/support/tickets` list/open/confirm-close; customer Support page |
 
 ## C — Hard rules that stay
 

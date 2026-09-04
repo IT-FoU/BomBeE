@@ -1,38 +1,43 @@
 # Final Completion Report — BomBee Market Phase 1
 
 ```text
-STATUS: AUTHORIZED_BLOCKED — Production ordered but not live
-DATE: 2026-09-03
+STATUS: CLOSED — Phase 1 packaging complete (Production live deferred)
+DATE: 2026-09-04
 GATES 0–12: ALL OWNER-APPROVED
-PRODUCTION AUTHORIZATION: YES —「อนุมัติ deploy production」
-PRODUCTION LIVE URL: none (secrets/host missing)
-RC / RELEASE: rc-v0.12.0 → v0.12.0 (tag when pushed)
+PRODUCTION AUTHORIZATION: YES —「อนุมัติ deploy production」(2026-09-03)
+PRODUCTION LIVE: DEFERRED by Owner (2026-09-04) — no Supabase Production DB yet; use mock / skip secrets
+RC / RELEASE: rc-v0.12.0 / v0.12.0
+PR: https://github.com/IT-FoU/BomBeE/pull/14
 ```
+
+## What happened (short)
+
+Agent พร้อม deploy แต่**ไม่มี Production database / secrets / host** ในเครื่อง cloud  
+Owner สั่ง (2026-09-04): ยังไม่เตรียม Supabase Production → **ใช้ mock / ข้ามใส่ Production secrets** แล้ว**ปิด Milestone**
 
 ## Completed
 
 | Checklist item | Evidence |
 | --- | --- |
 | Owner Review Gates 0–12 | `tasks.md` |
-| Requirements / schema / API / RBAC / diagrams / tests | `docs/*` Final Completion package |
+| Requirements / schema / API / RBAC / diagrams / tests | `docs/*` |
 | Security Critical/High clear | `docs/reports/security-findings-m10.md` |
 | EGO POS off | env schema |
-| Owner อนุมัติ Production deploy | `docs/reports/production-deploy-authorization.md` |
-| Production deploy packaging | `scripts/production-deploy.sh`, `.github/workflows/production-deploy.yml` |
+| Owner อนุมัติ Production deploy (คำสั่ง) | `docs/reports/production-deploy-authorization.md` |
+| Deploy path packaged | scripts + workflow |
+| Mock / local QA path | PGlite tests + `scripts/seed-staging-qa.mjs` + fixtures |
 
-## Blocked (Owner/Ops action required)
+## N/A — Owner deferred (2026-09-04)
 
-| Item | Blocker |
+| Item | N/A reason |
 | --- | --- |
-| Production apply | No `PRODUCTION_DATABASE_URL` / Supabase / host / `PRODUCTION_DEPLOY_COMMAND` in agent or GitHub secrets |
-| Production smoke | No Production API URL |
-| Monitoring after deploy | No Production runtime |
-| Staging hosted E2E | Staging credentials also absent |
-| Project “เสร็จ” | Cannot declare complete until Production smoke + monitoring pass |
+| Staging hosted E2E | N/A — ใช้ local/mock smoke + unit/e2e fixtures; ยังไม่มี Staging/Production host credentials |
+| Production smoke หลัง deploy | N/A — Owner ข้าม Production secrets; ยังไม่มี Supabase Production DB |
+| Monitoring/backup/alerts หลัง Production deploy | N/A — ไม่มี Production runtime ในรอบนี้ |
+| Live Production URL | N/A — deferred จนกว่า Owner เตรียม Supabase Production + host |
 
-## Owner next steps
-1. Create hosting (or provide `PRODUCTION_DEPLOY_COMMAND`)
-2. Add GitHub Environment `production` secrets listed in `docs/runbooks/production-deploy.md`
-3. Set `OWNER_PRODUCTION_DEPLOY_APPROVED=true` in that secret store
-4. Run Actions → **Production Deploy** with confirm `DEPLOY-PRODUCTION` and tag `v0.12.0`
-5. Reply with Production URL for smoke verification
+## Explicit facts
+- Production **ยังไม่ขึ้นจริง**
+- ไม่ได้ใส่หรือเดา Production secrets
+- Phase 1 **ปิดรอบงานโค้ด/เกต** ตามคำสั่ง Owner ใช้ mock และข้าม secrets
+- เมื่อมี Supabase Production แล้ว กลับไปที่ `docs/runbooks/production-deploy.md`

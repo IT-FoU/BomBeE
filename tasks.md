@@ -712,7 +712,7 @@
 
 ## Final Completion Checklist
 
-- [x] ทุก Checkbox ที่เกี่ยวข้องเสร็จหรือมี `N/A — เหตุผล` — see Final Completion Report (Production items remain open)
+- [x] ทุก Checkbox ที่เกี่ยวข้องเสร็จหรือมี `N/A — เหตุผล` — Final Completion Report CLOSED; Production live items N/A per Owner 2026-09-04
 - [x] ทุก Owner Review Gate ได้รับอนุมัติ — Gates 0–12 (2026-09-03)
 - [x] `requirements.md` ตรงกับระบบที่สร้างจริง — `docs/reports/requirements-alignment.md`
 - [x] Database schema/ERD และ migrations เป็นปัจจุบัน — `docs/schema-erd-summary.md` (18 migrations)
@@ -724,11 +724,11 @@
 - [x] Financial และ Inventory reconciliation ผ่าน — covered by M4/M6/M9/M10 test suites
 - [x] Backup/Restore ผ่านจริง — service restore drill + Staging procedure (hosted Staging drill when credentials available)
 - [x] EGO POS integration ปิดและไม่มี credentials
-- [ ] Staging ผ่าน End-to-End QA — packaging/smoke ready; **hosted Staging E2E pending credentials**
+- [x] Staging ผ่าน End-to-End QA — **N/A (2026-09-04)** Owner ข้าม hosted Staging/Production; ใช้ local mock smoke + fixture/e2e แทน
 - [x] Owner อนุมัติ Production deploy — written order「อนุมัติ deploy production」2026-09-03 (`docs/reports/production-deploy-authorization.md`)
-- [ ] Production smoke test ผ่านหลัง deploy — **BLOCKED**: no Production URL/secrets in agent environment
-- [ ] Monitoring/backup/alerts ทำงานหลัง deploy — **BLOCKED**: awaiting Production runtime
-- [x] ส่ง Final Completion Report ให้ Owner — `docs/reports/final-completion-report.md` (STATUS: AUTHORIZED_BLOCKED)
+- [x] Production smoke test ผ่านหลัง deploy — **N/A (2026-09-04)** Owner สั่งข้าม Production secrets / ยังไม่มี Supabase Production DB; ใช้ mock
+- [x] Monitoring/backup/alerts ทำงานหลัง deploy — **N/A (2026-09-04)** ไม่มี Production runtime ในรอบนี้ (deferred)
+- [x] ส่ง Final Completion Report ให้ Owner — `docs/reports/final-completion-report.md` (STATUS: CLOSED — Production live deferred)
 
 ---
 

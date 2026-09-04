@@ -1,33 +1,20 @@
 # PRODUCTION HOLD
 
 ## Status
-**AUTHORIZED — APPLY BLOCKED ON INFRASTRUCTURE**
+**CLOSED FOR PHASE 1 PACKAGING — Production live deferred**
 
-Owner written order received: **「อนุมัติ deploy production」** (2026-09-03).
+- Written Owner order: **「อนุมัติ deploy production」** (2026-09-03)
+- Follow-up Owner order (2026-09-04): **ข้าม Production secrets / ใช้ mock** เพราะยังไม่มี Supabase Production DB → **ปิด Milestone**
 
-Authorization flag for runtimes:
+## Meaning
+- Phase 1 โค้ด + เกต + deploy packaging ปิดรอบแล้ว
+- Production URL จริง **ยังไม่มี** จนกว่าจะเตรียม Supabase Production + host + secrets
+- เมื่อพร้อม: ทำตาม `docs/runbooks/production-deploy.md`
+
+## Runtime flags (เมื่อขึ้นของจริงทีหลัง)
 ```bash
 OWNER_PRODUCTION_DEPLOY_APPROVED=true
+INTEGRATIONS_MODE=sandbox   # จนกว่าจะอนุมัติ live credentials แยก
+INVITE_ONLY_ENABLED=true
+EGO_POS_ENABLED=false
 ```
-
-Health semantics:
-- `productionDeployAuthorized: true` when the flag is set
-- `productionHold: false` when authorized
-- Actual Production URL smoke still requires host + secrets
-
-## What is now allowed
-- Production deploy scripts / manual `workflow_dispatch` (with secrets)
-- Setting Production DNS **after** secrets and host are wired
-- Invite-only Production soft launch with `INTEGRATIONS_MODE=sandbox`
-
-## Still forbidden without extra Owner approval
-- `INTEGRATIONS_MODE=live` (needs live bank/SMS/courier credentials approval)
-- EGO POS enablement
-- Claiming the project “เสร็จ” until Production smoke + monitoring checklist pass
-
-## Current blocker in this agent environment
-- No Production Supabase/DB credentials available
-- No GitHub `production` environment secrets configured (empty / inaccessible)
-- No in-repo host adapter (Dockerfile / Fly / Vercel / etc.)
-
-See `docs/runbooks/production-deploy.md`.

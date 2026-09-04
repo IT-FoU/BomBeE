@@ -18,9 +18,12 @@ import {
 import { searchByImageMeta, type SearchMatch } from './lib/searchApi';
 import {
   addMyAddress,
+  confirmPhoneChange,
   fetchMyPrivacy,
   requestAccountDeletion,
   setMarketingOptIn,
+  startPhoneChange,
+  submitRecoveryDocument,
   type PrivacyAddress,
   type PrivacyProfile,
 } from './lib/privacyApi';
@@ -117,6 +120,10 @@ export function App() {
   const [privacyAddresses, setPrivacyAddresses] = useState<PrivacyAddress[]>([]);
   const [privacyNote, setPrivacyNote] = useState('');
   const [privacyBusy, setPrivacyBusy] = useState(false);
+  const [phoneChangeNew, setPhoneChangeNew] = useState('+8562097222999');
+  const [phoneChangeCorr, setPhoneChangeCorr] = useState('');
+  const [phoneChangeOldCode, setPhoneChangeOldCode] = useState('');
+  const [phoneChangeNewCode, setPhoneChangeNewCode] = useState('');
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewBody, setReviewBody] = useState('Great product');
@@ -1595,6 +1602,138 @@ export function App() {
               }}
             >
               Request account deletion
+            </button>
+            <h2>Phone change</h2>
+            <p className="muted">
+              Dual OTP to old + new numbers. Local/mock returns both codes for QA.
+            </p>
+            <label>
+              New phone
+              <input
+                value={phoneChangeNew}
+                onChange={(e) => setPhoneChangeNew(e.target.value)}
+                disabled={!loggedIn || privacyBusy}
+              />
+            </label>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || privacyBusy || !online}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token) return;
+                setPrivacyBusy(true);
+                setPrivacyNote('');
+                void (async () => {
+                  try {
+                    const started = await startPhoneChange(token, phoneChangeNew.trim());
+                    setPhoneChangeCorr(started.correlationId);
+                    if (started.devOldCode) setPhoneChangeOldCode(started.devOldCode);
+                    if (started.devNewCode) setPhoneChangeNewCode(started.devNewCode);
+                    setPrivacyNote(
+                      `Phone change started ${started.correlationId.slice(0, 8)}…` +
+                        (started.devOldCode
+                          ? ` (old ${started.devOldCode} / new ${started.devNewCode})`
+                          : ''),
+                    );
+                  } catch (err) {
+                    setPrivacyNote(
+                      err instanceof Error ? err.message : 'phone_change_start_failed',
+                    );
+                  } finally {
+                    setPrivacyBusy(false);
+                  }
+                })();
+              }}
+            >
+              Start phone change
+            </button>
+            <label>
+              Correlation id
+              <input
+                value={phoneChangeCorr}
+                onChange={(e) => setPhoneChangeCorr(e.target.value)}
+                disabled={!loggedIn || privacyBusy}
+              />
+            </label>
+            <label>
+              Old OTP
+              <input
+                value={phoneChangeOldCode}
+                onChange={(e) => setPhoneChangeOldCode(e.target.value)}
+                disabled={!loggedIn || privacyBusy}
+              />
+            </label>
+            <label>
+              New OTP
+              <input
+                value={phoneChangeNewCode}
+                onChange={(e) => setPhoneChangeNewCode(e.target.value)}
+                disabled={!loggedIn || privacyBusy}
+              />
+            </label>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || privacyBusy || !online || !phoneChangeCorr}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token) return;
+                setPrivacyBusy(true);
+                setPrivacyNote('');
+                void (async () => {
+                  try {
+                    const profile = await confirmPhoneChange(token, {
+                      correlationId: phoneChangeCorr.trim(),
+                      oldCode: phoneChangeOldCode.trim(),
+                      newCode: phoneChangeNewCode.trim(),
+                    });
+                    setPrivacyProfile(profile);
+                    setSessionLabel(
+                      `${profile.displayName} · ${profile.phoneE164 ?? ''}`,
+                    );
+                    setPrivacyNote(`Phone updated to ${profile.phoneE164}`);
+                  } catch (err) {
+                    setPrivacyNote(
+                      err instanceof Error ? err.message : 'phone_change_confirm_failed',
+                    );
+                  } finally {
+                    setPrivacyBusy(false);
+                  }
+                })();
+              }}
+            >
+              Confirm phone change
+            </button>
+            <h2>Account recovery</h2>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={privacyBusy || !online}
+              onClick={() => {
+                setPrivacyBusy(true);
+                setPrivacyNote('');
+                void (async () => {
+                  try {
+                    const requestId = await submitRecoveryDocument({
+                      claimedPhone:
+                        privacyProfile?.phoneE164 || otpPhone || '+8562097222099',
+                      documentStorageKey: 'private/recovery/local-mock.pdf',
+                    });
+                    setPrivacyNote(
+                      `Recovery submitted ${requestId.slice(0, 8)}… (private encrypted)`,
+                    );
+                  } catch (err) {
+                    setPrivacyNote(
+                      err instanceof Error ? err.message : 'recovery_submit_failed',
+                    );
+                  } finally {
+                    setPrivacyBusy(false);
+                  }
+                })();
+              }}
+            >
+              Submit recovery document
             </button>
             {privacyNote ? <p className="muted">{privacyNote}</p> : null}
             <button type="button" className="cta ghost" onClick={() => go('favorites')}>

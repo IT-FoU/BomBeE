@@ -1078,6 +1078,26 @@ export async function approveDeletionRequest(
   return (await res.json()) as { requests?: DeletionRequestRow[]; status?: string };
 }
 
+export type RecoveryRequestRow = {
+  requestId: string;
+  claimedPhoneE164: string;
+  documentStorageKey: string;
+  documentEncrypted: boolean;
+  status: string;
+  createdAt: string;
+  decidedAt: string | null;
+  decidedBy: string | null;
+};
+
+export async function listRecoveryRequests(limit = 50): Promise<RecoveryRequestRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/privacy/recovery-requests?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`recovery_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { requests: RecoveryRequestRow[] };
+  return body.requests;
+}
+
 export type ReviewRow = {
   reviewId: string;
   productId: string;

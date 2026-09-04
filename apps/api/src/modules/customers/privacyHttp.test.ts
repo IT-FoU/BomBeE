@@ -70,6 +70,66 @@ describe('privacy HTTP', () => {
     await services.db.close();
   });
 
+  it('starts and confirms dual-OTP phone change and lists recovery docs', async () => {
+    const identityId = await services.identity.ensureCustomer('+8562097222010', 'Phone Change QA');
+    const phoneToken = await services.identity.createSession({
+      authIdentityId: identityId,
+      audience: 'customer',
+      ttlMs: 60 * 60_000,
+    });
+
+    const start = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        '/v1/me/phone-change/start',
+        { newPhone: '+8562097222011' },
+        { authorization: `Bearer ${phoneToken}` },
+      ),
+      start.res,
+    );
+    expect(start.res.statusCode).toBe(200);
+    const correlationId = start.body().correlationId as string;
+    const oldCode = start.body().devOldCode as string;
+    const newCode = start.body().devNewCode as string;
+    expect(correlationId).toBeTruthy();
+    expect(oldCode).toMatch(/^\d{6}$/);
+    expect(newCode).toMatch(/^\d{6}$/);
+
+    const confirm = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        '/v1/me/phone-change/confirm',
+        { correlationId, oldCode, newCode },
+        { authorization: `Bearer ${phoneToken}` },
+      ),
+      confirm.res,
+    );
+    expect(confirm.res.statusCode).toBe(200);
+    expect((confirm.body().profile as { phoneE164: string }).phoneE164).toBe('+8562097222011');
+
+    const recovery = mockRes();
+    await router(
+      mockReq('POST', '/v1/me/recovery-document', {
+        claimedPhone: '+8562097222099',
+        documentStorageKey: 'private/recovery/qa.pdf',
+      }),
+      recovery.res,
+    );
+    expect(recovery.res.statusCode).toBe(201);
+    const requestId = recovery.body().requestId as string;
+
+    const list = mockRes();
+    await router(mockReq('GET', '/v1/privacy/recovery-requests'), list.res);
+    expect(list.res.statusCode).toBe(200);
+    expect(
+      (list.body().requests as Array<{ requestId: string; status: string }>).some(
+        (r) => r.requestId === requestId && r.status === 'pending',
+      ),
+    ).toBe(true);
+  });
+
   it('manages addresses, marketing opt-in, and deletion approve anonymize', async () => {
     const profile = mockRes();
     await router(

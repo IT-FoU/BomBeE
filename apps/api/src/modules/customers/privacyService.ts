@@ -345,4 +345,35 @@ export class CustomerPrivacyService {
       completedAt: r.completed_at,
     }));
   }
+
+  async listRecoveryRequests(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      claimed_phone_e164: string;
+      document_storage_key: string;
+      document_encrypted: boolean;
+      status: string;
+      created_at: string;
+      decided_at: string | null;
+      decided_by: string | null;
+    }>(
+      `SELECT id, claimed_phone_e164, document_storage_key, document_encrypted, status,
+              created_at::text, decided_at::text, decided_by
+       FROM app.account_recovery_requests
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      requestId: r.id,
+      claimedPhoneE164: r.claimed_phone_e164,
+      documentStorageKey: r.document_storage_key,
+      documentEncrypted: r.document_encrypted,
+      status: r.status,
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+      decidedBy: r.decided_by,
+    }));
+  }
 }

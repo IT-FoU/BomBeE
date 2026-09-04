@@ -63,6 +63,7 @@ import {
   restoreDrillBackup,
   listDeletionRequests,
   approveDeletionRequest,
+  listRecoveryRequests,
   listReviews,
   mockCreateReview,
   listTikTokLinks,
@@ -97,6 +98,7 @@ import {
   type BackupJobRow,
   type BackupAlertRow,
   type DeletionRequestRow,
+  type RecoveryRequestRow,
   type ReviewRow,
   type TikTokLinkRow,
   type RecallRow,
@@ -184,6 +186,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [backupAlerts, setBackupAlerts] = useState<BackupAlertRow[]>([]);
   const [backupNote, setBackupNote] = useState('');
   const [deletionRequests, setDeletionRequests] = useState<DeletionRequestRow[]>([]);
+  const [recoveryRequests, setRecoveryRequests] = useState<RecoveryRequestRow[]>([]);
   const [privacyNote, setPrivacyNote] = useState('');
   const [productReviews, setProductReviews] = useState<ReviewRow[]>([]);
   const [tiktokLinks, setTiktokLinks] = useState<TikTokLinkRow[]>([]);
@@ -224,6 +227,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           reconcile,
           backupBundle,
           deletionRows,
+          recoveryRows,
           reviewRows,
           tiktokRows,
           recallList,
@@ -248,6 +252,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           fetchPaymentsReconcile(),
           listBackups(50),
           listDeletionRequests(50),
+          listRecoveryRequests(50),
           listReviews(50),
           listTikTokLinks(50),
           listRecalls(50),
@@ -275,6 +280,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setBackupJobs(backupBundle.jobs);
         setBackupAlerts(backupBundle.alerts);
         setDeletionRequests(deletionRows);
+        setRecoveryRequests(recoveryRows);
         setProductReviews(reviewRows);
         setTiktokLinks(tiktokRows);
         setRecallRows(recallList);
@@ -2185,6 +2191,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </h2>
             <p className="lede">
               Account deletion requests — approve anonymizes profile/phone; orders retained.
+              Recovery queue lists encrypted private document submissions.
             </p>
             {privacyNote ? (
               <p className="lede" role="status">
@@ -2253,6 +2260,38 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh deletion queue
+            </button>
+            <ul className="roles" aria-label="Recovery requests">
+              {recoveryRequests.length === 0 ? <li>No recovery requests</li> : null}
+              {recoveryRequests.map((row) => (
+                <li key={row.requestId}>
+                  {row.status} · {row.claimedPhoneE164} ·{' '}
+                  {row.documentEncrypted ? 'encrypted' : 'plain'} ·{' '}
+                  {row.documentStorageKey}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setRecoveryRequests(await listRecoveryRequests(50));
+                    setPrivacyNote('Recovery queue refreshed');
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'recovery_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh recovery queue
             </button>
           </section>
           <section aria-labelledby="content-heading" id="content">

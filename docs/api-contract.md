@@ -85,7 +85,11 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/me/addresses` | Add customer address |
 | POST | `/v1/me/marketing-opt-in` | Set marketing opt-in boolean |
 | POST | `/v1/me/deletion-request` | Request account deletion (session = OTP gate locally) |
+| POST | `/v1/me/phone-change/start` | Dual OTP phone change start (Bearer; local returns `devOldCode`/`devNewCode`) |
+| POST | `/v1/me/phone-change/confirm` | Confirm phone change with both OTP codes |
+| POST | `/v1/me/recovery-document` | Submit private encrypted recovery document (`private/` key) |
 | GET | `/v1/privacy/deletion-requests` | List deletion requests (local ops) |
+| GET | `/v1/privacy/recovery-requests` | List recovery document requests (local ops) |
 | POST | `/v1/ops/privacy/deletion-requests/:id/approve` | Approve + anonymize (orders retained) |
 | GET | `/v1/reviews` | List product reviews (optional `productId`) |
 | POST | `/v1/reviews` | Create verified-purchase review (Bearer; delivered child) |

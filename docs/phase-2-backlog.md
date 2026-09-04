@@ -61,6 +61,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B41 | Customer return requests (me) | **Done** — `/v1/me/returns` list/create for delivered children; after-sales wiring |
 | P2-B42 | Product recalls list + mock ops | **Done** — `/v1/recalls`, ops mock-start/contact; Recalls BO |
 | P2-B43 | Store quality events + suspend/reactivate | **Done** — `/v1/stores/quality`, mock-event + reactivate; Quality BO |
+| P2-B44 | Customer phone-change OTP + recovery HTTP | **Done** — dual OTP start/confirm, recovery-document + recovery list; Privacy BO |
 
 ## C — Hard rules that stay
 

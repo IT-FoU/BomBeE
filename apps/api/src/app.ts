@@ -2852,10 +2852,145 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/me/phone-change/start') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{
+        newPhone?: string;
+        new_phone?: string;
+        oldPhone?: string;
+        old_phone?: string;
+      }>(req);
+      const newPhone = (body.newPhone ?? body.new_phone)?.trim();
+      if (!newPhone || !/^\+[1-9]\d{7,14}$/.test(newPhone)) {
+        sendJson(res, 400, { error: 'invalid_new_phone' });
+        return;
+      }
+      try {
+        const profile = await services.privacy.getProfile(session.identityId);
+        const oldPhone = (body.oldPhone ?? body.old_phone)?.trim() || profile.phoneE164;
+        if (!oldPhone || !/^\+[1-9]\d{7,14}$/.test(oldPhone)) {
+          sendJson(res, 400, { error: 'invalid_old_phone' });
+          return;
+        }
+        if (profile.phoneE164 && oldPhone !== profile.phoneE164) {
+          sendJson(res, 403, { error: 'old_phone_mismatch' });
+          return;
+        }
+        if (oldPhone === newPhone) {
+          sendJson(res, 400, { error: 'phone_unchanged' });
+          return;
+        }
+        const started = await services.privacy.startPhoneChange({
+          customerIdentityId: session.identityId,
+          oldPhone,
+          newPhone,
+        });
+        const payload: Record<string, unknown> = {
+          ok: true,
+          correlationId: started.correlationId,
+        };
+        // Local/mock only — never expose dual OTP codes outside local APP_ENV
+        if (env.APP_ENV === 'local' && env.INTEGRATIONS_MODE === 'mock') {
+          payload.devOldCode = started.oldCode;
+          payload.devNewCode = started.newCode;
+        }
+        sendJson(res, 200, payload);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'phone_change_start_failed';
+        sendJson(res, message === 'customer_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/me/phone-change/confirm') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{
+        correlationId?: string;
+        correlation_id?: string;
+        oldCode?: string;
+        old_code?: string;
+        newCode?: string;
+        new_code?: string;
+      }>(req);
+      const correlationId = (body.correlationId ?? body.correlation_id)?.trim();
+      const oldCode = (body.oldCode ?? body.old_code)?.trim();
+      const newCode = (body.newCode ?? body.new_code)?.trim();
+      if (!correlationId || !oldCode || !newCode) {
+        sendJson(res, 400, { error: 'correlation_and_codes_required' });
+        return;
+      }
+      try {
+        await services.privacy.confirmPhoneChange({
+          correlationId,
+          oldCode,
+          newCode,
+          customerIdentityId: session.identityId,
+        });
+        const profile = await services.privacy.getProfile(session.identityId);
+        sendJson(res, 200, { ok: true, profile });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'phone_change_confirm_failed';
+        const status =
+          message === 'otp_invalid'
+            ? 403
+            : message === 'phone_change_challenges_missing'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/me/recovery-document') {
+      const body = await readJsonBody<{
+        claimedPhone?: string;
+        claimed_phone?: string;
+        documentStorageKey?: string;
+        document_storage_key?: string;
+      }>(req);
+      const claimedPhone = (body.claimedPhone ?? body.claimed_phone)?.trim();
+      const documentStorageKey = (
+        body.documentStorageKey ??
+        body.document_storage_key ??
+        'private/recovery/local-mock.pdf'
+      ).trim();
+      if (!claimedPhone || !/^\+[1-9]\d{7,14}$/.test(claimedPhone)) {
+        sendJson(res, 400, { error: 'invalid_claimed_phone' });
+        return;
+      }
+      try {
+        const requestId = await services.privacy.submitRecoveryDocument({
+          claimedPhone,
+          documentStorageKey,
+        });
+        sendJson(res, 201, { ok: true, requestId, status: 'pending' });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'recovery_submit_failed';
+        sendJson(res, message === 'recovery_doc_must_be_private' ? 400 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/privacy/deletion-requests') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
       const requests = await services.privacy.listDeletionRequests(limit);
+      sendJson(res, 200, { ok: true, requests });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/privacy/recovery-requests') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const requests = await services.privacy.listRecoveryRequests(limit);
       sendJson(res, 200, { ok: true, requests });
       return;
     }

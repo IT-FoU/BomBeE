@@ -99,3 +99,57 @@ export async function requestAccountDeletion(sessionToken: string): Promise<stri
   const body = (await res.json()) as { requestId: string };
   return body.requestId;
 }
+
+export async function startPhoneChange(
+  sessionToken: string,
+  newPhone: string,
+): Promise<{ correlationId: string; devOldCode?: string; devNewCode?: string }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/me/phone-change/start`, {
+    method: 'POST',
+    headers: authHeaders(sessionToken),
+    body: JSON.stringify({ newPhone }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `phone_change_start_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    correlationId: string;
+    devOldCode?: string;
+    devNewCode?: string;
+  };
+}
+
+export async function confirmPhoneChange(
+  sessionToken: string,
+  input: { correlationId: string; oldCode: string; newCode: string },
+): Promise<PrivacyProfile> {
+  const res = await fetch(`${apiBaseUrl()}/v1/me/phone-change/confirm`, {
+    method: 'POST',
+    headers: authHeaders(sessionToken),
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `phone_change_confirm_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { profile: PrivacyProfile };
+  return body.profile;
+}
+
+export async function submitRecoveryDocument(input: {
+  claimedPhone: string;
+  documentStorageKey?: string;
+}): Promise<string> {
+  const res = await fetch(`${apiBaseUrl()}/v1/me/recovery-document`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `recovery_submit_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { requestId: string };
+  return body.requestId;
+}

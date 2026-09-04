@@ -1136,9 +1136,47 @@ paths:
       responses:
         '201':
           description: Deletion pending
+  /v1/me/phone-change/start:
+    post:
+      summary: Start dual-OTP phone change
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Correlation id (local may include dev OTP codes)
+        '401':
+          description: Unauthorized
+        '403':
+          description: Old phone mismatch
+  /v1/me/phone-change/confirm:
+    post:
+      summary: Confirm phone change with both OTP codes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile with updated phone
+        '403':
+          description: Invalid OTP
+        '409':
+          description: Challenges missing or consumed
+  /v1/me/recovery-document:
+    post:
+      summary: Submit private encrypted recovery document
+      responses:
+        '201':
+          description: Recovery request pending
+        '400':
+          description: Invalid phone or non-private storage key
   /v1/privacy/deletion-requests:
     get:
       summary: List account deletion requests (local ops)
+      responses:
+        '200':
+          description: Requests array
+  /v1/privacy/recovery-requests:
+    get:
+      summary: List account recovery requests (local ops)
       responses:
         '200':
           description: Requests array

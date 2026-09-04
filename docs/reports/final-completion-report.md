@@ -8,6 +8,7 @@ PRODUCTION AUTHORIZATION: YES —「อนุมัติ deploy production」(2
 PRODUCTION LIVE: DEFERRED by Owner (2026-09-04) — no Supabase Production DB yet; use mock / skip secrets
 RC / RELEASE: rc-v0.12.0 / v0.12.0
 PR: https://github.com/IT-FoU/BomBeE/pull/14
+MAIN: landed via fast-forward `cf10a6b` (2026-09-04)
 ```
 
 ## What happened (short)

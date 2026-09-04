@@ -31,3 +31,6 @@
 > เนื่องจากยังไม่ได้เตรียม Production Database บน Supabase ให้ใช้ Mock Data หรือข้ามขั้นตอนการใส่ Production Secrets แล้วสรุปปิด Milestone นี้ได้เลย
 
 → ปิด Phase 1 packaging ด้วย mock / N/A (ดู `docs/reports/final-completion-report.md`)
+
+## Update (2026-09-04)
+Phase 1 โค้ดถูก fast-forward เข้า `main` แล้ว (`cf10a6b`). รัน local/mock จาก `main` ได้ทันที — Production live ยังเลื่อนตามคำสั่ง Owner.

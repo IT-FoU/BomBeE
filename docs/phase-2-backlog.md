@@ -20,7 +20,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | --- | --- | --- |
 | P2-B1 | Backoffice interactive forms beyond shell | **Done (invite + store drafts)** |
 | P2-B2 | Customer OTP against real API (still mock SMS locally) | **Done (in progress PR)** — `/v1/auth/otp/*` + customer client |
-| P2-B3 | Legal Lo/En copy human review | KI-12-03 |
+| P2-B3 | Legal Lo/En copy human review | **Copy expanded in PWA**; human sign-off still KI-12-03 |
 | P2-B4 | Expand OpenAPI from `docs/api-contract.md` | **Done (auth+health)** — `docs/openapi.yaml` |
 | P2-B5 | Performance budgets in CI (bundle size check) | **Done** — `scripts/check-customer-bundle-budget.mjs` in CI |
 | P2-B6 | Richer synthetic seed into local Postgres | **Done** — `pnpm seed:sql` → `supabase/seed/generated_staging_qa.sql` |

@@ -53,6 +53,7 @@ export function App() {
   const [online, setOnline] = useState(true);
   const [otpPhone, setOtpPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [otpInvite, setOtpInvite] = useState('');
   const [otpHint, setOtpHint] = useState('');
   const [otpError, setOtpError] = useState('');
   const [otpBusy, setOtpBusy] = useState(false);
@@ -674,6 +675,15 @@ export function App() {
               />
             </label>
             <label>
+              Invite code (Staging/Private Beta)
+              <input
+                value={otpInvite}
+                onChange={(e) => setOtpInvite(e.target.value)}
+                placeholder="QA-BETA-001"
+                aria-label="Invite code"
+              />
+            </label>
+            <label>
               Code
               <input
                 value={otpCode}
@@ -695,7 +705,10 @@ export function App() {
                   setOtpBusy(true);
                   try {
                     assertOnlineForMutation(readNetworkStatus().online, 'otp_request');
-                    const result = await requestCustomerOtp(otpPhone.trim());
+                    const result = await requestCustomerOtp(
+                      otpPhone.trim(),
+                      otpInvite.trim() || undefined,
+                    );
                     if (result.devCode) {
                       setOtpCode(result.devCode);
                       setOtpHint(`Local mock code: ${result.devCode}`);
@@ -791,21 +804,48 @@ export function App() {
         {route === 'legal' && (
           <section className="page">
             <h1>Legal / Privacy / Returns</h1>
+            <p className="muted">
+              Review checklist: <code>docs/runbooks/legal-privacy-review.md</code> (Owner/local
+              counsel sign-off still required — KI-12-03).
+            </p>
             <article lang="lo">
               <h2>ນະໂຍບາຍຄວາມເປັນສ່ວນຕົວ</h2>
-              <p>ເຮົາເກັບຂໍ້ມູນເພື່ອຈັດສົ່ງເທົ່ານັ້ນ ແລະບໍ່ຂາຍຂໍ້ມູນລູກຄ້າ.</p>
+              <p>
+                ເຮົາເກັບເບີໂທ, ທີ່ຢູ່ຈັດສົ່ງ, ແລະປະຫວັດອໍເດີເພື່ອໃຫ້ບໍລິການ Private Beta.
+                ຮູບຄົ້ນຫາຖືກລຶບພາຍໃນ 24 ຊົ່ວໂມງ. ບໍ່ຂາຍຂໍ້ມູນລູກຄ້າ.
+              </p>
             </article>
             <article lang="en">
               <h2>Privacy policy</h2>
-              <p>We use data for delivery only and never sell customer data.</p>
+              <p>
+                We store phone, delivery address, and order history to operate the Private Beta.
+                Search images are purged within 24 hours. We never sell customer data.
+              </p>
+            </article>
+            <article lang="lo">
+              <h2>ເງື່ອນໄຂການໃຊ້</h2>
+              <p>
+                ການສັ່ງຊື້ຜ່ານ BomBee ເປັນ Managed Reseller — ຮ້ານຕົ້ນທາງແພັກ, ຂົນສົ່ງຈັດສົ່ງ.
+                ລາຄາເປັນ LAK ເທົ່ານັ້ນ.
+              </p>
+            </article>
+            <article lang="en">
+              <h2>Terms of use</h2>
+              <p>
+                Orders on BomBee are fulfilled as a Managed Reseller: origin stores pack; couriers
+                deliver. All prices are integer LAK only.
+              </p>
             </article>
             <article lang="lo">
               <h2>ການຄືນສິນຄ້າ</h2>
-              <p>ຄືນໄດ້ພາຍໃນ 7 ວັນເມື່ອເສຍ/ຜິດ/ບໍ່ຄົບ — ບໍ່ຮັບປ່ຽນໃຈ.</p>
+              <p>ຄືນໄດ້ພາຍໃນ 7 ວັນເມື່ອເສຍ/ຜິດ/ບໍ່ຄົບ — ບໍ່ຮັບປ່ຽນໃຈ. COD/QR ຕາມນະໂຍບາຍຊຳລະ.</p>
             </article>
             <article lang="en">
               <h2>Returns</h2>
-              <p>Returns within 7 days for defective/wrong/incomplete — no change-of-mind.</p>
+              <p>
+                Returns within 7 days for defective/wrong/incomplete items — no change-of-mind.
+                COD/QR follow the payment policy.
+              </p>
             </article>
           </section>
         )}

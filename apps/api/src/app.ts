@@ -4,11 +4,18 @@ import type { BombeeEnv } from '@bombee/config';
 import { BRAND_NAME, CURRENCY_CODE, DISPLAY_TIMEZONE } from '@bombee/shared';
 
 import { readJsonBody } from './http/readJsonBody.js';
+import { applyCors } from './http/cors.js';
 import { getHealth } from './modules/system/health.js';
 import type { ApiServices } from './runtime/createServices.js';
+import { InviteService, evaluateInviteAccess } from './modules/staging/inviteService.js';
 
 export function createAppRouter(env: BombeeEnv, services: ApiServices) {
+  const invites = new InviteService(services.db);
+
   return async function appRouter(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const preflight = applyCors(env, req, res);
+    if (preflight.handledPreflight) return;
+
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
 
     if (req.method === 'GET' && url.pathname === '/health') {
@@ -38,12 +45,34 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
     }
 
     if (req.method === 'POST' && url.pathname === '/v1/auth/otp/request') {
-      const body = await readJsonBody<{ phoneE164?: string; purpose?: string }>(req);
+      const body = await readJsonBody<{
+        phoneE164?: string;
+        purpose?: string;
+        inviteCode?: string;
+      }>(req);
       const phoneE164 = body.phoneE164?.trim();
       if (!phoneE164 || !/^\+[1-9]\d{7,14}$/.test(phoneE164)) {
         sendJson(res, 400, { error: 'invalid_phone' });
         return;
       }
+
+      if (env.INVITE_ONLY_ENABLED) {
+        const inviteCode = body.inviteCode?.trim();
+        if (!inviteCode) {
+          sendJson(res, 403, { error: 'invite_required' });
+          return;
+        }
+        const invite = await invites.findByCode(inviteCode);
+        const access = evaluateInviteAccess({
+          inviteOnlyEnabled: true,
+          invite,
+        });
+        if (!access.allowed) {
+          sendJson(res, 403, { error: access.reason });
+          return;
+        }
+      }
+
       const purpose = body.purpose === 'staff_login' ? 'staff_login' : 'customer_login';
       if (purpose === 'customer_login') {
         await services.identity.ensureCustomer(phoneE164, `Customer ${phoneE164.slice(-4)}`);

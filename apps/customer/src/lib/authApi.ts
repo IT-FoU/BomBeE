@@ -20,11 +20,18 @@ export type OtpVerifyResult = {
   identityId: string;
 };
 
-export async function requestCustomerOtp(phoneE164: string): Promise<OtpRequestResult> {
+export async function requestCustomerOtp(
+  phoneE164: string,
+  inviteCode?: string,
+): Promise<OtpRequestResult> {
   const res = await fetch(`${apiBaseUrl()}/v1/auth/otp/request`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ phoneE164, purpose: 'customer_login' }),
+    body: JSON.stringify({
+      phoneE164,
+      purpose: 'customer_login',
+      ...(inviteCode ? { inviteCode } : {}),
+    }),
   });
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: string };

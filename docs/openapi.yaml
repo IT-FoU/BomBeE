@@ -36,11 +36,16 @@ paths:
                 purpose:
                   type: string
                   enum: [customer_login, staff_login]
+                inviteCode:
+                  type: string
+                  description: Required when INVITE_ONLY_ENABLED=true
       responses:
         '200':
           description: Accepted (anti-enumeration). Local mock may include devCode.
         '400':
           description: Invalid phone
+        '403':
+          description: Invite required/invalid
   /v1/auth/otp/verify:
     post:
       summary: Verify OTP and create session

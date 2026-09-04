@@ -91,4 +91,45 @@ describe('auth HTTP OTP routes', () => {
     expect(bad.res.statusCode).toBe(400);
     expect(bad.body().error).toBe('invalid_phone');
   });
+
+  it('requires invite code when invite-only is enabled', async () => {
+    const stagingEnv = parseEnv({
+      APP_ENV: 'staging',
+      NODE_ENV: 'production',
+      PUBLIC_API_URL: 'https://api.staging.example.bombee',
+      PUBLIC_CUSTOMER_URL: 'https://staging.example.bombee',
+      PUBLIC_BACKOFFICE_URL: 'https://backoffice.staging.example.bombee',
+      EGO_POS_ENABLED: 'false',
+      INTEGRATIONS_MODE: 'sandbox',
+      INVITE_ONLY_ENABLED: 'true',
+    });
+    const stagingServices = await createLocalApiServices(stagingEnv);
+    const stagingRouter = createAppRouter(stagingEnv, stagingServices);
+    try {
+      const missing = mockRes();
+      await stagingRouter(
+        mockReq('POST', '/v1/auth/otp/request', { phoneE164: '+8562099887711' }),
+        missing.res,
+      );
+      expect(missing.res.statusCode).toBe(403);
+      expect(missing.body().error).toBe('invite_required');
+
+      await stagingServices.db.query(
+        `INSERT INTO app.beta_invites (invite_code, intended_role, max_uses)
+         VALUES ('QA-STAGE-1', 'customer', 5)`,
+      );
+      const ok = mockRes();
+      await stagingRouter(
+        mockReq('POST', '/v1/auth/otp/request', {
+          phoneE164: '+8562099887711',
+          inviteCode: 'QA-STAGE-1',
+        }),
+        ok.res,
+      );
+      expect(ok.res.statusCode).toBe(200);
+      expect(ok.body().status).toBe('accepted');
+    } finally {
+      await stagingServices.db.close();
+    }
+  });
 });

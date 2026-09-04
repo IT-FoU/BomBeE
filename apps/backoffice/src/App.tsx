@@ -17,6 +17,9 @@ import {
   listInventoryAdjustments,
   opsReceiveStock,
   opsAdjustStock,
+  listStockImportBatches,
+  previewStockImport,
+  commitStockImport,
   listCatalogProducts,
   listCatalogImportBatches,
   previewCatalogImport,
@@ -121,6 +124,7 @@ import {
   type OpsOrderRow,
   type OpsStockView,
   type InventoryAdjustmentRow,
+  type StockImportBatchRow,
   type SettlementBatchRow,
   type SupportTicketRow,
   type ReturnRequestRow,
@@ -213,6 +217,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [catalogNote, setCatalogNote] = useState('');
   const [stockDetail, setStockDetail] = useState<OpsStockView | null>(null);
   const [inventoryAdjustments, setInventoryAdjustments] = useState<InventoryAdjustmentRow[]>([]);
+  const [stockImportBatches, setStockImportBatches] = useState<StockImportBatchRow[]>([]);
   const [inventoryNote, setInventoryNote] = useState('');
   const [settlementBatches, setSettlementBatches] = useState<SettlementBatchRow[]>([]);
   const [settlementNote, setSettlementNote] = useState('');
@@ -284,6 +289,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           importBatchRows,
           mediaRows,
           inventoryAdjRows,
+          stockImportRows,
           batches,
           tickets,
           returns,
@@ -320,6 +326,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listCatalogImportBatches(50),
           listCatalogMedia(50),
           listInventoryAdjustments(50),
+          listStockImportBatches(50),
           listSettlementBatches(50),
           listSupportTickets(50),
           listReturns(50),
@@ -356,6 +363,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setImportBatches(importBatchRows);
         setCatalogMedia(mediaRows);
         setInventoryAdjustments(inventoryAdjRows);
+        setStockImportBatches(stockImportRows);
         setSettlementBatches(batches);
         setSupportTickets(tickets);
         setReturnRequests(returns);
@@ -1335,7 +1343,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </h2>
             <p className="lede">
               Lot balances for a selected variant (use Stock on a catalog row). Mock receive adds
-              units; adjust applies maker-checker in one shot.
+              units; adjust applies maker-checker in one shot. Preview/commit stock import batches
+              apply deltas as import ledger txs.
             </p>
             {inventoryNote ? (
               <p className="lede" role="status">
@@ -1429,6 +1438,91 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 </li>
               ))}
             </ul>
+            <ul className="roles" aria-label="Stock import batches">
+              {stockImportBatches.length === 0 ? <li>No stock import batches yet</li> : null}
+              {stockImportBatches.map((row) => (
+                <li key={row.batchId}>
+                  {row.status} · {row.idempotencyKey} · Δ total{' '}
+                  {row.previewReport?.differenceTotal ?? 0} · {row.batchId.slice(0, 8)}…
+                  {row.status === 'preview' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setInventoryNote('');
+                          void (async () => {
+                            try {
+                              const result = await commitStockImport(row.batchId);
+                              if (result.batches) setStockImportBatches(result.batches);
+                              if (stockDetail?.variantId) {
+                                setStockDetail(await fetchVariantStock(stockDetail.variantId));
+                              }
+                              setInventoryNote(
+                                `Committed stock import ${row.batchId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'stock_import_commit_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Commit import
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setInventoryNote('');
+                void (async () => {
+                  try {
+                    const result = await previewStockImport({
+                      idempotencyKey: `bo-stock-${Date.now()}`,
+                      storeId: stockDetail?.balances[0]?.storeId,
+                      rows: stockDetail?.balances[0]
+                        ? [
+                            {
+                              variantId: stockDetail.variantId,
+                              lotId: stockDetail.balances[0].lotId,
+                              onHand: stockDetail.balances[0].onHand + 5,
+                            },
+                          ]
+                        : undefined,
+                    });
+                    setStockImportBatches(result.batches);
+                    setInventoryNote(
+                      `Preview ${result.batchId.slice(0, 8)}… Δ=${result.report.differenceTotal ?? 0}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'stock_import_preview_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock stock import preview
+            </button>{' '}
             <button
               type="button"
               className="cta"
@@ -1438,6 +1532,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 void (async () => {
                   try {
                     setInventoryAdjustments(await listInventoryAdjustments(50));
+                    setStockImportBatches(await listStockImportBatches(50));
                     if (stockDetail?.variantId) {
                       setStockDetail(await fetchVariantStock(stockDetail.variantId));
                     }

@@ -270,6 +270,140 @@ export class InventoryService {
     return { batchId: batch.rows[0]!.id, report, replay: false };
   }
 
+  async listStockImportBatches(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      idempotency_key: string;
+      status: string;
+      preview_report: {
+        rows?: Array<{
+          variantId: string;
+          lotId: string;
+          current: number;
+          imported: number;
+          delta: number;
+        }>;
+        differenceTotal?: number;
+      } | null;
+      created_at: string;
+    }>(
+      `SELECT id, store_id, idempotency_key, status, preview_report, created_at::text
+       FROM private.inventory_import_batches
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      batchId: r.id,
+      storeId: r.store_id,
+      idempotencyKey: r.idempotency_key,
+      status: r.status,
+      previewReport: r.preview_report,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async commitStockImport(input: {
+    batchId: string;
+    actorIdentityId?: string;
+    correlationId?: string;
+  }) {
+    const batch = await this.db.query<{
+      id: string;
+      store_id: string;
+      status: string;
+      preview_report: {
+        rows?: Array<{
+          variantId: string;
+          lotId: string;
+          current: number;
+          imported: number;
+          delta: number;
+        }>;
+      } | null;
+    }>(
+      `SELECT id, store_id, status, preview_report
+       FROM private.inventory_import_batches WHERE id = $1`,
+      [input.batchId],
+    );
+    const current = batch.rows[0];
+    if (!current) throw new Error('batch_not_found');
+    if (current.status === 'committed') return { ok: true as const, replay: true };
+    if (current.status !== 'preview') {
+      return { ok: false as const, reason: 'not_preview' };
+    }
+
+    const rows = current.preview_report?.rows ?? [];
+    const correlationId = input.correlationId ?? crypto.randomUUID();
+
+    try {
+      for (const row of rows) {
+        if (!row.delta) continue;
+        const bal = await this.db.query<{ id: string }>(
+          `SELECT id FROM private.inventory_balances
+           WHERE store_id = $1 AND variant_id = $2 AND lot_id = $3
+           ORDER BY updated_at DESC
+           LIMIT 1`,
+          [current.store_id, row.variantId, row.lotId],
+        );
+        const balanceId = bal.rows[0]?.id;
+        if (!balanceId) {
+          await this.db.query(
+            `UPDATE private.inventory_import_batches SET status = 'failed' WHERE id = $1`,
+            [input.batchId],
+          );
+          return { ok: false as const, reason: 'balance_not_found' };
+        }
+
+        await this.db.query(`BEGIN`);
+        try {
+          const locked = await this.lockBalance(balanceId);
+          const onHand = locked.on_hand + row.delta;
+          if (onHand < 0 || locked.reserved > onHand) {
+            await this.db.query(`ROLLBACK`);
+            await this.db.query(
+              `UPDATE private.inventory_import_batches SET status = 'failed' WHERE id = $1`,
+              [input.batchId],
+            );
+            return { ok: false as const, reason: 'insufficient_stock' };
+          }
+          await this.db.query(
+            `UPDATE private.inventory_balances
+             SET on_hand = $2, updated_at = timezone('utc', now())
+             WHERE id = $1`,
+            [balanceId, onHand],
+          );
+          await this.appendTx({
+            balanceId,
+            txType: 'import',
+            quantity: row.delta,
+            correlationId,
+            actorIdentityId: input.actorIdentityId,
+            reason: 'stock_import_commit',
+          });
+          await this.db.query(`COMMIT`);
+        } catch (error) {
+          await this.db.query(`ROLLBACK`);
+          throw error;
+        }
+      }
+
+      await this.db.query(
+        `UPDATE private.inventory_import_batches SET status = 'committed' WHERE id = $1`,
+        [input.batchId],
+      );
+      return { ok: true as const, replay: false };
+    } catch (error) {
+      await this.db.query(
+        `UPDATE private.inventory_import_batches SET status = 'failed' WHERE id = $1`,
+        [input.batchId],
+      );
+      throw error;
+    }
+  }
+
   async reconcileLedger(balanceId: string) {
     const bal = await this.getBalance(balanceId);
     const txs = await this.db.query<{ tx_type: string; quantity: number }>(

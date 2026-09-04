@@ -1073,6 +1073,146 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/inventory/import/batches') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const batches = await services.inventory.listStockImportBatches(limit);
+      sendJson(res, 200, { ok: true, batches });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/import/preview') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        idempotencyKey?: string;
+        idempotency_key?: string;
+        rows?: Array<{
+          variantId?: string;
+          variant_id?: string;
+          lotId?: string;
+          lot_id?: string;
+          onHand?: number;
+          on_hand?: number;
+        }>;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 409, { error: 'no_active_store' });
+          return;
+        }
+
+        let rows = (body.rows ?? []).map((r) => ({
+          variantId: (r.variantId ?? r.variant_id ?? '').trim(),
+          lotId: (r.lotId ?? r.lot_id ?? '').trim(),
+          onHand:
+            typeof r.onHand === 'number'
+              ? Math.floor(r.onHand)
+              : typeof r.on_hand === 'number'
+                ? Math.floor(r.on_hand)
+                : 0,
+        })).filter((r) => r.variantId && r.lotId);
+
+        if (rows.length === 0) {
+          const bal = await services.db.query<{
+            variant_id: string;
+            lot_id: string;
+            on_hand: number;
+            store_id: string;
+          }>(
+            `SELECT variant_id, lot_id, on_hand, store_id FROM private.inventory_balances
+             WHERE store_id = $1
+             ORDER BY updated_at DESC LIMIT 1`,
+            [storeId],
+          );
+          const seed = bal.rows[0];
+          if (!seed) {
+            sendJson(res, 409, { error: 'no_balance' });
+            return;
+          }
+          rows = [
+            {
+              variantId: seed.variant_id,
+              lotId: seed.lot_id,
+              onHand: Number(seed.on_hand) + 5,
+            },
+          ];
+        }
+
+        const preview = await services.inventory.previewStockImport({
+          storeId,
+          idempotencyKey:
+            body.idempotencyKey?.trim() ||
+            body.idempotency_key?.trim() ||
+            `stock-imp-${crypto.randomUUID()}`,
+          rows,
+        });
+        const batches = await services.inventory.listStockImportBatches(50);
+        sendJson(res, 201, {
+          ok: true,
+          batchId: preview.batchId,
+          storeId,
+          report: preview.report,
+          replay: preview.replay,
+          batches,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'stock_import_preview_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const stockImportCommitMatch = url.pathname.match(
+      /^\/v1\/ops\/inventory\/import\/([^/]+)\/commit$/,
+    );
+    if (req.method === 'POST' && stockImportCommitMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const batchId = decodeURIComponent(stockImportCommitMatch[1]!);
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const committed = await services.inventory.commitStockImport({
+          batchId,
+          actorIdentityId,
+        });
+        const batches = await services.inventory.listStockImportBatches(50);
+        if (!committed.ok) {
+          sendJson(res, 409, {
+            ok: false,
+            error: committed.reason,
+            batchId,
+            batches,
+          });
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          batchId,
+          replay: committed.replay,
+          status: 'committed',
+          batches,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'stock_import_commit_failed';
+        sendJson(res, message === 'batch_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/carts') {
       const session = await requireCustomerSession(req, services);
       if (!session) {

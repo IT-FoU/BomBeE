@@ -629,6 +629,84 @@ export async function opsAdjustStock(input: {
   };
 }
 
+export type StockImportBatchRow = {
+  batchId: string;
+  storeId: string;
+  idempotencyKey: string;
+  status: string;
+  previewReport: {
+    rows?: Array<{
+      variantId: string;
+      lotId: string;
+      current: number;
+      imported: number;
+      delta: number;
+    }>;
+    differenceTotal?: number;
+  } | null;
+  createdAt: string;
+};
+
+export async function listStockImportBatches(
+  limit = 50,
+): Promise<StockImportBatchRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/inventory/import/batches?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`stock_import_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { batches: StockImportBatchRow[] };
+  return body.batches;
+}
+
+export async function previewStockImport(input: {
+  storeId?: string;
+  idempotencyKey?: string;
+  rows?: Array<{ variantId: string; lotId: string; onHand: number }>;
+} = {}): Promise<{
+  batchId: string;
+  report: { differenceTotal?: number };
+  batches: StockImportBatchRow[];
+  replay?: boolean;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/inventory/import/preview`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `stock_import_preview_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    batchId: string;
+    report: { differenceTotal?: number };
+    batches: StockImportBatchRow[];
+    replay?: boolean;
+  };
+}
+
+export async function commitStockImport(
+  batchId: string,
+): Promise<{ batches?: StockImportBatchRow[]; status?: string; replay?: boolean }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/inventory/import/${encodeURIComponent(batchId)}/commit`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `stock_import_commit_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    batches?: StockImportBatchRow[];
+    status?: string;
+    replay?: boolean;
+  };
+}
+
 export type SettlementBatchRow = {
   batchId: string;
   storeId: string;

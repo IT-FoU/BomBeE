@@ -497,6 +497,42 @@ paths:
           description: Adjustment approved and applied
         '409':
           description: Self-approval, unauthorized, or insufficient stock
+  /v1/inventory/import/batches:
+    get:
+      summary: List stock import batches
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Batches array
+  /v1/ops/inventory/import/preview:
+    post:
+      summary: Local mock stock import preview
+      responses:
+        '201':
+          description: Preview report + batch id
+        '403':
+          description: Mock ops disabled
+  /v1/ops/inventory/import/{batchId}/commit:
+    post:
+      summary: Commit stock import preview batch
+      parameters:
+        - in: path
+          name: batchId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Committed
+        '404':
+          description: Batch not found
+        '409':
+          description: Balance missing or insufficient stock
   /v1/carts:
     post:
       summary: Create cart for customer session

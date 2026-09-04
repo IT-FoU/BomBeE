@@ -228,5 +228,17 @@ describe('Milestone 4 inventory', () => {
       rows: [{ variantId, lotId, onHand: 12 }],
     });
     expect(replay.replay).toBe(true);
+
+    const before = await inventory.getBalance(balanceId);
+    const commit = await inventory.commitStockImport({ batchId: preview.batchId });
+    expect(commit).toEqual({ ok: true, replay: false });
+    const after = await inventory.getBalance(balanceId);
+    expect(after.on_hand).toBe(before.on_hand + (12 - before.on_hand));
+    const commitReplay = await inventory.commitStockImport({ batchId: preview.batchId });
+    expect(commitReplay).toEqual({ ok: true, replay: true });
+    const listed = await inventory.listStockImportBatches(10);
+    expect(listed.some((b) => b.batchId === preview.batchId && b.status === 'committed')).toBe(
+      true,
+    );
   });
 });

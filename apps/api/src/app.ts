@@ -470,6 +470,14 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/orders') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const orders = await services.orders.listRecentOrders(limit);
+      sendJson(res, 200, { ok: true, orders });
+      return;
+    }
+
     const orderMatch = url.pathname.match(/^\/v1\/orders\/([^/]+)$/);
     if (req.method === 'GET' && orderMatch) {
       const session = await requireCustomerSession(req, services);

@@ -125,3 +125,28 @@ export async function mockRemitCodShipment(
     idempotentReplay?: boolean;
   };
 }
+
+export type OpsOrderRow = {
+  parentId: string;
+  orderNumber: string;
+  status: string;
+  totalLak: number;
+  createdAt: string;
+  customerIdentityId: string;
+  children: Array<{
+    childOrderId: string;
+    storeId: string;
+    status: string;
+    totalLak: number;
+    paymentReceived: boolean;
+  }>;
+};
+
+export async function listOrders(limit = 50): Promise<OpsOrderRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/orders?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`orders_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { orders: OpsOrderRow[] };
+  return body.orders;
+}

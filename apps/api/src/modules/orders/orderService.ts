@@ -526,4 +526,55 @@ export class OrderService {
       documents: docs.rows,
     };
   }
+
+  /** Local ops: recent parent orders with child status summary. */
+  async listRecentOrders(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const parents = await this.db.query<{
+      id: string;
+      order_number: string;
+      status: string;
+      total_lak: number;
+      created_at: string;
+      customer_identity_id: string;
+    }>(
+      `SELECT id, order_number, status, total_lak, created_at::text, customer_identity_id
+       FROM app.parent_orders
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    const results = [];
+    for (const parent of parents.rows) {
+      const children = await this.db.query<{
+        id: string;
+        status: string;
+        store_id: string;
+        total_lak: number;
+        payment_received: boolean;
+      }>(
+        `SELECT id, status, store_id, total_lak, payment_received
+         FROM app.child_orders
+         WHERE parent_order_id = $1
+         ORDER BY child_order_number`,
+        [parent.id],
+      );
+      results.push({
+        parentId: parent.id,
+        orderNumber: parent.order_number,
+        status: parent.status,
+        totalLak: Number(parent.total_lak),
+        createdAt: parent.created_at,
+        customerIdentityId: parent.customer_identity_id,
+        children: children.rows.map((c) => ({
+          childOrderId: c.id,
+          storeId: c.store_id,
+          status: c.status,
+          totalLak: Number(c.total_lak),
+          paymentReceived: c.payment_received,
+        })),
+      });
+    }
+    return results;
+  }
 }

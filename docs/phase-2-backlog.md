@@ -37,6 +37,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B17 | COD create HTTP + reserve + fulfill path | **Done** — `POST .../payments/cod`; mock-advance/deliver supports COD |
 | P2-B18 | Cancel before handoff HTTP | **Done** — `POST .../cancel` releases stock + cancels open QR; customer wired |
 | P2-B19 | COD remittance mock HTTP + backoffice list | **Done** — `GET/POST .../cod/shipments`; mock remit + reconcile; Payments section |
+| P2-B20 | Orders list HTTP + backoffice Orders | **Done** — `GET /v1/orders`; Orders section shows recent parent/child statuses |
 
 ## C — Hard rules that stay
 

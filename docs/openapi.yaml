@@ -263,6 +263,18 @@ paths:
           description: Order created
         '409':
           description: Domain conflict (empty cart, inactive variant, store closed, …)
+  /v1/orders:
+    get:
+      summary: List recent parent orders with child summaries (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Orders array
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

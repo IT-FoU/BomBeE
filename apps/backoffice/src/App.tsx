@@ -15,11 +15,13 @@ import {
   createStoreDraft,
   listCodShipments,
   listInvites,
+  listOrders,
   listStores,
   mockRemitCodShipment,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
+  type OpsOrderRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -65,6 +67,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [storeDraftName, setStoreDraftName] = useState('');
   const [storeDrafts, setStoreDrafts] = useState<IssuedStore[]>([]);
   const [codShipments, setCodShipments] = useState<CodShipmentRow[]>([]);
+  const [opsOrders, setOpsOrders] = useState<OpsOrderRow[]>([]);
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -76,14 +79,16 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [invites, stores, cod] = await Promise.all([
+        const [invites, stores, cod, orders] = await Promise.all([
           listInvites(),
           listStores(),
           listCodShipments(),
+          listOrders(30),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
         setCodShipments(cod);
+        setOpsOrders(orders);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -341,6 +346,45 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               ))}
             </ul>
           </section>
+          <section aria-labelledby="orders-heading" id="orders">
+            <h2 id="orders-heading">
+              <span lang="en">Orders</span>
+              {' / '}
+              <span lang="lo">ອໍເດີ</span>
+            </h2>
+            <p className="lede">Recent parent orders from local API (PGlite mock).</p>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                void (async () => {
+                  try {
+                    setOpsOrders(await listOrders(30));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'orders_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh orders
+            </button>
+            <ul className="roles" aria-label="Recent orders">
+              {opsOrders.length === 0 ? <li>No orders yet</li> : null}
+              {opsOrders.map((order) => (
+                <li key={order.parentId}>
+                  {order.orderNumber} · {order.status} · {formatLak(LAK(order.totalLak))} ·{' '}
+                  {order.children.length} child
+                  {order.children.length === 1 ? '' : 'ren'} (
+                  {order.children.map((c) => c.status).join(', ')})
+                </li>
+              ))}
+            </ul>
+          </section>
           <section aria-labelledby="payments-heading" id="payments">
             <h2 id="payments-heading">
               <span lang="en">Payments</span>
@@ -428,9 +472,15 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           {navItems
             .filter(
               (item) =>
-                !['dashboard', 'integrations', 'staff', 'invites', 'stores', 'payments'].includes(
-                  item.id,
-                ),
+                ![
+                  'dashboard',
+                  'integrations',
+                  'staff',
+                  'invites',
+                  'stores',
+                  'payments',
+                  'orders',
+                ].includes(item.id),
             )
             .map((item) => (
               <section key={item.id} aria-labelledby={`${item.id}-heading`} id={item.id}>

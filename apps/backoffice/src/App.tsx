@@ -48,6 +48,10 @@ import {
   mockCreateExport,
   approveExportRequest,
   mockDownloadExport,
+  listNotifications,
+  mockEnqueueNotification,
+  mockProcessNotifications,
+  markNotificationRead,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -61,6 +65,8 @@ import {
   type RefundApprovalRow,
   type AuditEventRow,
   type ExportRequestRow,
+  type NotificationInboxRow,
+  type NotificationOutboxRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -124,6 +130,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [auditNote, setAuditNote] = useState('');
   const [exportRequests, setExportRequests] = useState<ExportRequestRow[]>([]);
   const [exportNote, setExportNote] = useState('');
+  const [notificationInbox, setNotificationInbox] = useState<NotificationInboxRow[]>([]);
+  const [notificationOutbox, setNotificationOutbox] = useState<NotificationOutboxRow[]>([]);
+  const [notificationNote, setNotificationNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -148,6 +157,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           refundRows,
           auditRows,
           exportRows,
+          notificationBundle,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -161,6 +171,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listRefunds(50),
           listAuditEvents(50),
           listExports(50),
+          listNotifications(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -174,6 +185,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setRefunds(refundRows);
         setAuditEvents(auditRows);
         setExportRequests(exportRows);
+        setNotificationInbox(notificationBundle.inbox);
+        setNotificationOutbox(notificationBundle.outbox);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -1233,6 +1246,150 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh promotions
             </button>
           </section>
+          <section aria-labelledby="notifications-heading" id="notifications">
+            <h2 id="notifications-heading">
+              <span lang="en">Notifications</span>
+              {' / '}
+              <span lang="lo">ແຈ້ງເຕືອນ</span>
+            </h2>
+            <p className="lede">
+              Local inbox + outbox — mock enqueue (memory provider), process dispatch, mark
+              read.
+            </p>
+            {notificationNote ? (
+              <p className="lede" role="status">
+                {notificationNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Notification inbox">
+              {notificationInbox.length === 0 ? <li>No inbox messages yet</li> : null}
+              {notificationInbox.map((item) => (
+                <li key={item.inboxId}>
+                  {item.read ? 'read' : 'unread'} · {item.channel} · {item.template} ·{' '}
+                  {item.title}
+                  {!item.read ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setNotificationNote('');
+                          void (async () => {
+                            try {
+                              const result = await markNotificationRead(item.inboxId);
+                              setNotificationInbox(result.inbox);
+                              setNotificationOutbox(result.outbox);
+                              setNotificationNote(`Marked ${item.inboxId.slice(0, 8)}… read`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'notification_mark_read_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Mark read
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="Notification outbox">
+              {notificationOutbox.length === 0 ? <li>No outbox jobs yet</li> : null}
+              {notificationOutbox.map((job) => (
+                <li key={job.outboxId}>
+                  {job.status} · {job.provider}/{job.channel} · {job.template} · attempts{' '}
+                  {job.attempts}/{job.maxAttempts}
+                  {job.lastError ? ` · ${job.lastError}` : ''}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setNotificationNote('');
+                void (async () => {
+                  try {
+                    const result = await mockEnqueueNotification({
+                      title: 'Ops ping',
+                      body: 'Opened from Notifications section',
+                      template: 'ops.backoffice_ping',
+                    });
+                    setNotificationInbox(result.inbox);
+                    setNotificationOutbox(result.outbox);
+                    setNotificationNote(`Enqueued ${result.outboxId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'notification_enqueue_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock enqueue
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setNotificationNote('');
+                void (async () => {
+                  try {
+                    const result = await mockProcessNotifications();
+                    setNotificationInbox(result.inbox);
+                    setNotificationOutbox(result.outbox);
+                    setNotificationNote('Processed due outbox jobs');
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'notification_process_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Process outbox
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    const result = await listNotifications(50);
+                    setNotificationInbox(result.inbox);
+                    setNotificationOutbox(result.outbox);
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'notifications_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh notifications
+            </button>
+          </section>
           <section aria-labelledby="approvals-heading" id="approvals">
             <h2 id="approvals-heading">
               <span lang="en">Approvals</span>
@@ -1587,6 +1744,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'approvals',
                   'audit',
                   'exports',
+                  'notifications',
                 ].includes(item.id),
             )
             .map((item) => (

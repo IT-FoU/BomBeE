@@ -149,12 +149,93 @@ export class NotificationDispatchService {
     }));
   }
 
+  async listInboxRecent(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      recipient_identity_id: string;
+      channel: string;
+      template: string;
+      title: string;
+      body: string;
+      action_link: string | null;
+      read_at: string | null;
+      created_at: string;
+    }>(
+      `SELECT id, recipient_identity_id, channel, template, title, body,
+              action_link, read_at::text, created_at::text
+       FROM app.notification_inbox
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      inboxId: r.id,
+      recipientIdentityId: r.recipient_identity_id,
+      channel: r.channel,
+      template: r.template,
+      title: r.title,
+      body: r.body,
+      actionLink: r.action_link,
+      read: r.read_at != null,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async listOutbox(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      channel: string;
+      provider: string;
+      destination: string;
+      template: string;
+      status: string;
+      attempts: number;
+      max_attempts: number;
+      last_error: string | null;
+      created_at: string;
+      sent_at: string | null;
+    }>(
+      `SELECT id, channel, provider, destination, template, status, attempts,
+              max_attempts, last_error, created_at::text, sent_at::text
+       FROM app.notification_outbox
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      outboxId: r.id,
+      channel: r.channel,
+      provider: r.provider,
+      destination: r.destination,
+      template: r.template,
+      status: r.status,
+      attempts: r.attempts,
+      maxAttempts: r.max_attempts,
+      lastError: r.last_error,
+      createdAt: r.created_at,
+      sentAt: r.sent_at,
+    }));
+  }
+
   async markRead(inboxId: string, recipientIdentityId: string) {
     await this.db.query(
       `UPDATE app.notification_inbox SET read_at = timezone('utc', now())
        WHERE id = $1 AND recipient_identity_id = $2`,
       [inboxId, recipientIdentityId],
     );
+  }
+
+  /** Ops helper: mark read by inbox id when recipient is known from the row. */
+  async markReadById(inboxId: string) {
+    const row = await this.db.query<{ recipient_identity_id: string }>(
+      `SELECT recipient_identity_id FROM app.notification_inbox WHERE id = $1`,
+      [inboxId],
+    );
+    const recipient = row.rows[0];
+    if (!recipient) throw new Error('inbox_not_found');
+    await this.markRead(inboxId, recipient.recipient_identity_id);
   }
 
   private async fail(

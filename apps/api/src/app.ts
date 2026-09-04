@@ -526,6 +526,17 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/notifications') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const [inbox, outbox] = await Promise.all([
+        services.notifications.listInboxRecent(limit),
+        services.notifications.listOutbox(limit),
+      ]);
+      sendJson(res, 200, { ok: true, inbox, outbox });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/exports/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });
@@ -621,6 +632,88 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'export_download_failed';
         sendJson(res, message === 'export not found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/notifications/mock-enqueue') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        title?: string;
+        body?: string;
+        template?: string;
+        channel?: 'in_app' | 'sms' | 'push' | 'email';
+      }>(req);
+      try {
+        const recipientIdentityId = await resolveOpsActor(services);
+        const title = body.title?.trim() || 'Local mock notification';
+        const message = body.body?.trim() || 'Queued from backoffice Notifications section';
+        const template = body.template?.trim() || 'ops.mock_ping';
+        const channel = body.channel ?? 'in_app';
+        const outboxId = await services.notifications.enqueue({
+          channel,
+          provider: 'memory',
+          destination: recipientIdentityId,
+          template,
+          title,
+          body: message,
+          recipientIdentityId,
+          actionLink: '/notifications',
+          payload: { source: 'local_mock' },
+        });
+        const [inbox, outbox] = await Promise.all([
+          services.notifications.listInboxRecent(50),
+          services.notifications.listOutbox(50),
+        ]);
+        sendJson(res, 201, { ok: true, outboxId, inbox, outbox });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'notification_enqueue_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/notifications/mock-process') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      try {
+        await services.notifications.processOutbox();
+        const [inbox, outbox] = await Promise.all([
+          services.notifications.listInboxRecent(50),
+          services.notifications.listOutbox(50),
+        ]);
+        sendJson(res, 200, { ok: true, inbox, outbox });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'notification_process_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const inboxMarkReadMatch = url.pathname.match(
+      /^\/v1\/ops\/notifications\/inbox\/([^/]+)\/mark-read$/,
+    );
+    if (req.method === 'POST' && inboxMarkReadMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const inboxId = decodeURIComponent(inboxMarkReadMatch[1]!);
+      try {
+        await services.notifications.markReadById(inboxId);
+        const [inbox, outbox] = await Promise.all([
+          services.notifications.listInboxRecent(50),
+          services.notifications.listOutbox(50),
+        ]);
+        sendJson(res, 200, { ok: true, inboxId, inbox, outbox });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'notification_mark_read_failed';
+        sendJson(res, message === 'inbox_not_found' ? 404 : 400, { error: message });
       }
       return;
     }

@@ -13,6 +13,10 @@ import { IdentityService } from '../modules/identity/service.js';
 import { MockSmsProvider } from '../modules/identity/otp.js';
 import { InventoryService } from '../modules/inventory/inventoryService.js';
 import { ReservationService } from '../modules/inventory/reservationService.js';
+import {
+  InMemoryProvider,
+  NotificationDispatchService,
+} from '../modules/notifications/dispatchService.js';
 import { OrderService } from '../modules/orders/orderService.js';
 import { ManualBankAdapter, PaymentService } from '../modules/payments/paymentService.js';
 import { PromotionService } from '../modules/promotions/promotionService.js';
@@ -39,6 +43,7 @@ export type ApiServices = {
   promotions: PromotionService;
   audit: AuditService;
   exports: ExportService;
+  notifications: NotificationDispatchService;
 };
 
 /** Local/mock runtime: in-memory PGlite + mock SMS (no hosted DB required). */
@@ -60,6 +65,10 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
   const promotions = new PromotionService(db);
   const audit = new AuditService(db);
   const exports = new ExportService(db);
+  const notifications = new NotificationDispatchService(
+    db,
+    new Map([['memory', new InMemoryProvider()]]),
+  );
   await seedLocalCatalog(db);
   return {
     db,
@@ -79,5 +88,6 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     promotions,
     audit,
     exports,
+    notifications,
   };
 }

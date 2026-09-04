@@ -730,6 +730,64 @@ paths:
           description: Download recorded
         '409':
           description: Not ready / expired / limit
+  /v1/notifications:
+    get:
+      summary: List notification inbox + outbox (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Inbox and outbox arrays
+  /v1/ops/notifications/mock-enqueue:
+    post:
+      summary: Local/mock enqueue inbox + outbox (memory provider)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                template:
+                  type: string
+                channel:
+                  type: string
+      responses:
+        '201':
+          description: Enqueued
+        '403':
+          description: Mock ops disabled
+  /v1/ops/notifications/mock-process:
+    post:
+      summary: Local/mock process due outbox jobs
+      responses:
+        '200':
+          description: Outbox processed
+        '403':
+          description: Mock ops disabled
+  /v1/ops/notifications/inbox/{inboxId}/mark-read:
+    post:
+      summary: Local/mock mark inbox message read
+      parameters:
+        - in: path
+          name: inboxId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Marked read
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Inbox not found
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

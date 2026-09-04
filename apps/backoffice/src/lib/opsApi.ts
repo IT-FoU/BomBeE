@@ -718,3 +718,107 @@ export async function mockDownloadExport(
     downloadCount?: number;
   };
 }
+
+export type NotificationInboxRow = {
+  inboxId: string;
+  recipientIdentityId: string;
+  channel: string;
+  template: string;
+  title: string;
+  body: string;
+  actionLink: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
+export type NotificationOutboxRow = {
+  outboxId: string;
+  channel: string;
+  provider: string;
+  destination: string;
+  template: string;
+  status: string;
+  attempts: number;
+  maxAttempts: number;
+  lastError: string | null;
+  createdAt: string;
+  sentAt: string | null;
+};
+
+export async function listNotifications(
+  limit = 50,
+): Promise<{ inbox: NotificationInboxRow[]; outbox: NotificationOutboxRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/notifications?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`notifications_list_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    inbox: NotificationInboxRow[];
+    outbox: NotificationOutboxRow[];
+  };
+}
+
+export async function mockEnqueueNotification(input: {
+  title?: string;
+  body?: string;
+  template?: string;
+} = {}): Promise<{
+  outboxId: string;
+  inbox: NotificationInboxRow[];
+  outbox: NotificationOutboxRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/notifications/mock-enqueue`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `notification_enqueue_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    outboxId: string;
+    inbox: NotificationInboxRow[];
+    outbox: NotificationOutboxRow[];
+  };
+}
+
+export async function mockProcessNotifications(): Promise<{
+  inbox: NotificationInboxRow[];
+  outbox: NotificationOutboxRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/notifications/mock-process`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `notification_process_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    inbox: NotificationInboxRow[];
+    outbox: NotificationOutboxRow[];
+  };
+}
+
+export async function markNotificationRead(
+  inboxId: string,
+): Promise<{ inbox: NotificationInboxRow[]; outbox: NotificationOutboxRow[] }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/notifications/inbox/${encodeURIComponent(inboxId)}/mark-read`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `notification_mark_read_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    inbox: NotificationInboxRow[];
+    outbox: NotificationOutboxRow[];
+  };
+}

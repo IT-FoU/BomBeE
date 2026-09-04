@@ -48,6 +48,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B28 | Refunds approve/pay + Approvals BO | **Done** — `GET /v1/refunds`, mock-create/approve/mock-pay; Approvals section |
 | P2-B29 | Audit events list + mock append | **Done** — `GET /v1/audit/events`, `POST /v1/ops/audit/mock-event`; Audit section |
 | P2-B30 | Exports list + mock approve/download | **Done** — `GET /v1/exports`, mock-create/approve/mock-download; Exports section |
+| P2-B31 | Notifications inbox/outbox + mock ops | **Done** — `GET /v1/notifications`, mock-enqueue/process/mark-read; Notifications section |
 
 ## C — Hard rules that stay
 

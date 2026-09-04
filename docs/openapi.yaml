@@ -267,6 +267,70 @@ paths:
           description: Not owner
         '404':
           description: Missing
+  /v1/orders/{parentId}/confirm-children:
+    post:
+      summary: Local/mock supplier confirm for child orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Children confirmed
+        '403':
+          description: Mock ops disabled or not owner
+        '409':
+          description: Transition forbidden
+  /v1/orders/{parentId}/payments/qr:
+    post:
+      summary: Create QR payment request for confirmed children
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: QR created
+        '409':
+          description: Requires supplier confirmation
+  /v1/payments/{paymentRequestId}:
+    get:
+      summary: Payment request status
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: paymentRequestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment DTO
+  /v1/payments/{paymentRequestId}/mock-confirm:
+    post:
+      summary: Local/mock evidence submit + confirm
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: paymentRequestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Marked paid
+        '403':
+          description: Mock ops disabled
 components:
   securitySchemes:
     bearerAuth:

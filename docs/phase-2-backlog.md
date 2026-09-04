@@ -27,6 +27,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B7 | Invite redeem on OTP verify + remove demo login fallback | **Done** — verify redeems invite; customer shows API errors only |
 | P2-B8 | Customer catalog browse from local API | **Done** — `/v1/catalog/products|categories` + PGlite seed + fixture fallback |
 | P2-B9 | Thin checkout HTTP (cart → order, no QR) | **Done** — `/v1/carts*`, `/v1/orders/:id` + customer place-order wiring |
+| P2-B10 | Mock QR payment HTTP + customer pay flow | **Done** — confirm-children + QR create + mock-confirm (local/mock only) |
 
 ## C — Hard rules that stay
 

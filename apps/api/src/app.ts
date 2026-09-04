@@ -380,6 +380,191 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const confirmChildrenMatch = url.pathname.match(/^\/v1\/orders\/([^/]+)\/confirm-children$/);
+    if (req.method === 'POST' && confirmChildrenMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const parentId = decodeURIComponent(confirmChildrenMatch[1]!);
+      if (!(await parentOwnedBy(services, parentId, session.identityId))) {
+        sendJson(res, 403, { error: 'order_forbidden' });
+        return;
+      }
+      const body = await readJsonBody<{ childOrderIds?: string[] }>(req);
+      const children = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.child_orders WHERE parent_order_id = $1`,
+        [parentId],
+      );
+      const wanted = new Set(body.childOrderIds ?? children.rows.map((c) => c.id));
+      const confirmed: string[] = [];
+      for (const child of children.rows) {
+        if (!wanted.has(child.id)) continue;
+        const result = await services.orders.transitionChild({
+          childOrderId: child.id,
+          toStatus: 'confirmed',
+          actorIdentityId: session.identityId,
+          reason: 'local_mock_supplier_confirm',
+          correlationId: crypto.randomUUID(),
+        });
+        if (!result.ok) {
+          sendJson(res, 409, { error: result.reason, childOrderId: child.id });
+          return;
+        }
+        confirmed.push(child.id);
+      }
+      sendJson(res, 200, { ok: true, confirmedChildIds: confirmed });
+      return;
+    }
+
+    const createQrMatch = url.pathname.match(/^\/v1\/orders\/([^/]+)\/payments\/qr$/);
+    if (req.method === 'POST' && createQrMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const parentId = decodeURIComponent(createQrMatch[1]!);
+      if (!(await parentOwnedBy(services, parentId, session.identityId))) {
+        sendJson(res, 403, { error: 'order_forbidden' });
+        return;
+      }
+      const body = await readJsonBody<{ childOrderIds?: string[] }>(req);
+      let childOrderIds = body.childOrderIds;
+      if (!childOrderIds || childOrderIds.length === 0) {
+        const children = await services.db.query<{ id: string }>(
+          `SELECT id FROM app.child_orders WHERE parent_order_id = $1`,
+          [parentId],
+        );
+        childOrderIds = children.rows.map((c) => c.id);
+      }
+      try {
+        const qr = await services.payments.createQrPaymentRequest({
+          parentOrderId: parentId,
+          childOrderIds,
+          actorIdentityId: session.identityId,
+        });
+        sendJson(res, 201, { ok: true, ...qr });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'qr_create_failed';
+        sendJson(res, message === 'qr_requires_supplier_confirmation' ? 409 : 400, {
+          error: message,
+        });
+      }
+      return;
+    }
+
+    const paymentMatch = url.pathname.match(/^\/v1\/payments\/([^/]+)$/);
+    if (req.method === 'GET' && paymentMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const paymentRequestId = decodeURIComponent(paymentMatch[1]!);
+      const row = await services.db.query<{
+        id: string;
+        parent_order_id: string;
+        reference_code: string;
+        method: string;
+        amount_lak: number;
+        status: string;
+        expires_at: string;
+        customer_identity_id: string;
+      }>(
+        `SELECT pr.id, pr.parent_order_id, pr.reference_code, pr.method,
+                pr.amount_lak, pr.status, pr.expires_at::text,
+                po.customer_identity_id
+         FROM finance.payment_requests pr
+         JOIN app.parent_orders po ON po.id = pr.parent_order_id
+         WHERE pr.id = $1`,
+        [paymentRequestId],
+      );
+      const payment = row.rows[0];
+      if (!payment) {
+        sendJson(res, 404, { error: 'payment_not_found' });
+        return;
+      }
+      if (payment.customer_identity_id !== session.identityId) {
+        sendJson(res, 403, { error: 'payment_forbidden' });
+        return;
+      }
+      sendJson(res, 200, {
+        ok: true,
+        payment: {
+          paymentRequestId: payment.id,
+          parentOrderId: payment.parent_order_id,
+          referenceCode: payment.reference_code,
+          method: payment.method,
+          amountLak: Number(payment.amount_lak),
+          status: payment.status,
+          expiresAt: payment.expires_at,
+        },
+      });
+      return;
+    }
+
+    const mockConfirmMatch = url.pathname.match(/^\/v1\/payments\/([^/]+)\/mock-confirm$/);
+    if (req.method === 'POST' && mockConfirmMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const paymentRequestId = decodeURIComponent(mockConfirmMatch[1]!);
+      const owned = await services.db.query<{
+        amount_lak: number;
+        customer_identity_id: string;
+        reference_code: string;
+      }>(
+        `SELECT pr.amount_lak, po.customer_identity_id, pr.reference_code
+         FROM finance.payment_requests pr
+         JOIN app.parent_orders po ON po.id = pr.parent_order_id
+         WHERE pr.id = $1`,
+        [paymentRequestId],
+      );
+      const payment = owned.rows[0];
+      if (!payment) {
+        sendJson(res, 404, { error: 'payment_not_found' });
+        return;
+      }
+      if (payment.customer_identity_id !== session.identityId) {
+        sendJson(res, 403, { error: 'payment_forbidden' });
+        return;
+      }
+      const amountLak = Number(payment.amount_lak);
+      const evidence = await services.payments.submitEvidence({
+        paymentRequestId,
+        amountReportedLak: amountLak,
+        evidenceStorageKey: `mock/evidence/${paymentRequestId}.png`,
+        idempotencyKey: `mock-evidence-${paymentRequestId}`,
+      });
+      const confirmed = await services.payments.confirmPayment({
+        paymentRequestId,
+        attemptId: evidence.attemptId,
+        channel: 'manual',
+        amountLak,
+        bankRef: `MOCK-${payment.reference_code}`,
+        idempotencyKey: `mock-confirm-${paymentRequestId}`,
+        actorIdentityId: session.identityId,
+      });
+      if (!confirmed.ok) {
+        sendJson(res, 409, { error: confirmed.reason });
+        return;
+      }
+      sendJson(res, 200, { ok: true, paymentRequestId, status: 'paid' });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/') {
       sendJson(res, 200, {
         name: BRAND_NAME,
@@ -422,4 +607,16 @@ async function cartOwnedBy(services: ApiServices, cartId: string, identityId: st
     [cartId],
   );
   return row.rows[0]?.customer_identity_id === identityId;
+}
+
+async function parentOwnedBy(services: ApiServices, parentId: string, identityId: string) {
+  const row = await services.db.query<{ customer_identity_id: string }>(
+    `SELECT customer_identity_id FROM app.parent_orders WHERE id = $1`,
+    [parentId],
+  );
+  return row.rows[0]?.customer_identity_id === identityId;
+}
+
+function mockOpsAllowed(env: BombeeEnv): boolean {
+  return env.INTEGRATIONS_MODE === 'mock' || env.APP_ENV === 'local';
 }

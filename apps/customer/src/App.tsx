@@ -9,6 +9,13 @@ import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './
 import { requestCustomerOtp, verifyCustomerOtp, fetchSessionMe, logoutSession } from './lib/authApi';
 import { loadCatalogProducts } from './lib/catalogApi';
 import { checkoutLocalCart, fetchOrderView } from './lib/checkoutApi';
+import {
+  confirmChildrenMock,
+  createQrPayment,
+  fetchPaymentStatus,
+  mockConfirmPayment,
+  type QrPayment,
+} from './lib/paymentApi';
 
 type Route =
   | 'home'
@@ -70,6 +77,10 @@ export function App() {
   const [apiOrderLabel, setApiOrderLabel] = useState('');
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const [qrPayment, setQrPayment] = useState<QrPayment | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState('');
   const [notifications] = useState([
     { id: 'n1', title: locale === 'lo' ? 'ຮ້ານຢືນຢັນແລ້ວ' : 'Store confirmed', unread: true },
   ]);
@@ -213,8 +224,33 @@ export function App() {
 
   function pay() {
     assertOnlineForMutation(online, 'payment');
-    setOrderStatus('awaiting_payment');
-    go('orders');
+    const token = sessionStorage.getItem('bombee_session');
+    if (!token || !apiOrderId) {
+      setOrderStatus('awaiting_payment');
+      setPaymentStatus('fixture stub');
+      go('orders');
+      return;
+    }
+    setPayBusy(true);
+    setPayError('');
+    void (async () => {
+      try {
+        await confirmChildrenMock(token, apiOrderId);
+        const qr = await createQrPayment(token, apiOrderId);
+        setQrPayment(qr);
+        setPaymentStatus(`QR ${qr.referenceCode} · ${qr.amountLak} LAK`);
+        setOrderStatus('awaiting_payment');
+        await mockConfirmPayment(token, qr.paymentRequestId);
+        const status = await fetchPaymentStatus(token, qr.paymentRequestId);
+        setPaymentStatus(`${status.referenceCode} · ${status.status}`);
+        setOrderStatus(status.status === 'paid' ? 'paid' : 'awaiting_payment');
+        go('orders');
+      } catch (err) {
+        setPayError(err instanceof Error ? err.message : 'payment_failed');
+      } finally {
+        setPayBusy(false);
+      }
+    })();
   }
 
   const filteredProducts = products.filter((p) => {
@@ -672,7 +708,12 @@ export function App() {
         {route === 'payment' && (
           <section className="page">
             <h1>QR payment</h1>
-            <p>Select confirmed stores to combine:</p>
+            {apiOrderId ? (
+              <p className="muted">Order {apiOrderLabel || apiOrderId}</p>
+            ) : (
+              <p className="muted">No API order — fixture payment stub</p>
+            )}
+            <p>Select cart stores (display only; API pays all children on order):</p>
             {totals.groups.map((g) => (
               <label key={g.storeId} className="check">
                 <input
@@ -687,11 +728,18 @@ export function App() {
                 {g.storeName}
               </label>
             ))}
-            <p>Status: awaiting transfer · evidence upload pending</p>
+            {qrPayment ? (
+              <p>
+                QR {qrPayment.referenceCode} · {formatLak(LAK(qrPayment.amountLak))} · expires{' '}
+                {qrPayment.expiresAt}
+              </p>
+            ) : (
+              <p>Status: {paymentStatus || 'awaiting transfer · local mock confirm'}</p>
+            )}
             <button
               type="button"
               className="cta primary"
-              disabled={!online}
+              disabled={!online || payBusy}
               onClick={() => {
                 try {
                   pay();
@@ -700,8 +748,9 @@ export function App() {
                 }
               }}
             >
-              Confirm payment
+              {payBusy ? 'Paying…' : 'Simulate confirm + mock pay'}
             </button>
+            {payError ? <p className="error">{payError}</p> : null}
           </section>
         )}
 
@@ -712,6 +761,7 @@ export function App() {
               Parent {apiOrderLabel || sampleOrder.parentId} — {sampleOrder.status}
             </p>
             {apiOrderId ? <p className="muted">API order id: {apiOrderId}</p> : null}
+            {paymentStatus ? <p className="muted">Payment: {paymentStatus}</p> : null}
             <h2>Combined</h2>
             <p>Total {formatLak(LAK(orderSummary.combinedTotalLak))}</p>
             <h2>By store</h2>

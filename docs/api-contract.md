@@ -23,6 +23,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/carts/:id/items` | Upsert cart line |
 | POST | `/v1/carts/:id/checkout` | Create parent/child orders (no payment) |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
+| POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |
+| POST | `/v1/orders/:parentId/payments/qr` | Create QR payment request |
+| GET | `/v1/payments/:id` | Payment request status |
+| POST | `/v1/payments/:id/mock-confirm` | Local/mock evidence + confirm |
 
 ## Domain services (in-process; tested via Vitest + PGlite)
 

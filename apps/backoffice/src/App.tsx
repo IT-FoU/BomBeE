@@ -28,6 +28,11 @@ import {
   mockUploadCatalogMedia,
   issueCatalogMediaSignedUrl,
   listCodShipments,
+  listCodProfiles,
+  listRedeliveryFees,
+  mockCodFailure,
+  restoreCodProfile,
+  mockRequireRedeliveryFee,
   listInvites,
   listOrders,
   listSettlementBatches,
@@ -128,6 +133,8 @@ import {
   mockQualityEvent,
   reactivateStore,
   type CodShipmentRow,
+  type CodProfileRow,
+  type RedeliveryFeeRow,
   type IssuedInvite,
   type IssuedStore,
   type StoreDocumentRow,
@@ -228,6 +235,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [storeOnboarding, setStoreOnboarding] = useState<StoreOnboarding | null>(null);
   const [onboardNote, setOnboardNote] = useState('');
   const [codShipments, setCodShipments] = useState<CodShipmentRow[]>([]);
+  const [codProfiles, setCodProfiles] = useState<CodProfileRow[]>([]);
+  const [redeliveryFees, setRedeliveryFees] = useState<RedeliveryFeeRow[]>([]);
   const [opsOrders, setOpsOrders] = useState<OpsOrderRow[]>([]);
   const [splitShipments, setSplitShipments] = useState<SplitShipmentRequestRow[]>([]);
   const [ordersNote, setOrdersNote] = useState('');
@@ -311,6 +320,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           stores,
           storeDocs,
           cod,
+          codProfileRows,
+          redeliveryFeeRows,
           orders,
           splitRows,
           products,
@@ -352,6 +363,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listStores(),
           listStoreDocuments(50),
           listCodShipments(),
+          listCodProfiles(50),
+          listRedeliveryFees(50),
           listOrders(30),
           listSplitShipments(50),
           listCatalogProducts(50),
@@ -393,6 +406,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setStoreDrafts(stores);
         setStoreDocuments(storeDocs);
         setCodShipments(cod);
+        setCodProfiles(codProfileRows);
+        setRedeliveryFees(redeliveryFeeRows);
         setOpsOrders(orders);
         setSplitShipments(splitRows);
         setCatalogProducts(products);
@@ -2033,8 +2048,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ການຊຳລະ</span>
             </h2>
             <p className="lede">
-              Local COD shipments — mock remittance records courier cash-in (does not change
-              delivery status).
+              Local COD — remittance, failure→QR-forced, restore, and redelivery fees.
             </p>
             {remitNote ? (
               <p className="lede" role="status">
@@ -2090,6 +2104,109 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 </li>
               ))}
             </ul>
+            <ul className="roles" aria-label="COD profiles">
+              {codProfiles.length === 0 ? <li>No COD profiles yet</li> : null}
+              {codProfiles.map((profile) => (
+                <li key={profile.customerIdentityId}>
+                  {profile.subject ?? profile.customerIdentityId.slice(0, 8)}… · fails{' '}
+                  {profile.failedCodCount} · {profile.qrForced ? 'QR forced' : 'COD ok'}
+                  {profile.qrForced ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setRemitNote('');
+                          void (async () => {
+                            try {
+                              const result = await restoreCodProfile(profile.customerIdentityId, {
+                                reason: 'BO mock restore',
+                              });
+                              if (result.profiles) setCodProfiles(result.profiles);
+                              setRemitNote(
+                                `Restored COD for ${profile.customerIdentityId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'cod_restore_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Restore COD
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="Redelivery fees">
+              {redeliveryFees.length === 0 ? <li>No redelivery fees yet</li> : null}
+              {redeliveryFees.map((fee) => (
+                <li key={fee.redeliveryFeeId}>
+                  {formatLak(LAK(fee.amountLak))} · child {fee.childOrderId.slice(0, 8)}…
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setRemitNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCodFailure({});
+                    if (result.profiles) setCodProfiles(result.profiles);
+                    setRemitNote(
+                      `COD failure · fails=${String(result.failedCodCount ?? 0)} · qrForced=${String(result.qrForced ?? false)}`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'cod_failure_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock COD failure
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setRemitNote('');
+                void (async () => {
+                  try {
+                    const result = await mockRequireRedeliveryFee({ amountLak: 15000 });
+                    if (result.fees) setRedeliveryFees(result.fees);
+                    setRemitNote(
+                      `Redelivery fee ${result.redeliveryFeeId.slice(0, 8)}… · ${formatLak(LAK(result.amountLak))}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'redelivery_fee_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock redelivery fee
+            </button>{' '}
             <button
               type="button"
               className="cta"
@@ -2098,7 +2215,14 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 setFormBusy(true);
                 void (async () => {
                   try {
-                    setCodShipments(await listCodShipments());
+                    const [shipments, profiles, fees] = await Promise.all([
+                      listCodShipments(),
+                      listCodProfiles(50),
+                      listRedeliveryFees(50),
+                    ]);
+                    setCodShipments(shipments);
+                    setCodProfiles(profiles);
+                    setRedeliveryFees(fees);
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : 'cod_list_failed');
                   } finally {
@@ -2107,7 +2231,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 })();
               }}
             >
-              Refresh COD list
+              Refresh COD lists
             </button>
           </section>
           <section aria-labelledby="settlements-heading" id="settlements">

@@ -575,6 +575,152 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/cod/profiles') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const profiles = await services.payments.listCodProfiles(limit);
+      sendJson(res, 200, { ok: true, profiles });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/cod/redelivery-fees') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const fees = await services.payments.listRedeliveryFees(limit);
+      sendJson(res, 200, { ok: true, fees });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/cod/profiles/mock-failure') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        customerIdentityId?: string;
+        customer_identity_id?: string;
+        customerCaused?: boolean;
+        customer_caused?: boolean;
+      }>(req);
+      try {
+        let customerIdentityId = (body.customerIdentityId ?? body.customer_identity_id)?.trim();
+        if (!customerIdentityId) {
+          const existing = await services.db.query<{ customer_identity_id: string }>(
+            `SELECT customer_identity_id FROM finance.cod_profiles
+             ORDER BY updated_at DESC LIMIT 1`,
+          );
+          customerIdentityId = existing.rows[0]?.customer_identity_id;
+        }
+        if (!customerIdentityId) {
+          customerIdentityId = await services.identity.ensureCustomer(
+            '+8562097008861',
+            'Local COD Failure Customer',
+          );
+        }
+        const customerCaused = body.customerCaused ?? body.customer_caused ?? true;
+        const result = await services.payments.recordCustomerCodFailure(
+          customerIdentityId,
+          customerCaused,
+        );
+        const profiles = await services.payments.listCodProfiles(50);
+        sendJson(res, 200, {
+          ok: true,
+          customerIdentityId,
+          customerCaused,
+          ...result,
+          profiles,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'cod_failure_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const codRestoreMatch = url.pathname.match(
+      /^\/v1\/ops\/cod\/profiles\/([^/]+)\/restore$/,
+    );
+    if (req.method === 'POST' && codRestoreMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const customerIdentityId = decodeURIComponent(codRestoreMatch[1]!);
+      const body = await readJsonBody<{ reason?: string }>(req);
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        await services.payments.restoreCod({
+          customerIdentityId,
+          actorIdentityId,
+          reason: body.reason?.trim() || 'local_mock_cod_restore',
+        });
+        const profiles = await services.payments.listCodProfiles(50);
+        sendJson(res, 200, {
+          ok: true,
+          customerIdentityId,
+          qrForced: false,
+          failedCodCount: 0,
+          profiles,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'cod_restore_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/cod/redelivery-fees/mock-require') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        childOrderId?: string;
+        child_order_id?: string;
+        amountLak?: number;
+        amount_lak?: number;
+      }>(req);
+      try {
+        let childOrderId = (body.childOrderId ?? body.child_order_id)?.trim();
+        if (!childOrderId) {
+          const child = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.child_orders ORDER BY created_at DESC LIMIT 1`,
+          );
+          childOrderId = child.rows[0]?.id;
+        }
+        if (!childOrderId) {
+          sendJson(res, 409, { error: 'no_eligible_child' });
+          return;
+        }
+        const amountLak =
+          typeof body.amountLak === 'number'
+            ? Math.trunc(body.amountLak)
+            : typeof body.amount_lak === 'number'
+              ? Math.trunc(body.amount_lak)
+              : 15_000;
+        if (!Number.isInteger(amountLak) || amountLak <= 0) {
+          sendJson(res, 400, { error: 'invalid_amount' });
+          return;
+        }
+        const redeliveryFeeId = await services.payments.requireRedeliveryFee(
+          childOrderId,
+          amountLak,
+        );
+        const fees = await services.payments.listRedeliveryFees(50);
+        sendJson(res, 201, {
+          ok: true,
+          redeliveryFeeId,
+          childOrderId,
+          amountLak,
+          fees,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'redelivery_fee_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/stores') {
       const body = await readJsonBody<{ name?: string; code?: string }>(req);
       const name = body.name?.trim();

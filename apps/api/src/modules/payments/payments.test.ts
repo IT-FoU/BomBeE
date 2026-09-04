@@ -282,7 +282,7 @@ describe('Milestone 6 payments', () => {
 
     await payments.recordCustomerCodFailure(customerId, true);
     const afterOne = await payments.recordCustomerCodFailure(customerId, true);
-    expect(afterOne.qr_forced).toBe(true);
+    expect(afterOne.qrForced).toBe(true);
 
     await payments.restoreCod({
       customerIdentityId: customerId,

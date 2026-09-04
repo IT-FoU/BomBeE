@@ -153,6 +153,11 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/orders/:parentId/payments/cod` | Create COD shipments + reserve stock (confirmed children) |
 | GET | `/v1/cod/shipments` | List COD shipments (local ops) |
 | POST | `/v1/cod/shipments/:id/mock-remit` | Local/mock courier remittance + COD reconcile (does not change delivery) |
+| GET | `/v1/cod/profiles` | List COD customer profiles (fails / QR-forced) |
+| POST | `/v1/ops/cod/profiles/mock-failure` | Local/mock customer-caused COD failure (2nd → QR forced) |
+| POST | `/v1/ops/cod/profiles/:customerIdentityId/restore` | Restore COD eligibility (staff audit) |
+| GET | `/v1/cod/redelivery-fees` | List redelivery fees |
+| POST | `/v1/ops/cod/redelivery-fees/mock-require` | Local/mock require redelivery fee (default 15k LAK) |
 | GET | `/v1/payments/:id` | Payment request status |
 | POST | `/v1/payments/:id/mock-confirm` | Local/mock evidence + confirm |
 | POST | `/v1/payments/mock-expire-due` | Local/mock expire open QR past deadline + release stock + cancel `awaiting_payment` children; also grace-expire reservations |

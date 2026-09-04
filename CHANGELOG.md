@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 local — COD restore + mock-failure + redelivery fee HTTP
 - Phase 2 local — support ticket SLA escalated list + mock-evaluate HTTP
 - Phase 2 local — packing SLA late list + mock-evaluate HTTP
 - Phase 2 local — delivery lost/damaged claims list + mock-open + resolve HTTP

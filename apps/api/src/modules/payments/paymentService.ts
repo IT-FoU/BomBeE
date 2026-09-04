@@ -424,7 +424,7 @@ export class PaymentService {
   }
 
   async recordCustomerCodFailure(customerIdentityId: string, customerCaused: boolean) {
-    if (!customerCaused) return { qrForced: false };
+    if (!customerCaused) return { failedCodCount: 0, qrForced: false, skipped: true as const };
     await this.ensureCodProfile(customerIdentityId);
     const row = await this.db.query<{ failed_cod_count: number; qr_forced: boolean }>(
       `UPDATE finance.cod_profiles
@@ -435,7 +435,11 @@ export class PaymentService {
        RETURNING failed_cod_count, qr_forced`,
       [customerIdentityId],
     );
-    return row.rows[0]!;
+    return {
+      failedCodCount: row.rows[0]!.failed_cod_count,
+      qrForced: row.rows[0]!.qr_forced,
+      skipped: false as const,
+    };
   }
 
   async restoreCod(input: {
@@ -443,6 +447,7 @@ export class PaymentService {
     actorIdentityId: string;
     reason: string;
   }) {
+    await this.ensureCodProfile(input.customerIdentityId);
     await this.db.query(
       `UPDATE finance.cod_profiles
        SET qr_forced = false, failed_cod_count = 0, updated_at = timezone('utc', now())
@@ -468,6 +473,56 @@ export class PaymentService {
       [childOrderId, amountLak],
     );
     return row.rows[0]!.id;
+  }
+
+  async listCodProfiles(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      customer_identity_id: string;
+      subject: string | null;
+      is_new_customer: boolean;
+      failed_cod_count: number;
+      qr_forced: boolean;
+      updated_at: string;
+    }>(
+      `SELECT p.customer_identity_id, i.subject, p.is_new_customer, p.failed_cod_count,
+              p.qr_forced, p.updated_at::text
+       FROM finance.cod_profiles p
+       LEFT JOIN security.auth_identities i ON i.id = p.customer_identity_id
+       ORDER BY p.updated_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      customerIdentityId: r.customer_identity_id,
+      subject: r.subject,
+      isNewCustomer: r.is_new_customer,
+      failedCodCount: Number(r.failed_cod_count),
+      qrForced: r.qr_forced,
+      updatedAt: r.updated_at,
+    }));
+  }
+
+  async listRedeliveryFees(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      child_order_id: string;
+      amount_lak: number;
+      created_at: string;
+    }>(
+      `SELECT id, child_order_id, amount_lak, created_at::text
+       FROM finance.redelivery_fees
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      redeliveryFeeId: r.id,
+      childOrderId: r.child_order_id,
+      amountLak: Number(r.amount_lak),
+      createdAt: r.created_at,
+    }));
   }
 
   async recordCourierRemittance(input: {

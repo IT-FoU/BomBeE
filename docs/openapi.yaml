@@ -2091,6 +2091,92 @@ paths:
           description: Mock ops disabled
         '409':
           description: Shipment failed
+  /v1/cod/profiles:
+    get:
+      summary: List COD customer profiles (fails / QR-forced)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Profiles array
+  /v1/ops/cod/profiles/mock-failure:
+    post:
+      summary: Local/mock customer-caused COD failure (2nd forces QR)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_identity_id:
+                  type: string
+                customer_caused:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Failure recorded (or skipped if not customer-caused)
+        '403':
+          description: Mock ops disabled
+  /v1/ops/cod/profiles/{customerIdentityId}/restore:
+    post:
+      summary: Restore COD eligibility after QR force (staff audit)
+      parameters:
+        - in: path
+          name: customerIdentityId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Profile restored
+        '403':
+          description: Mock ops disabled
+  /v1/cod/redelivery-fees:
+    get:
+      summary: List redelivery fees
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Fees array
+  /v1/ops/cod/redelivery-fees/mock-require:
+    post:
+      summary: Local/mock require redelivery fee on a child order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                amount_lak:
+                  type: integer
+                  default: 15000
+      responses:
+        '201':
+          description: Fee recorded
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No eligible child
   /v1/payments/mismatches:
     get:
       summary: List recon mismatches

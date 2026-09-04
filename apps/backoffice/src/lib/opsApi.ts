@@ -306,6 +306,117 @@ export async function mockRemitCodShipment(
   };
 }
 
+export type CodProfileRow = {
+  customerIdentityId: string;
+  subject: string | null;
+  isNewCustomer: boolean;
+  failedCodCount: number;
+  qrForced: boolean;
+  updatedAt: string;
+};
+
+export type RedeliveryFeeRow = {
+  redeliveryFeeId: string;
+  childOrderId: string;
+  amountLak: number;
+  createdAt: string;
+};
+
+export async function listCodProfiles(limit = 50): Promise<CodProfileRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/cod/profiles?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`cod_profiles_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { profiles: CodProfileRow[] };
+  return body.profiles;
+}
+
+export async function listRedeliveryFees(limit = 50): Promise<RedeliveryFeeRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/cod/redelivery-fees?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`redelivery_fees_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { fees: RedeliveryFeeRow[] };
+  return body.fees;
+}
+
+export async function mockCodFailure(input: {
+  customerIdentityId?: string;
+  customerCaused?: boolean;
+} = {}): Promise<{
+  customerIdentityId: string;
+  failedCodCount?: number;
+  qrForced?: boolean;
+  skipped?: boolean;
+  profiles?: CodProfileRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/cod/profiles/mock-failure`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      customer_identity_id: input.customerIdentityId,
+      customer_caused: input.customerCaused,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `cod_failure_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    customerIdentityId: string;
+    failedCodCount?: number;
+    qrForced?: boolean;
+    skipped?: boolean;
+    profiles?: CodProfileRow[];
+  };
+}
+
+export async function restoreCodProfile(
+  customerIdentityId: string,
+  input: { reason?: string } = {},
+): Promise<{ profiles?: CodProfileRow[]; qrForced?: boolean }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/cod/profiles/${encodeURIComponent(customerIdentityId)}/restore`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: input.reason }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `cod_restore_failed_${res.status}`);
+  }
+  return (await res.json()) as { profiles?: CodProfileRow[]; qrForced?: boolean };
+}
+
+export async function mockRequireRedeliveryFee(input: {
+  childOrderId?: string;
+  amountLak?: number;
+} = {}): Promise<{
+  redeliveryFeeId: string;
+  amountLak: number;
+  fees?: RedeliveryFeeRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/cod/redelivery-fees/mock-require`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      child_order_id: input.childOrderId,
+      amount_lak: input.amountLak,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `redelivery_fee_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    redeliveryFeeId: string;
+    amountLak: number;
+    fees?: RedeliveryFeeRow[];
+  };
+}
+
 export type OpsOrderRow = {
   parentId: string;
   orderNumber: string;

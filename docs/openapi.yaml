@@ -534,6 +534,29 @@ paths:
       responses:
         '200':
           description: Returns array
+  /v1/me/returns:
+    get:
+      summary: List own return requests
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Returns array
+        '401':
+          description: Unauthorized
+    post:
+      summary: Request return for owned delivered child
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Return request created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Not order owner
+        '409':
+          description: Not delivered or window/reason ineligible
   /v1/ops/returns/mock-create:
     post:
       summary: Local/mock return for a delivered child

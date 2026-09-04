@@ -218,6 +218,73 @@ export class ReturnService {
     }));
   }
 
+  async listReturnsForCustomer(customerIdentityId: string, limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      child_order_id: string;
+      parent_order_id: string;
+      reason: string;
+      status: string;
+      shipping_liability: string | null;
+      total_lak: number;
+      requested_at: string;
+      delivered_at: string;
+    }>(
+      `SELECT r.id, r.child_order_id, co.parent_order_id, r.reason, r.status,
+              r.shipping_liability, co.total_lak,
+              r.requested_at::text, r.delivered_at::text
+       FROM app.return_requests r
+       JOIN app.child_orders co ON co.id = r.child_order_id
+       JOIN app.parent_orders po ON po.id = co.parent_order_id
+       WHERE po.customer_identity_id = $1
+       ORDER BY r.requested_at DESC
+       LIMIT $2`,
+      [customerIdentityId, capped],
+    );
+    return rows.rows.map((r) => ({
+      returnRequestId: r.id,
+      childOrderId: r.child_order_id,
+      parentOrderId: r.parent_order_id,
+      reason: r.reason,
+      status: r.status,
+      shippingLiability: r.shipping_liability,
+      amountLak: Number(r.total_lak),
+      requestedAt: r.requested_at,
+      deliveredAt: r.delivered_at,
+    }));
+  }
+
+  async resolveOwnedDeliveredChild(input: {
+    childOrderId: string;
+    customerIdentityId: string;
+  }) {
+    const delivery = await this.db.query<{
+      delivered_at: string | null;
+      status: string;
+      customer_identity_id: string;
+    }>(
+      `SELECT sd.delivered_at::text, co.status, po.customer_identity_id
+       FROM app.child_orders co
+       JOIN app.parent_orders po ON po.id = co.parent_order_id
+       LEFT JOIN app.shipment_deliveries sd
+         ON sd.child_order_id = co.id AND sd.status = 'delivered'
+       WHERE co.id = $1
+       ORDER BY sd.delivered_at DESC NULLS LAST
+       LIMIT 1`,
+      [input.childOrderId],
+    );
+    const child = delivery.rows[0];
+    if (!child) throw new Error('child_order_not_found');
+    if (child.customer_identity_id !== input.customerIdentityId) {
+      throw new Error('not_order_owner');
+    }
+    if (child.status !== 'delivered' || !child.delivered_at) {
+      throw new Error('child_not_delivered');
+    }
+    return { deliveredAt: new Date(child.delivered_at) };
+  }
+
   async approveReturn(returnRequestId: string) {
     const row = await this.db.query<{ status: string }>(
       `SELECT status FROM app.return_requests WHERE id = $1`,

@@ -36,6 +36,7 @@ import {
   openMySupportTicket,
   type MySupportTicket,
 } from './lib/supportApi';
+import { listMyReturns, requestMyReturn, type MyReturnRow } from './lib/returnsApi';
 import {
   confirmChildrenMock,
   createCodPayment,
@@ -130,6 +131,10 @@ export function App() {
   );
   const [supportNote, setSupportNote] = useState('');
   const [supportBusy, setSupportBusy] = useState(false);
+  const [myReturns, setMyReturns] = useState<MyReturnRow[]>([]);
+  const [returnReason, setReturnReason] = useState('defective');
+  const [returnNote, setReturnNote] = useState('');
+  const [returnBusy, setReturnBusy] = useState(false);
   const [qrPayment, setQrPayment] = useState<QrPayment | null>(null);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [payBusy, setPayBusy] = useState(false);
@@ -1107,9 +1112,87 @@ export function App() {
               </>
             )}
             <h2>After-sales</h2>
-            <button type="button" className="cta ghost">
-              Request return / refund + evidence
+            <label>
+              Return reason
+              <select
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                aria-label="Return reason"
+              >
+                <option value="defective">Defective</option>
+                <option value="wrong_item">Wrong item</option>
+                <option value="incomplete">Incomplete</option>
+                <option value="materially_not_described">Not as described</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || returnBusy || !online || trackingChildren.length === 0}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                const delivered = trackingChildren.find((c) => c.status === 'delivered');
+                const child = delivered ?? trackingChildren[0];
+                if (!token || !child) {
+                  setReturnNote('Need login and a delivered child order');
+                  return;
+                }
+                setReturnBusy(true);
+                setReturnNote('');
+                void (async () => {
+                  try {
+                    assertOnlineForMutation(online, 'return_request');
+                    const result = await requestMyReturn(token, {
+                      childOrderId: child.id,
+                      reason: returnReason,
+                    });
+                    if (result.returns) setMyReturns(result.returns);
+                    else setMyReturns(await listMyReturns(token));
+                    setReturnNote(
+                      `Return ${result.returnRequestId.slice(0, 8)}… (${result.shippingLiability ?? 'pending'})`,
+                    );
+                  } catch (err) {
+                    setReturnNote(err instanceof Error ? err.message : 'return_failed');
+                  } finally {
+                    setReturnBusy(false);
+                  }
+                })();
+              }}
+            >
+              Request return + evidence
+            </button>{' '}
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={returnBusy}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token) return;
+                setReturnBusy(true);
+                void (async () => {
+                  try {
+                    setMyReturns(await listMyReturns(token));
+                    setReturnNote('Loaded returns');
+                  } catch (err) {
+                    setReturnNote(err instanceof Error ? err.message : 'returns_list_failed');
+                  } finally {
+                    setReturnBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh returns
             </button>
+            {returnNote ? <p className="muted">{returnNote}</p> : null}
+            {myReturns.length > 0 ? (
+              <ul aria-label="My returns">
+                {myReturns.slice(0, 5).map((r) => (
+                  <li key={r.returnRequestId}>
+                    {r.status} · {r.reason} · {r.returnRequestId.slice(0, 8)}…
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <label>
               Rating
               <input

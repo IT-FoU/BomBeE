@@ -58,6 +58,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B38 | Customer privacy addresses + deletion | **Done** — `/v1/me/privacy|addresses|marketing-opt-in|deletion-request`, ops approve anonymize; Privacy BO |
 | P2-B39 | Product reviews + TikTok HTTP | **Done** — `/v1/reviews`, `/v1/tiktok-links`, ops mock-create/moderate; Content BO; customer after-sales |
 | P2-B40 | Customer support tickets (me) | **Done** — `/v1/me/support/tickets` list/open/confirm-close; customer Support page |
+| P2-B41 | Customer return requests (me) | **Done** — `/v1/me/returns` list/create for delivered children; after-sales wiring |
 
 ## C — Hard rules that stay
 

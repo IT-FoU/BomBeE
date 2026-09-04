@@ -635,6 +635,90 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/me/returns') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const returns = await services.returns.listReturnsForCustomer(
+        session.identityId,
+        limit,
+      );
+      sendJson(res, 200, { ok: true, returns });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/me/returns') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{
+        childOrderId?: string;
+        child_order_id?: string;
+        reason?: string;
+        evidenceKeys?: string[];
+        evidence_keys?: string[];
+      }>(req);
+      const childOrderId = body.childOrderId ?? body.child_order_id;
+      if (!childOrderId?.trim()) {
+        sendJson(res, 400, { error: 'child_order_id_required' });
+        return;
+      }
+      const reasonRaw = body.reason ?? 'defective';
+      const allowed = [
+        'defective',
+        'wrong_item',
+        'incomplete',
+        'materially_not_described',
+      ] as const;
+      if (!(allowed as readonly string[]).includes(reasonRaw)) {
+        sendJson(res, 400, { error: 'invalid_return_reason' });
+        return;
+      }
+      try {
+        const owned = await services.returns.resolveOwnedDeliveredChild({
+          childOrderId: childOrderId.trim(),
+          customerIdentityId: session.identityId,
+        });
+        const evidenceKeys =
+          body.evidenceKeys ??
+          body.evidence_keys ??
+          [`customer/return/${childOrderId.trim()}.jpg`];
+        const created = await services.returns.requestReturn({
+          childOrderId: childOrderId.trim(),
+          reason: reasonRaw as (typeof allowed)[number],
+          deliveredAt: owned.deliveredAt,
+          evidenceKeys,
+          createdBy: session.identityId,
+        });
+        const returns = await services.returns.listReturnsForCustomer(
+          session.identityId,
+          50,
+        );
+        sendJson(res, 201, { ok: true, ...created, returns });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'return_create_failed';
+        const status =
+          message === 'not_order_owner'
+            ? 403
+            : message === 'child_order_not_found'
+              ? 404
+              : message === 'child_not_delivered' ||
+                  message === 'return_window_exceeded' ||
+                  message === 'change_of_mind_not_allowed' ||
+                  message === 'invalid_return_reason'
+                ? 409
+                : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/promotions') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

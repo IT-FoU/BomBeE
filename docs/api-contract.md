@@ -41,6 +41,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/support/tickets/:id/reply` | Local/mock staff reply → `awaiting_customer` |
 | POST | `/v1/ops/support/tickets/:id/resolve` | Local/mock preliminary resolve |
 | GET | `/v1/returns` | List return requests (local ops) |
+| GET | `/v1/me/returns` | List own return requests (Bearer) |
+| POST | `/v1/me/returns` | Request return for owned delivered child (Bearer) |
 | POST | `/v1/ops/returns/mock-create` | Local/mock return for delivered child (optional `child_order_id`) |
 | POST | `/v1/ops/returns/:id/approve` | Local/mock approve pending return |
 | GET | `/v1/promotions` | List promotions (local ops) |

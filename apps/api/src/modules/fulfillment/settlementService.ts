@@ -98,6 +98,31 @@ export class SettlementService {
     }));
   }
 
+  async listLines(batchId: string) {
+    const rows = await this.db.query<{
+      id: string;
+      child_order_id: string;
+      amount_lak: number;
+      held: boolean;
+      disputed: boolean;
+      hold_reason: string | null;
+    }>(
+      `SELECT id, child_order_id, amount_lak, held, disputed, hold_reason
+       FROM finance.settlement_lines
+       WHERE batch_id = $1
+       ORDER BY child_order_id`,
+      [batchId],
+    );
+    return rows.rows.map((r) => ({
+      lineId: r.id,
+      childOrderId: r.child_order_id,
+      amountLak: Number(r.amount_lak),
+      held: r.held,
+      disputed: r.disputed,
+      holdReason: r.hold_reason,
+    }));
+  }
+
   async createBatch(input: {
     storeId: string;
     makerIdentityId: string;
@@ -179,6 +204,14 @@ export class SettlementService {
   }
 
   async submitForApproval(batchId: string) {
+    const batch = await this.db.query<{ status: string }>(
+      `SELECT status FROM finance.settlement_batches WHERE id = $1`,
+      [batchId],
+    );
+    if (!batch.rows[0]) throw new Error('batch_not_found');
+    if (batch.rows[0].status !== 'draft') {
+      throw new Error('batch_not_submittable');
+    }
     await this.db.query(
       `UPDATE finance.settlement_batches SET status = 'pending_approval' WHERE id = $1`,
       [batchId],

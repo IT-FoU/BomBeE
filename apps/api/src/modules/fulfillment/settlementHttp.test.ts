@@ -165,5 +165,37 @@ describe('settlement HTTP', () => {
     );
     expect(again.res.statusCode).toBe(409);
     expect(again.body().error).toBe('no_eligible_orders');
+
+    const batchId = created.body().batchId as string;
+    const lines = mockRes();
+    await router(mockReq('GET', `/v1/settlements/${batchId}/lines`), lines.res);
+    expect(lines.res.statusCode).toBe(200);
+    expect((lines.body().lines as unknown[]).length).toBeGreaterThanOrEqual(1);
+
+    const submit = mockRes();
+    await router(mockReq('POST', `/v1/ops/settlements/${batchId}/submit`, {}), submit.res);
+    expect(submit.res.statusCode).toBe(200);
+    expect(submit.body().status).toBe('pending_approval');
+
+    const submitAgain = mockRes();
+    await router(mockReq('POST', `/v1/ops/settlements/${batchId}/submit`, {}), submitAgain.res);
+    expect(submitAgain.res.statusCode).toBe(409);
+    expect(submitAgain.body().error).toBe('batch_not_submittable');
+
+    const approve = mockRes();
+    await router(mockReq('POST', `/v1/ops/settlements/${batchId}/approve`, {}), approve.res);
+    expect(approve.res.statusCode).toBe(200);
+    expect(approve.body().status).toBe('approved');
+
+    const dispute = mockRes();
+    await router(
+      mockReq('POST', `/v1/ops/settlements/${batchId}/dispute`, {
+        reason: 'qa fee mismatch',
+      }),
+      dispute.res,
+    );
+    expect(dispute.res.statusCode).toBe(200);
+    expect(dispute.body().status).toBe('partially_disputed');
+    expect(dispute.body().disputeId).toBeTruthy();
   });
 });

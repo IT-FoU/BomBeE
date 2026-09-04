@@ -343,6 +343,72 @@ paths:
           description: Mock ops disabled
         '409':
           description: No eligible orders or payout missing/on hold
+  /v1/settlements/{batchId}/lines:
+    get:
+      summary: Settlement lines for a batch
+      parameters:
+        - in: path
+          name: batchId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lines array
+        '404':
+          description: Batch not found
+  /v1/ops/settlements/{batchId}/submit:
+    post:
+      summary: Local/mock submit draft batch for approval
+      parameters:
+        - in: path
+          name: batchId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status pending_approval
+        '409':
+          description: Batch not submittable
+  /v1/ops/settlements/{batchId}/approve:
+    post:
+      summary: Local/mock approve batch (distinct finance actor)
+      parameters:
+        - in: path
+          name: batchId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status approved
+        '409':
+          description: Self-approval denied or not approvable
+  /v1/ops/settlements/{batchId}/dispute:
+    post:
+      summary: Local/mock dispute a settlement line
+      parameters:
+        - in: path
+          name: batchId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Line disputed; batch partially_disputed
+        '409':
+          description: Dispute window exceeded
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

@@ -29,6 +29,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/orders/:parentId/fulfillment/mock-deliver` | Local ops POD→delivered |
 | GET | `/v1/settlements` | List settlement batches (local ops) |
 | POST | `/v1/ops/settlements/mock-create` | Local/mock draft batch for delivered+paid children (optional `store_id`) |
+| GET | `/v1/settlements/:batchId/lines` | Settlement lines for a batch |
+| POST | `/v1/ops/settlements/:batchId/submit` | Local/mock submit draft → `pending_approval` |
+| POST | `/v1/ops/settlements/:batchId/approve` | Local/mock approve (distinct finance actor; maker-checker) |
+| POST | `/v1/ops/settlements/:batchId/dispute` | Local/mock dispute a line (`child_order_id` optional → first line) |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

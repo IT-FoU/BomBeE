@@ -285,3 +285,60 @@ export async function mockCreateSettlementBatch(storeId?: string): Promise<{
     batches: SettlementBatchRow[];
   };
 }
+
+export type SettlementLineRow = {
+  lineId: string;
+  childOrderId: string;
+  amountLak: number;
+  held: boolean;
+  disputed: boolean;
+  holdReason: string | null;
+};
+
+export async function listSettlementLines(batchId: string): Promise<SettlementLineRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/settlements/${batchId}/lines`);
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `settlement_lines_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { lines: SettlementLineRow[] };
+  return body.lines;
+}
+
+async function settlementOpsAction(
+  path: string,
+  body: Record<string, unknown> = {},
+): Promise<{ batches?: SettlementBatchRow[]; status?: string; disputeId?: string }> {
+  const res = await fetch(`${apiBaseUrl()}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `settlement_ops_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    batches?: SettlementBatchRow[];
+    status?: string;
+    disputeId?: string;
+  };
+}
+
+export async function submitSettlementBatch(batchId: string) {
+  return settlementOpsAction(`/v1/ops/settlements/${batchId}/submit`);
+}
+
+export async function approveSettlementBatch(batchId: string) {
+  return settlementOpsAction(`/v1/ops/settlements/${batchId}/approve`);
+}
+
+export async function disputeSettlementBatch(
+  batchId: string,
+  input: { childOrderId?: string; reason?: string } = {},
+) {
+  return settlementOpsAction(`/v1/ops/settlements/${batchId}/dispute`, {
+    child_order_id: input.childOrderId,
+    reason: input.reason,
+  });
+}

@@ -546,6 +546,137 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const settlementLinesMatch = url.pathname.match(/^\/v1\/settlements\/([^/]+)\/lines$/);
+    if (req.method === 'GET' && settlementLinesMatch) {
+      const batchId = decodeURIComponent(settlementLinesMatch[1]!);
+      const batch = await services.db.query<{ id: string }>(
+        `SELECT id FROM finance.settlement_batches WHERE id = $1`,
+        [batchId],
+      );
+      if (!batch.rows[0]) {
+        sendJson(res, 404, { error: 'batch_not_found' });
+        return;
+      }
+      const lines = await services.settlements.listLines(batchId);
+      sendJson(res, 200, { ok: true, batchId, lines });
+      return;
+    }
+
+    const settlementSubmitMatch = url.pathname.match(
+      /^\/v1\/ops\/settlements\/([^/]+)\/submit$/,
+    );
+    if (req.method === 'POST' && settlementSubmitMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const batchId = decodeURIComponent(settlementSubmitMatch[1]!);
+      try {
+        await services.settlements.submitForApproval(batchId);
+        const batches = await services.settlements.listBatches(50);
+        sendJson(res, 200, { ok: true, batchId, status: 'pending_approval', batches });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'settlement_submit_failed';
+        const status =
+          message === 'batch_not_found'
+            ? 404
+            : message === 'batch_not_submittable'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    const settlementApproveMatch = url.pathname.match(
+      /^\/v1\/ops\/settlements\/([^/]+)\/approve$/,
+    );
+    if (req.method === 'POST' && settlementApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const batchId = decodeURIComponent(settlementApproveMatch[1]!);
+      try {
+        const maker = await services.db.query<{ maker_identity_id: string }>(
+          `SELECT maker_identity_id FROM finance.settlement_batches WHERE id = $1`,
+          [batchId],
+        );
+        if (!maker.rows[0]) {
+          sendJson(res, 404, { error: 'batch_not_found' });
+          return;
+        }
+        const approverIdentityId = await resolveOpsApprover(
+          services,
+          maker.rows[0].maker_identity_id,
+        );
+        await services.settlements.approveBatch({ batchId, approverIdentityId });
+        const batches = await services.settlements.listBatches(50);
+        sendJson(res, 200, { ok: true, batchId, status: 'approved', batches });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'settlement_approve_failed';
+        const status =
+          message === 'batch_not_found'
+            ? 404
+            : message === 'self_approval_denied' || message === 'batch_not_approvable'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    const settlementDisputeMatch = url.pathname.match(
+      /^\/v1\/ops\/settlements\/([^/]+)\/dispute$/,
+    );
+    if (req.method === 'POST' && settlementDisputeMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const batchId = decodeURIComponent(settlementDisputeMatch[1]!);
+      const body = await readJsonBody<{
+        child_order_id?: string;
+        childOrderId?: string;
+        reason?: string;
+      }>(req);
+      let childOrderId = body.child_order_id ?? body.childOrderId;
+      if (!childOrderId) {
+        const lines = await services.settlements.listLines(batchId);
+        childOrderId = lines.find((l) => !l.disputed)?.childOrderId ?? lines[0]?.childOrderId;
+      }
+      if (!childOrderId) {
+        sendJson(res, 409, { error: 'no_settlement_lines' });
+        return;
+      }
+      try {
+        const dispute = await services.settlements.openDispute({
+          batchId,
+          childOrderId,
+          reason: body.reason?.trim() || 'local_mock_dispute',
+        });
+        const batches = await services.settlements.listBatches(50);
+        sendJson(res, 200, {
+          ok: true,
+          batchId,
+          childOrderId,
+          status: 'partially_disputed',
+          ...dispute,
+          batches,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'settlement_dispute_failed';
+        const status =
+          message === 'batch_not_found' || message === 'settlement_line_not_found'
+            ? 404
+            : message === 'dispute_window_exceeded'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     const opsConfirmMatch = url.pathname.match(/^\/v1\/ops\/orders\/([^/]+)\/confirm-children$/);
     if (req.method === 'POST' && opsConfirmMatch) {
       if (!mockOpsAllowed(env)) {
@@ -1326,5 +1457,35 @@ async function resolveOpsActor(services: ApiServices): Promise<string> {
     'Local Ops',
     '+8562087000099',
   );
+  return created.identityId;
+}
+
+/** Distinct from maker for settlement maker-checker (local mock). */
+async function resolveOpsApprover(
+  services: ApiServices,
+  makerIdentityId: string,
+): Promise<string> {
+  const existing = await services.db.query<{ id: string }>(
+    `SELECT id FROM security.auth_identities
+     WHERE subject IN ('staff:local-catalog-maker', 'staff:local-finance')
+       AND id <> $1
+     ORDER BY subject
+     LIMIT 1`,
+    [makerIdentityId],
+  );
+  if (existing.rows[0]) return existing.rows[0].id;
+  const created = await services.identity.ensureStaff(
+    'staff:local-finance',
+    'Local Finance',
+    '+8562087000098',
+  );
+  if (created.identityId === makerIdentityId) {
+    const other = await services.identity.ensureStaff(
+      'staff:local-finance-approver',
+      'Local Finance Approver',
+      '+8562087000097',
+    );
+    return other.identityId;
+  }
   return created.identityId;
 }

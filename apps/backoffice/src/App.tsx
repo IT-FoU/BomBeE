@@ -25,6 +25,9 @@ import {
   opsConfirmChildren,
   opsMockAdvance,
   opsMockDeliver,
+  submitSettlementBatch,
+  approveSettlementBatch,
+  disputeSettlementBatch,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -659,7 +662,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ຈ່າຍຮ້ານ</span>
             </h2>
             <p className="lede">
-              Local draft settlement batches for delivered + paid children (active payout required).
+              Local settlement batches — create draft, submit, approve (maker-checker), or dispute a
+              line (delivered + paid children; active payout required).
             </p>
             {settlementNote ? (
               <p className="lede" role="status">
@@ -672,6 +676,104 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 <li key={batch.batchId}>
                   {batch.status} · {batch.storeName} · {batch.lineCount} lines · net{' '}
                   {formatLak(LAK(batch.netLak))}
+                  {batch.status === 'draft' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setSettlementNote('');
+                          void (async () => {
+                            try {
+                              const result = await submitSettlementBatch(batch.batchId);
+                              if (result.batches) setSettlementBatches(result.batches);
+                              setSettlementNote(
+                                `Submitted ${batch.batchId.slice(0, 8)}… → pending_approval`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'settlement_submit_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Submit
+                      </button>
+                    </>
+                  ) : null}
+                  {batch.status === 'draft' || batch.status === 'pending_approval' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setSettlementNote('');
+                          void (async () => {
+                            try {
+                              const result = await approveSettlementBatch(batch.batchId);
+                              if (result.batches) setSettlementBatches(result.batches);
+                              setSettlementNote(
+                                `Approved ${batch.batchId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'settlement_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve
+                      </button>
+                    </>
+                  ) : null}
+                  {batch.status !== 'partially_disputed' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setSettlementNote('');
+                          void (async () => {
+                            try {
+                              const result = await disputeSettlementBatch(batch.batchId, {
+                                reason: 'BO mock dispute',
+                              });
+                              if (result.batches) setSettlementBatches(result.batches);
+                              setSettlementNote(
+                                `Disputed ${batch.batchId.slice(0, 8)}… · ${result.disputeId?.slice(0, 8) ?? ''}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'settlement_dispute_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Dispute
+                      </button>
+                    </>
+                  ) : null}
                 </li>
               ))}
             </ul>

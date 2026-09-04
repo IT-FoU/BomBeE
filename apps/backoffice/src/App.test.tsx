@@ -23,6 +23,7 @@ describe('backoffice shell QA', () => {
         'notifications',
         'approvals',
         'staff',
+        'invites',
         'audit',
         'exports',
       ]),

@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+
 import {
   APP_ROLES,
   BRAND_NAME,
@@ -23,6 +25,7 @@ const navItems = [
   { id: 'notifications', label: { lo: 'ແຈ້ງເຕືອນ', en: 'Notifications' } },
   { id: 'approvals', label: { lo: 'ອະນຸມັດ', en: 'Approvals' } },
   { id: 'staff', label: { lo: 'ພະນັກງານ', en: 'Staff & roles' } },
+  { id: 'invites', label: { lo: 'ເຊີນເຂົ້າ', en: 'Beta invites' } },
   { id: 'audit', label: { lo: 'ອອດິດ', en: 'Audit' } },
   { id: 'exports', label: { lo: 'ສົ່ງອອກ', en: 'Exports' } },
 ] as const;
@@ -30,7 +33,30 @@ const navItems = [
 const SAMPLE_AMOUNT = LAK(1_250_000);
 const SAMPLE_DATE = '2026-09-03T04:00:00.000Z';
 
+type InviteDraft = {
+  code: string;
+  role: 'customer' | 'store_owner' | 'ops';
+  maxUses: number;
+  note: string;
+};
+
 export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
+  const [inviteDraft, setInviteDraft] = useState<InviteDraft>({
+    code: '',
+    role: 'customer',
+    maxUses: 1,
+    note: '',
+  });
+  const [issuedInvites, setIssuedInvites] = useState<InviteDraft[]>([]);
+  const [formError, setFormError] = useState('');
+  const [storeDraftName, setStoreDraftName] = useState('');
+  const [storeDrafts, setStoreDrafts] = useState<string[]>([]);
+
+  const invitePreview = useMemo(
+    () => inviteDraft.code.trim().toUpperCase() || 'QA-BETA-…',
+    [inviteDraft.code],
+  );
+
   return (
     <div className="shell">
       <a className="skip-link" href="#main-content">
@@ -68,8 +94,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         <main className="main" id="main-content" tabIndex={-1}>
           <h1>{t('operationsShell', locale)}</h1>
           <p className="lede">
-            Milestone 10 final QA: responsive shell, keyboard focus, Lo/En labels, LAK/date
-            formatting, and security audit evidence before Customer PWA.
+            Phase 2 backoffice: interactive invite + store draft forms (local mock; no Production
+            data).
           </p>
           <section aria-labelledby="format-heading" id="formats">
             <h2 id="format-heading">Locale formatting</h2>
@@ -125,8 +151,143 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               ))}
             </ul>
           </section>
+          <section aria-labelledby="invites-heading" id="invites">
+            <h2 id="invites-heading">
+              <span lang="en">Beta invites</span>
+              {' / '}
+              <span lang="lo">ເຊີນເຂົ້າ</span>
+            </h2>
+            <p className="lede">Issue invite-only codes for Private Beta (local draft list).</p>
+            <form
+              className="ops-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const code = inviteDraft.code.trim().toUpperCase();
+                if (!/^[A-Z0-9-]{4,32}$/.test(code)) {
+                  setFormError('Invite code must be 4–32 chars (A–Z, 0–9, -)');
+                  return;
+                }
+                if (issuedInvites.some((row) => row.code === code)) {
+                  setFormError('Code already drafted');
+                  return;
+                }
+                setFormError('');
+                setIssuedInvites((rows) => [...rows, { ...inviteDraft, code }]);
+                setInviteDraft({ code: '', role: 'customer', maxUses: 1, note: '' });
+              }}
+            >
+              <label>
+                Code
+                <input
+                  value={inviteDraft.code}
+                  onChange={(e) => setInviteDraft((d) => ({ ...d, code: e.target.value }))}
+                  placeholder="QA-BETA-001"
+                  aria-label="Invite code"
+                />
+              </label>
+              <label>
+                Role
+                <select
+                  value={inviteDraft.role}
+                  onChange={(e) =>
+                    setInviteDraft((d) => ({
+                      ...d,
+                      role: e.target.value as InviteDraft['role'],
+                    }))
+                  }
+                  aria-label="Invite role"
+                >
+                  <option value="customer">customer</option>
+                  <option value="store_owner">store_owner</option>
+                  <option value="ops">ops</option>
+                </select>
+              </label>
+              <label>
+                Max uses
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={inviteDraft.maxUses}
+                  onChange={(e) =>
+                    setInviteDraft((d) => ({
+                      ...d,
+                      maxUses: Number(e.target.value) || 1,
+                    }))
+                  }
+                  aria-label="Max uses"
+                />
+              </label>
+              <label>
+                Note
+                <input
+                  value={inviteDraft.note}
+                  onChange={(e) => setInviteDraft((d) => ({ ...d, note: e.target.value }))}
+                  placeholder="synthetic QA"
+                  aria-label="Invite note"
+                />
+              </label>
+              <p className="lede">Preview: {invitePreview}</p>
+              {formError ? (
+                <p className="form-error" role="alert">
+                  {formError}
+                </p>
+              ) : null}
+              <button type="submit" className="cta">
+                Add invite draft
+              </button>
+            </form>
+            <ul className="roles" aria-label="Drafted invites">
+              {issuedInvites.length === 0 ? <li>No drafts yet</li> : null}
+              {issuedInvites.map((row) => (
+                <li key={row.code}>
+                  {row.code} · {row.role} · max {row.maxUses}
+                  {row.note ? ` · ${row.note}` : ''}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section aria-labelledby="stores-heading" id="stores">
+            <h2 id="stores-heading">
+              <span lang="en">Stores</span>
+              {' / '}
+              <span lang="lo">ຮ້ານ</span>
+            </h2>
+            <p className="lede">Create a local store draft name (not persisted to Production).</p>
+            <form
+              className="ops-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const name = storeDraftName.trim();
+                if (name.length < 2) return;
+                setStoreDrafts((rows) => [...rows, name]);
+                setStoreDraftName('');
+              }}
+            >
+              <label>
+                Store name
+                <input
+                  value={storeDraftName}
+                  onChange={(e) => setStoreDraftName(e.target.value)}
+                  placeholder="QA Store Vientiane"
+                  aria-label="Store draft name"
+                />
+              </label>
+              <button type="submit" className="cta">
+                Add store draft
+              </button>
+            </form>
+            <ul className="roles" aria-label="Store drafts">
+              {storeDrafts.length === 0 ? <li>No store drafts yet</li> : null}
+              {storeDrafts.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          </section>
           {navItems
-            .filter((item) => !['dashboard', 'integrations', 'staff'].includes(item.id))
+            .filter(
+              (item) => !['dashboard', 'integrations', 'staff', 'invites', 'stores'].includes(item.id),
+            )
             .map((item) => (
               <section key={item.id} aria-labelledby={`${item.id}-heading`} id={item.id}>
                 <h2 id={`${item.id}-heading`}>

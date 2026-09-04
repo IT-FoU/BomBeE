@@ -13,6 +13,7 @@ Online marketplace for Vientiane. Phase 1 is a **Managed Reseller / Private Beta
 - Release tag: `v0.12.0` · Deploy packaging: see `docs/runbooks/production-deploy.md`
 - Briefing: [`docs/reports/why-production-blocked.md`](./docs/reports/why-production-blocked.md)
 - Final report: [`docs/reports/final-completion-report.md`](./docs/reports/final-completion-report.md)
+- Next steps: [`docs/NEXT-STEPS.md`](./docs/NEXT-STEPS.md)
 
 EGO POS integration is **disabled** and must stay off for Phase 1.
 

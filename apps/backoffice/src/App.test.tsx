@@ -29,6 +29,7 @@ describe('backoffice shell QA', () => {
         'exports',
         'backups',
         'privacy',
+        'content',
       ]),
     );
   });

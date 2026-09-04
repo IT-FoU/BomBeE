@@ -1077,3 +1077,97 @@ export async function approveDeletionRequest(
   }
   return (await res.json()) as { requests?: DeletionRequestRow[]; status?: string };
 }
+
+export type ReviewRow = {
+  reviewId: string;
+  productId: string;
+  childOrderId: string;
+  rating: number;
+  bodyLo: string | null;
+  bodyEn: string | null;
+  verifiedPurchase: boolean;
+  status: string;
+  createdAt: string;
+};
+
+export type TikTokLinkRow = {
+  linkId: string;
+  url: string;
+  productId: string | null;
+  submittedByType: string;
+  status: string;
+  createdAt: string;
+  publishedAt: string | null;
+};
+
+export async function listReviews(limit = 50): Promise<ReviewRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/reviews?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`reviews_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { reviews: ReviewRow[] };
+  return body.reviews;
+}
+
+export async function mockCreateReview(input: {
+  rating?: number;
+  bodyEn?: string;
+} = {}): Promise<{ reviewId: string; reviews: ReviewRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/reviews/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      rating: input.rating,
+      body_en: input.bodyEn,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `review_mock_create_failed_${res.status}`);
+  }
+  return (await res.json()) as { reviewId: string; reviews: ReviewRow[] };
+}
+
+export async function listTikTokLinks(limit = 50): Promise<TikTokLinkRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/tiktok-links?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`tiktok_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { links: TikTokLinkRow[] };
+  return body.links;
+}
+
+export async function mockSubmitTikTokLink(input: {
+  url?: string;
+  as?: 'staff' | 'supplier' | 'customer';
+} = {}): Promise<{ linkId: string; status: string; links: TikTokLinkRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/tiktok-links/mock-submit`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `tiktok_mock_submit_failed_${res.status}`);
+  }
+  return (await res.json()) as { linkId: string; status: string; links: TikTokLinkRow[] };
+}
+
+export async function moderateTikTokLink(
+  linkId: string,
+  approve: boolean,
+): Promise<{ links?: TikTokLinkRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/tiktok-links/${encodeURIComponent(linkId)}/moderate`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ approve }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `tiktok_moderate_failed_${res.status}`);
+  }
+  return (await res.json()) as { links?: TikTokLinkRow[]; status?: string };
+}

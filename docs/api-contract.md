@@ -76,6 +76,13 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/me/deletion-request` | Request account deletion (session = OTP gate locally) |
 | GET | `/v1/privacy/deletion-requests` | List deletion requests (local ops) |
 | POST | `/v1/ops/privacy/deletion-requests/:id/approve` | Approve + anonymize (orders retained) |
+| GET | `/v1/reviews` | List product reviews (optional `productId`) |
+| POST | `/v1/reviews` | Create verified-purchase review (Bearer; delivered child) |
+| GET | `/v1/tiktok-links` | List TikTok link submissions |
+| POST | `/v1/tiktok-links` | Customer submit TikTok URL (HTTPS allowlist) |
+| POST | `/v1/ops/reviews/mock-create` | Local/mock delivered order + verified review |
+| POST | `/v1/ops/tiktok-links/mock-submit` | Local/mock submit TikTok (`as` staff/supplier/customer) |
+| POST | `/v1/ops/tiktok-links/:id/moderate` | Local/mock approve or reject TikTok |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

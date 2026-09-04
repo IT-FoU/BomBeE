@@ -2479,6 +2479,248 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/reviews') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const productId = url.searchParams.get('productId')?.trim() || undefined;
+      const reviews = await services.content.listReviews({ productId, limit });
+      sendJson(res, 200, { ok: true, reviews });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/reviews') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{
+        productId?: string;
+        product_id?: string;
+        childOrderId?: string;
+        child_order_id?: string;
+        rating?: number;
+        bodyLo?: string;
+        body_lo?: string;
+        bodyEn?: string;
+        body_en?: string;
+      }>(req);
+      const productId = body.productId ?? body.product_id;
+      const childOrderId = body.childOrderId ?? body.child_order_id;
+      const rating = body.rating;
+      if (!productId || !childOrderId || typeof rating !== 'number' || rating < 1 || rating > 5) {
+        sendJson(res, 400, { error: 'invalid_review' });
+        return;
+      }
+      try {
+        const created = await services.content.createReview({
+          productId,
+          childOrderId,
+          customerIdentityId: session.identityId,
+          rating,
+          bodyLo: body.bodyLo ?? body.body_lo,
+          bodyEn: body.bodyEn ?? body.body_en,
+        });
+        const reviews = await services.content.listReviews({ limit: 50 });
+        sendJson(res, 201, { ok: true, ...created, reviews });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'review_create_failed';
+        const status =
+          message === 'not_order_owner' || message === 'not_verified_purchase'
+            ? 403
+            : message === 'review_requires_delivered' || message === 'review_window_exceeded'
+              ? 409
+              : message === 'child_order_not_found'
+                ? 404
+                : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/tiktok-links') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const links = await services.content.listTikTokLinks(limit);
+      sendJson(res, 200, { ok: true, links });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/tiktok-links') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{
+        url?: string;
+        productId?: string;
+        product_id?: string;
+      }>(req);
+      const linkUrl = body.url?.trim();
+      if (!linkUrl) {
+        sendJson(res, 400, { error: 'url_required' });
+        return;
+      }
+      try {
+        const created = await services.content.submitTikTokLink({
+          url: linkUrl,
+          productId: body.productId ?? body.product_id,
+          submittedByType: 'customer',
+          submittedBy: session.identityId,
+        });
+        const links = await services.content.listTikTokLinks(50);
+        sendJson(res, 201, { ok: true, ...created, links });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'tiktok_submit_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/reviews/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        rating?: number;
+        body_en?: string;
+        bodyEn?: string;
+      }>(req);
+      try {
+        const product = await services.db.query<{
+          product_id: string;
+          variant_id: string;
+          store_id: string;
+        }>(
+          `SELECT pv.product_id, pv.id AS variant_id, pv.store_id
+           FROM app.product_variants pv
+           JOIN app.products p ON p.id = pv.product_id
+           WHERE p.status = 'active' AND pv.status = 'active'
+           ORDER BY p.created_at
+           LIMIT 1`,
+        );
+        const sell = product.rows[0];
+        if (!sell) {
+          sendJson(res, 409, { error: 'no_active_product' });
+          return;
+        }
+        const customerId = await services.identity.ensureCustomer(
+          '+8562097222039',
+          'Review QA',
+        );
+        const cartId = await services.orders.createCart(customerId);
+        await services.orders.addCartItem(cartId, {
+          storeId: sell.store_id,
+          variantId: sell.variant_id,
+          quantity: 1,
+        });
+        const createdOrder = await services.orders.checkout({
+          cartId,
+          customerIdentityId: customerId,
+          actorIdentityId: customerId,
+          correlationId: crypto.randomUUID(),
+          shippingLakByStore: { [sell.store_id]: 10000 },
+        });
+        const childOrderId = createdOrder.childIds[0]!;
+        await services.db.query(
+          `UPDATE app.child_orders
+           SET status = 'delivered', payment_received = true, updated_at = timezone('utc', now())
+           WHERE id = $1`,
+          [childOrderId],
+        );
+        const created = await services.content.createReview({
+          productId: sell.product_id,
+          childOrderId,
+          customerIdentityId: customerId,
+          rating:
+            typeof body.rating === 'number' && body.rating >= 1 && body.rating <= 5
+              ? body.rating
+              : 5,
+          bodyEn: body.bodyEn ?? body.body_en ?? 'Local mock review',
+        });
+        const reviews = await services.content.listReviews({ limit: 50 });
+        sendJson(res, 201, {
+          ok: true,
+          ...created,
+          productId: sell.product_id,
+          childOrderId,
+          reviews,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'review_mock_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/tiktok-links/mock-submit') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        url?: string;
+        productId?: string;
+        product_id?: string;
+        as?: 'staff' | 'supplier' | 'customer';
+      }>(req);
+      const linkUrl =
+        body.url?.trim() ||
+        `https://www.tiktok.com/@bombee/video/${Date.now().toString().slice(-8)}`;
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const created = await services.content.submitTikTokLink({
+          url: linkUrl,
+          productId: body.productId ?? body.product_id,
+          submittedByType: body.as ?? 'supplier',
+          submittedBy: actorIdentityId,
+        });
+        const links = await services.content.listTikTokLinks(50);
+        sendJson(res, 201, { ok: true, ...created, links });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'tiktok_mock_submit_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const tiktokModerateMatch = url.pathname.match(
+      /^\/v1\/ops\/tiktok-links\/([^/]+)\/moderate$/,
+    );
+    if (req.method === 'POST' && tiktokModerateMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const linkId = decodeURIComponent(tiktokModerateMatch[1]!);
+      const body = await readJsonBody<{ approve?: boolean }>(req);
+      if (typeof body.approve !== 'boolean') {
+        sendJson(res, 400, { error: 'approve_required' });
+        return;
+      }
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        await services.content.moderateTikTok({
+          linkId,
+          approve: body.approve,
+          actorIdentityId,
+        });
+        const links = await services.content.listTikTokLinks(50);
+        sendJson(res, 200, {
+          ok: true,
+          linkId,
+          status: body.approve ? 'published' : 'rejected',
+          links,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'tiktok_moderate_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/search/catalog') {
       const q = url.searchParams.get('q')?.trim() || undefined;
       const barcode = url.searchParams.get('barcode')?.trim() || undefined;

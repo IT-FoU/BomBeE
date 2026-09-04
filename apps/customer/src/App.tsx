@@ -25,6 +25,12 @@ import {
   type PrivacyProfile,
 } from './lib/privacyApi';
 import {
+  createReview,
+  listReviews,
+  submitTikTokLink,
+  type ReviewRow,
+} from './lib/contentApi';
+import {
   confirmChildrenMock,
   createCodPayment,
   createQrPayment,
@@ -104,6 +110,12 @@ export function App() {
   const [privacyAddresses, setPrivacyAddresses] = useState<PrivacyAddress[]>([]);
   const [privacyNote, setPrivacyNote] = useState('');
   const [privacyBusy, setPrivacyBusy] = useState(false);
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewBody, setReviewBody] = useState('Great product');
+  const [tiktokUrl, setTiktokUrl] = useState('https://www.tiktok.com/@bombee/video/1234567890');
+  const [contentNote, setContentNote] = useState('');
+  const [contentBusy, setContentBusy] = useState(false);
   const [qrPayment, setQrPayment] = useState<QrPayment | null>(null);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [payBusy, setPayBusy] = useState(false);
@@ -1084,9 +1096,128 @@ export function App() {
             <button type="button" className="cta ghost">
               Request return / refund + evidence
             </button>
-            <button type="button" className="cta ghost">
-              Submit review / TikTok link
+            <label>
+              Rating
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={reviewRating}
+                onChange={(e) => setReviewRating(Number(e.target.value) || 5)}
+                aria-label="Review rating"
+              />
+            </label>
+            <label>
+              Review
+              <input
+                value={reviewBody}
+                onChange={(e) => setReviewBody(e.target.value)}
+                aria-label="Review body"
+              />
+            </label>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || contentBusy || !online || trackingChildren.length === 0}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                const delivered = trackingChildren.find((c) => c.status === 'delivered');
+                const child = delivered ?? trackingChildren[0];
+                const productId =
+                  products.find((p) => !p.id.startsWith('p'))?.id ?? products[0]?.id;
+                if (!token || !child || !productId) {
+                  setContentNote('Need login, order children, and API catalog product');
+                  return;
+                }
+                setContentBusy(true);
+                setContentNote('');
+                void (async () => {
+                  try {
+                    const result = await createReview(token, {
+                      productId,
+                      childOrderId: child.id,
+                      rating: reviewRating,
+                      bodyEn: reviewBody.trim() || undefined,
+                    });
+                    if (result.reviews) setReviews(result.reviews);
+                    else setReviews(await listReviews(50));
+                    setContentNote(`Review ${result.reviewId.slice(0, 8)}… (${result.status})`);
+                  } catch (err) {
+                    setContentNote(err instanceof Error ? err.message : 'review_failed');
+                  } finally {
+                    setContentBusy(false);
+                  }
+                })();
+              }}
+            >
+              Submit review
             </button>
+            <label>
+              TikTok URL
+              <input
+                value={tiktokUrl}
+                onChange={(e) => setTiktokUrl(e.target.value)}
+                aria-label="TikTok URL"
+              />
+            </label>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || contentBusy || !online}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token) return;
+                setContentBusy(true);
+                setContentNote('');
+                void (async () => {
+                  try {
+                    const result = await submitTikTokLink(token, {
+                      url: tiktokUrl.trim(),
+                      productId: products.find((p) => !p.id.startsWith('p'))?.id,
+                    });
+                    setContentNote(`TikTok ${result.linkId.slice(0, 8)}… (${result.status})`);
+                  } catch (err) {
+                    setContentNote(err instanceof Error ? err.message : 'tiktok_failed');
+                  } finally {
+                    setContentBusy(false);
+                  }
+                })();
+              }}
+            >
+              Submit TikTok link
+            </button>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={contentBusy}
+              onClick={() => {
+                setContentBusy(true);
+                void (async () => {
+                  try {
+                    const rows = await listReviews(50);
+                    setReviews(rows);
+                    setContentNote(`Loaded ${rows.length} reviews`);
+                  } catch (err) {
+                    setContentNote(err instanceof Error ? err.message : 'reviews_list_failed');
+                  } finally {
+                    setContentBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh reviews
+            </button>
+            {contentNote ? <p className="muted">{contentNote}</p> : null}
+            {reviews.length > 0 ? (
+              <ul aria-label="Product reviews">
+                {reviews.slice(0, 5).map((r) => (
+                  <li key={r.reviewId}>
+                    ★{r.rating} — {r.status}
+                    {r.bodyEn ? ` — ${r.bodyEn}` : ''}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </section>
         )}
 

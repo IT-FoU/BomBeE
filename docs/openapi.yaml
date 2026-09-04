@@ -1025,6 +1025,77 @@ paths:
           description: Anonymized
         '409':
           description: Not pending
+  /v1/reviews:
+    get:
+      summary: List product reviews
+      parameters:
+        - in: query
+          name: productId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reviews array
+    post:
+      summary: Create verified-purchase review
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Review created
+        '401':
+          description: Unauthorized
+        '409':
+          description: Not delivered or window exceeded
+  /v1/tiktok-links:
+    get:
+      summary: List TikTok link submissions
+      responses:
+        '200':
+          description: Links array
+    post:
+      summary: Customer submit TikTok URL
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Link submitted
+        '401':
+          description: Unauthorized
+  /v1/ops/reviews/mock-create:
+    post:
+      summary: Local mock delivered order + verified review
+      responses:
+        '201':
+          description: Review created
+        '403':
+          description: Mock ops disabled
+  /v1/ops/tiktok-links/mock-submit:
+    post:
+      summary: Local mock TikTok submit
+      responses:
+        '201':
+          description: Link created
+        '403':
+          description: Mock ops disabled
+  /v1/ops/tiktok-links/{linkId}/moderate:
+    post:
+      summary: Approve or reject TikTok link
+      parameters:
+        - in: path
+          name: linkId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Moderated
+        '403':
+          description: Mock ops disabled
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

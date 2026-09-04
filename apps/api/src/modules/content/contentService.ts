@@ -223,4 +223,75 @@ export class ContentService {
       correlationId: crypto.randomUUID(),
     });
   }
+
+  async listReviews(input: { productId?: string; limit?: number } = {}) {
+    const capped = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      product_id: string;
+      child_order_id: string;
+      customer_identity_id: string;
+      rating: number;
+      body_lo: string | null;
+      body_en: string | null;
+      verified_purchase: boolean;
+      status: string;
+      created_at: string;
+    }>(
+      input.productId
+        ? `SELECT id, product_id, child_order_id, customer_identity_id, rating,
+                  body_lo, body_en, verified_purchase, status, created_at::text
+           FROM app.product_reviews
+           WHERE product_id = $1
+           ORDER BY created_at DESC
+           LIMIT $2`
+        : `SELECT id, product_id, child_order_id, customer_identity_id, rating,
+                  body_lo, body_en, verified_purchase, status, created_at::text
+           FROM app.product_reviews
+           ORDER BY created_at DESC
+           LIMIT $1`,
+      input.productId ? [input.productId, capped] : [capped],
+    );
+    return rows.rows.map((r) => ({
+      reviewId: r.id,
+      productId: r.product_id,
+      childOrderId: r.child_order_id,
+      customerIdentityId: r.customer_identity_id,
+      rating: r.rating,
+      bodyLo: r.body_lo,
+      bodyEn: r.body_en,
+      verifiedPurchase: r.verified_purchase,
+      status: r.status,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async listTikTokLinks(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      url: string;
+      product_id: string | null;
+      submitted_by_type: string;
+      status: string;
+      created_at: string;
+      published_at: string | null;
+    }>(
+      `SELECT id, url, product_id, submitted_by_type, status,
+              created_at::text, published_at::text
+       FROM app.tiktok_links
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      linkId: r.id,
+      url: r.url,
+      productId: r.product_id,
+      submittedByType: r.submitted_by_type,
+      status: r.status,
+      createdAt: r.created_at,
+      publishedAt: r.published_at,
+    }));
+  }
 }

@@ -63,6 +63,11 @@ import {
   restoreDrillBackup,
   listDeletionRequests,
   approveDeletionRequest,
+  listReviews,
+  mockCreateReview,
+  listTikTokLinks,
+  mockSubmitTikTokLink,
+  moderateTikTokLink,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -86,6 +91,8 @@ import {
   type BackupJobRow,
   type BackupAlertRow,
   type DeletionRequestRow,
+  type ReviewRow,
+  type TikTokLinkRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -109,6 +116,7 @@ const navItems = [
   { id: 'exports', label: { lo: 'ສົ່ງອອກ', en: 'Exports' } },
   { id: 'backups', label: { lo: 'ສຳຮອງ', en: 'Backups' } },
   { id: 'privacy', label: { lo: 'ຄວາມເປັນສ່ວນຕົວ', en: 'Privacy' } },
+  { id: 'content', label: { lo: 'ເນື້ອຫາ', en: 'Content' } },
 ] as const;
 
 const SAMPLE_AMOUNT = LAK(1_250_000);
@@ -166,6 +174,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [backupNote, setBackupNote] = useState('');
   const [deletionRequests, setDeletionRequests] = useState<DeletionRequestRow[]>([]);
   const [privacyNote, setPrivacyNote] = useState('');
+  const [productReviews, setProductReviews] = useState<ReviewRow[]>([]);
+  const [tiktokLinks, setTiktokLinks] = useState<TikTokLinkRow[]>([]);
+  const [contentNote, setContentNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -197,6 +208,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           reconcile,
           backupBundle,
           deletionRows,
+          reviewRows,
+          tiktokRows,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -217,6 +230,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           fetchPaymentsReconcile(),
           listBackups(50),
           listDeletionRequests(50),
+          listReviews(50),
+          listTikTokLinks(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -240,6 +255,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setBackupJobs(backupBundle.jobs);
         setBackupAlerts(backupBundle.alerts);
         setDeletionRequests(deletionRows);
+        setProductReviews(reviewRows);
+        setTiktokLinks(tiktokRows);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -2215,6 +2232,160 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh deletion queue
             </button>
           </section>
+          <section aria-labelledby="content-heading" id="content">
+            <h2 id="content-heading">
+              <span lang="en">Content</span>
+              {' / '}
+              <span lang="lo">ເນື້ອຫາ</span>
+            </h2>
+            <p className="lede">
+              Product reviews and TikTok links — mock seed verified reviews; moderate pending
+              TikTok submissions.
+            </p>
+            {contentNote ? (
+              <p className="lede" role="status">
+                {contentNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Product reviews">
+              {productReviews.length === 0 ? <li>No reviews yet</li> : null}
+              {productReviews.map((row) => (
+                <li key={row.reviewId}>
+                  ★{row.rating} · {row.status}
+                  {row.verifiedPurchase ? ' · verified' : ''}
+                  {row.bodyEn ? ` — ${row.bodyEn}` : ''} · {row.reviewId.slice(0, 8)}…
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="TikTok links">
+              {tiktokLinks.length === 0 ? <li>No TikTok links yet</li> : null}
+              {tiktokLinks.map((link) => (
+                <li key={link.linkId}>
+                  {link.status} · {link.submittedByType} · {link.url}
+                  {link.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setContentNote('');
+                          void (async () => {
+                            try {
+                              const result = await moderateTikTokLink(link.linkId, true);
+                              if (result.links) setTiktokLinks(result.links);
+                              setContentNote(`Published ${link.linkId.slice(0, 8)}…`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'tiktok_moderate_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setContentNote('');
+                          void (async () => {
+                            try {
+                              const result = await moderateTikTokLink(link.linkId, false);
+                              if (result.links) setTiktokLinks(result.links);
+                              setContentNote(`Rejected ${link.linkId.slice(0, 8)}…`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'tiktok_moderate_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setContentNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateReview({
+                      rating: 5,
+                      bodyEn: 'BO mock review',
+                    });
+                    setProductReviews(result.reviews);
+                    setContentNote(`Created review ${result.reviewId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'review_mock_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create review
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setContentNote('');
+                void (async () => {
+                  try {
+                    const result = await mockSubmitTikTokLink({ as: 'supplier' });
+                    setTiktokLinks(result.links);
+                    setContentNote(`Submitted TikTok ${result.linkId.slice(0, 8)}… (${result.status})`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'tiktok_submit_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock submit TikTok
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setProductReviews(await listReviews(50));
+                    setTiktokLinks(await listTikTokLinks(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'content_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh content
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -2239,6 +2410,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'notifications',
                   'backups',
                   'privacy',
+                  'content',
                 ].includes(item.id),
             )
             .map((item) => (

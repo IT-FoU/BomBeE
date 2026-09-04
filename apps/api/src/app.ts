@@ -565,6 +565,187 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const createCodMatch = url.pathname.match(/^\/v1\/orders\/([^/]+)\/payments\/cod$/);
+    if (req.method === 'POST' && createCodMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const parentId = decodeURIComponent(createCodMatch[1]!);
+      if (!(await parentOwnedBy(services, parentId, session.identityId))) {
+        sendJson(res, 403, { error: 'order_forbidden' });
+        return;
+      }
+      const body = await readJsonBody<{ childOrderIds?: string[] }>(req);
+      const children = await services.db.query<{
+        id: string;
+        status: string;
+        total_lak: number;
+      }>(
+        `SELECT id, status, total_lak FROM app.child_orders WHERE parent_order_id = $1`,
+        [parentId],
+      );
+      const wanted = new Set(
+        body.childOrderIds && body.childOrderIds.length > 0
+          ? body.childOrderIds
+          : children.rows.map((c) => c.id),
+      );
+      const shipments: Array<{
+        childOrderId: string;
+        codShipmentId: string;
+        amountLak: number;
+        depositLak: number;
+        balanceDueLak: number;
+      }> = [];
+      const reservations: Array<{
+        orderItemId: string;
+        childOrderId: string;
+        reservationId: string;
+        balanceId: string;
+        quantity: number;
+      }> = [];
+      const correlationId = crypto.randomUUID();
+
+      for (const child of children.rows) {
+        if (!wanted.has(child.id)) continue;
+        if (!['confirmed', 'partial_confirmed', 'awaiting_cod'].includes(child.status)) {
+          sendJson(res, 409, {
+            error: 'cod_requires_supplier_confirmation',
+            childOrderId: child.id,
+            status: child.status,
+          });
+          return;
+        }
+
+        const amountLak = Number(child.total_lak);
+        const childReservations: typeof reservations = [];
+        const lines = await services.db.query<{
+          id: string;
+          variant_id: string;
+          store_id: string;
+          quantity: number;
+        }>(
+          `SELECT id, variant_id, store_id, quantity
+           FROM app.order_items
+           WHERE child_order_id = $1 AND status = 'active'`,
+          [child.id],
+        );
+        for (const line of lines.rows) {
+          const balanceId = await services.inventory.pickBalanceForReserve({
+            storeId: line.store_id,
+            variantId: line.variant_id,
+            quantity: line.quantity,
+          });
+          if (!balanceId) {
+            for (const reserved of [...reservations, ...childReservations]) {
+              await services.reservations.release({
+                reservationId: reserved.reservationId,
+                correlationId,
+                reason: 'cod_reserve_rollback',
+              });
+            }
+            sendJson(res, 409, {
+              error: 'insufficient_available',
+              orderItemId: line.id,
+              variantId: line.variant_id,
+            });
+            return;
+          }
+          const reserved = await services.reservations.reserve({
+            balanceId,
+            quantity: line.quantity,
+            reservationType: 'cod',
+            idempotencyKey: `cod:${child.id}:${line.id}`,
+            correlationId,
+          });
+          if (!reserved.ok) {
+            for (const prev of [...reservations, ...childReservations]) {
+              await services.reservations.release({
+                reservationId: prev.reservationId,
+                correlationId,
+                reason: 'cod_reserve_rollback',
+              });
+            }
+            sendJson(res, 409, {
+              error: reserved.reason,
+              orderItemId: line.id,
+              variantId: line.variant_id,
+            });
+            return;
+          }
+          childReservations.push({
+            orderItemId: line.id,
+            childOrderId: child.id,
+            reservationId: reserved.reservationId,
+            balanceId,
+            quantity: line.quantity,
+          });
+        }
+
+        const existing = await services.db.query<{
+          id: string;
+          amount_lak: number;
+          deposit_lak: number;
+          balance_due_lak: number;
+        }>(
+          `SELECT id, amount_lak, deposit_lak, balance_due_lak
+           FROM finance.cod_shipments
+           WHERE child_order_id = $1
+           ORDER BY created_at DESC LIMIT 1`,
+          [child.id],
+        );
+        let codShipmentId = existing.rows[0]?.id;
+        let depositLak = existing.rows[0] ? Number(existing.rows[0].deposit_lak) : 0;
+        let balanceDueLak = existing.rows[0] ? Number(existing.rows[0].balance_due_lak) : 0;
+
+        if (!codShipmentId) {
+          const created = await services.payments.createCodShipment({
+            customerIdentityId: session.identityId,
+            childOrderId: child.id,
+            amountLak,
+            phoneVerified: true,
+          });
+          if (!created.ok) {
+            for (const reserved of [...reservations, ...childReservations]) {
+              await services.reservations.release({
+                reservationId: reserved.reservationId,
+                correlationId,
+                reason: 'cod_reserve_rollback',
+              });
+            }
+            sendJson(res, 409, { error: created.reason, childOrderId: child.id });
+            return;
+          }
+          codShipmentId = created.codShipmentId;
+          depositLak = created.depositLak;
+          balanceDueLak = created.balanceDueLak;
+        }
+
+        reservations.push(...childReservations);
+        shipments.push({
+          childOrderId: child.id,
+          codShipmentId,
+          amountLak,
+          depositLak,
+          balanceDueLak,
+        });
+      }
+
+      if (shipments.length === 0) {
+        sendJson(res, 400, { error: 'no_children' });
+        return;
+      }
+      sendJson(res, 201, {
+        ok: true,
+        shipments,
+        reservations,
+        totalDepositLak: shipments.reduce((s, x) => s + x.depositLak, 0),
+        totalBalanceDueLak: shipments.reduce((s, x) => s + x.balanceDueLak, 0),
+      });
+      return;
+    }
+
     const paymentMatch = url.pathname.match(/^\/v1\/payments\/([^/]+)$/);
     if (req.method === 'GET' && paymentMatch) {
       const session = await requireCustomerSession(req, services);

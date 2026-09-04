@@ -24,7 +24,7 @@ async function consumeReservationsForChild(
   childOrderId: string,
   correlationId: string,
 ): Promise<string[]> {
-  const rows = await services.db.query<{ id: string; status: string }>(
+  const qrRows = await services.db.query<{ id: string; status: string }>(
     `SELECT r.id, r.status
      FROM app.order_items oi
      JOIN finance.payment_allocations pa ON pa.child_order_id = oi.child_order_id
@@ -34,8 +34,20 @@ async function consumeReservationsForChild(
        AND oi.status = 'active'`,
     [childOrderId],
   );
+  const codRows = await services.db.query<{ id: string; status: string }>(
+    `SELECT r.id, r.status
+     FROM app.order_items oi
+     JOIN private.inventory_reservations r
+       ON r.idempotency_key = ('cod:' || oi.child_order_id::text || ':' || oi.id::text)
+     WHERE oi.child_order_id = $1
+       AND oi.status = 'active'`,
+    [childOrderId],
+  );
   const consumed: string[] = [];
-  for (const row of rows.rows) {
+  const seen = new Set<string>();
+  for (const row of [...qrRows.rows, ...codRows.rows]) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
     if (row.status !== 'active' && row.status !== 'consumed') continue;
     const result = await services.reservations.consume({
       reservationId: row.id,
@@ -76,7 +88,8 @@ export async function mockAdvanceFulfillment(
   const results: MockAdvanceChildResult[] = [];
 
   for (const child of children.rows) {
-    if (!child.payment_received) {
+    const codEligible = child.status === 'awaiting_cod';
+    if (!child.payment_received && !codEligible) {
       results.push({
         childOrderId: child.id,
         from: child.status,
@@ -94,11 +107,12 @@ export async function mockAdvanceFulfillment(
 
     while (
       status === 'awaiting_payment' ||
+      status === 'awaiting_cod' ||
       status === 'packing' ||
       status === 'ready' ||
       status === 'handed_to_courier'
     ) {
-      if (status === 'awaiting_payment') {
+      if (status === 'awaiting_payment' || status === 'awaiting_cod') {
         const now = new Date();
         await services.delivery.schedulePackingDeadline(child.id, now);
         const result = await services.orders.transitionChild({
@@ -307,6 +321,19 @@ export async function mockDeliverFulfillment(
       deliveredAt: new Date(),
     });
     steps.push('pod');
+
+    await services.db.query(
+      `UPDATE app.child_orders
+       SET payment_received = true, updated_at = timezone('utc', now())
+       WHERE id = $1 AND payment_received = false`,
+      [child.id],
+    );
+    await services.db.query(
+      `UPDATE finance.cod_shipments
+       SET status = 'collected'
+       WHERE child_order_id = $1 AND status = 'open'`,
+      [child.id],
+    );
 
     const result = await services.orders.transitionChild({
       childOrderId: child.id,

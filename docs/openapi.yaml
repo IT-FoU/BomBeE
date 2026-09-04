@@ -315,6 +315,22 @@ paths:
           description: QR created with reservations[]
         '409':
           description: Requires supplier confirmation or insufficient_available
+  /v1/orders/{parentId}/payments/cod:
+    post:
+      summary: Create COD shipments for confirmed children and reserve stock
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: COD shipments + reservations
+        '409':
+          description: Requires confirmation, COD ineligible, or insufficient stock
   /v1/payments/{paymentRequestId}:
     get:
       summary: Payment request status

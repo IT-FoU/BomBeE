@@ -34,6 +34,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B14 | Consume stock on ship + mock POD/deliver | **Done** — `ReservationService.consume` at handoff; `POST .../fulfillment/mock-deliver` |
 | P2-B15 | Expire due QR payments + reservations | **Done** — `POST /v1/payments/mock-expire-due` releases stock for expired open QR |
 | P2-B16 | Cancel awaiting children on QR expire | **Done** — mock-expire-due cancels allocated `awaiting_payment` children |
+| P2-B17 | COD create HTTP + reserve + fulfill path | **Done** — `POST .../payments/cod`; mock-advance/deliver supports COD |
 
 ## C — Hard rules that stay
 

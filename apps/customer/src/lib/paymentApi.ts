@@ -65,6 +65,43 @@ export async function createQrPayment(
   return (await res.json()) as QrPayment;
 }
 
+export async function createCodPayment(
+  sessionToken: string,
+  parentId: string,
+  childOrderIds?: string[],
+): Promise<{
+  shipments: Array<{
+    childOrderId: string;
+    codShipmentId: string;
+    amountLak: number;
+    depositLak: number;
+    balanceDueLak: number;
+  }>;
+  totalDepositLak: number;
+  totalBalanceDueLak: number;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/orders/${parentId}/payments/cod`, {
+    method: 'POST',
+    headers: authHeaders(sessionToken),
+    body: JSON.stringify(childOrderIds ? { childOrderIds } : {}),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `cod_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    shipments: Array<{
+      childOrderId: string;
+      codShipmentId: string;
+      amountLak: number;
+      depositLak: number;
+      balanceDueLak: number;
+    }>;
+    totalDepositLak: number;
+    totalBalanceDueLak: number;
+  };
+}
+
 export async function mockConfirmPayment(
   sessionToken: string,
   paymentRequestId: string,

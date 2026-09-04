@@ -11,6 +11,7 @@ import { loadCatalogProducts } from './lib/catalogApi';
 import { checkoutLocalCart, fetchOrderView, mockAdvanceFulfillment, mockDeliverFulfillment } from './lib/checkoutApi';
 import {
   confirmChildrenMock,
+  createCodPayment,
   createQrPayment,
   fetchPaymentStatus,
   mockConfirmPayment,
@@ -231,7 +232,7 @@ export function App() {
     assertOnlineForMutation(online, 'payment');
     const token = sessionStorage.getItem('bombee_session');
     if (!token || !apiOrderId) {
-      setOrderStatus('awaiting_payment');
+      setOrderStatus(paymentMethod === 'cod' ? 'awaiting_cod' : 'awaiting_payment');
       setPaymentStatus('fixture stub');
       go('orders');
       return;
@@ -241,6 +242,16 @@ export function App() {
     void (async () => {
       try {
         await confirmChildrenMock(token, apiOrderId);
+        if (paymentMethod === 'cod') {
+          const codPay = await createCodPayment(token, apiOrderId);
+          setQrPayment(null);
+          setPaymentStatus(
+            `COD deposit ${codPay.totalDepositLak} · due ${codPay.totalBalanceDueLak} LAK`,
+          );
+          setOrderStatus('awaiting_cod');
+          go('orders');
+          return;
+        }
         const qr = await createQrPayment(token, apiOrderId);
         setQrPayment(qr);
         setPaymentStatus(`QR ${qr.referenceCode} · ${qr.amountLak} LAK`);

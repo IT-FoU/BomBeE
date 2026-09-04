@@ -676,6 +676,71 @@ export async function approvePriceRequest(
   return (await res.json()) as { requests?: PriceRequestRow[]; status?: string };
 }
 
+export type NearExpiryRequestRow = {
+  requestId: string;
+  variantId: string;
+  proposedSellingPriceLak: number;
+  reason: string;
+  status: string;
+  makerIdentityId: string;
+  approverIdentityId: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+};
+
+export async function listNearExpiryRequests(
+  limit = 50,
+): Promise<NearExpiryRequestRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/pricing/near-expiry?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`near_expiry_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { requests: NearExpiryRequestRow[] };
+  return body.requests;
+}
+
+export async function mockProposeNearExpiry(input: {
+  proposedSellingPriceLak?: number;
+  reason?: string;
+} = {}): Promise<{
+  requestId: string;
+  linkedLotId?: string | null;
+  requests: NearExpiryRequestRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/pricing/near-expiry/mock-propose`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `near_expiry_propose_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    requestId: string;
+    linkedLotId?: string | null;
+    requests: NearExpiryRequestRow[];
+  };
+}
+
+export async function approveNearExpiryRequest(
+  requestId: string,
+): Promise<{ requests?: NearExpiryRequestRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/pricing/near-expiry/${encodeURIComponent(requestId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `near_expiry_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as { requests?: NearExpiryRequestRow[]; status?: string };
+}
+
 export type ContractVersionRow = {
   contractId: string;
   storeId: string;

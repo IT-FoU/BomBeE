@@ -1375,6 +1375,165 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/pricing/near-expiry') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const requests = await services.pricing.listNearExpiryDiscounts(limit);
+      sendJson(res, 200, { ok: true, requests });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/pricing/near-expiry/mock-propose') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        variantId?: string;
+        variant_id?: string;
+        proposedSellingPriceLak?: number;
+        proposed_selling_price_lak?: number;
+        reason?: string;
+        lotId?: string;
+        lot_id?: string;
+        linkLot?: boolean;
+        link_lot?: boolean;
+      }>(req);
+      try {
+        let variantId = (body.variantId ?? body.variant_id)?.trim();
+        if (!variantId) {
+          const variant = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.product_variants
+             WHERE status = 'active'
+             ORDER BY created_at
+             LIMIT 1`,
+          );
+          variantId = variant.rows[0]?.id;
+        }
+        if (!variantId) {
+          sendJson(res, 409, { error: 'no_active_variant' });
+          return;
+        }
+        const active = await services.pricing.activePrice(variantId);
+        const proposedSellingPriceLak =
+          typeof body.proposedSellingPriceLak === 'number'
+            ? Math.floor(body.proposedSellingPriceLak)
+            : typeof body.proposed_selling_price_lak === 'number'
+              ? Math.floor(body.proposed_selling_price_lak)
+              : active
+                ? Math.max(1, Number(active.selling_price_lak) - 1000)
+                : 3500;
+        if (proposedSellingPriceLak < 0) {
+          sendJson(res, 400, { error: 'invalid_price' });
+          return;
+        }
+        const maker = await services.identity.ensureStaff(
+          'staff:local-catalog-maker',
+          'Catalog Maker',
+          '+8562087000001',
+        );
+        const requestId = await services.pricing.requestNearExpiryDiscount({
+          variantId,
+          proposedSellingPriceLak,
+          reason: body.reason?.trim() || 'local_mock_near_expiry_clearance',
+          makerIdentityId: maker.identityId,
+        });
+        let linkedLotId: string | null = null;
+        const shouldLink = body.linkLot ?? body.link_lot ?? true;
+        if (shouldLink) {
+          let lotId = (body.lotId ?? body.lot_id)?.trim();
+          if (!lotId) {
+            const lot = await services.db.query<{ id: string }>(
+              `SELECT id FROM private.inventory_lots
+               WHERE variant_id = $1 AND status = 'available'
+               ORDER BY created_at
+               LIMIT 1`,
+              [variantId],
+            );
+            lotId = lot.rows[0]?.id;
+          }
+          if (lotId) {
+            await services.inventory.linkExpiryDiscount(lotId, requestId);
+            linkedLotId = lotId;
+          }
+        }
+        const requests = await services.pricing.listNearExpiryDiscounts(50);
+        sendJson(res, 201, {
+          ok: true,
+          requestId,
+          variantId,
+          proposedSellingPriceLak,
+          linkedLotId,
+          status: 'pending',
+          requests,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'near_expiry_propose_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const nearExpiryApproveMatch = url.pathname.match(
+      /^\/v1\/ops\/pricing\/near-expiry\/([^/]+)\/approve$/,
+    );
+    if (req.method === 'POST' && nearExpiryApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const requestId = decodeURIComponent(nearExpiryApproveMatch[1]!);
+      try {
+        const reqRow = await services.db.query<{
+          maker_identity_id: string;
+          status: string;
+        }>(
+          `SELECT maker_identity_id, status
+           FROM finance.near_expiry_discount_requests WHERE id = $1`,
+          [requestId],
+        );
+        if (!reqRow.rows[0]) {
+          sendJson(res, 404, { error: 'near_expiry_request_not_found' });
+          return;
+        }
+        if (reqRow.rows[0].status !== 'pending') {
+          sendJson(res, 409, { error: 'not_pending' });
+          return;
+        }
+        const approverIdentityId = await resolveOpsApprover(
+          services,
+          reqRow.rows[0].maker_identity_id,
+        );
+        const approved = await services.pricing.approveNearExpiryDiscount({
+          requestId,
+          approverIdentityId,
+        });
+        if (!approved.ok) {
+          const status =
+            approved.reason === 'not_found'
+              ? 404
+              : approved.reason === 'not_pending' || approved.reason === 'self_approval'
+                ? 409
+                : 400;
+          sendJson(res, status, { error: approved.reason });
+          return;
+        }
+        const requests = await services.pricing.listNearExpiryDiscounts(50);
+        sendJson(res, 200, {
+          ok: true,
+          requestId,
+          status: 'approved',
+          variantId: approved.variantId,
+          proposedSellingPriceLak: approved.proposedSellingPriceLak,
+          requests,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'near_expiry_approve_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/audit/events') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

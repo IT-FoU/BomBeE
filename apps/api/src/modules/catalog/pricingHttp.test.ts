@@ -112,4 +112,37 @@ describe('pricing HTTP', () => {
       ),
     ).toBe(true);
   });
+
+  it('proposes and approves near-expiry discounts and links lots', async () => {
+    const proposed = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/pricing/near-expiry/mock-propose', {
+        proposedSellingPriceLak: 2500,
+        reason: 'expires within twenty days',
+      }),
+      proposed.res,
+    );
+    expect(proposed.res.statusCode).toBe(201);
+    const requestId = proposed.body().requestId as string;
+    expect(requestId).toBeTruthy();
+    expect(proposed.body().linkedLotId).toBeTruthy();
+
+    const approved = mockRes();
+    await router(
+      mockReq('POST', `/v1/ops/pricing/near-expiry/${requestId}/approve`, {}),
+      approved.res,
+    );
+    expect(approved.res.statusCode).toBe(200);
+    expect(approved.body().status).toBe('approved');
+    expect(approved.body().proposedSellingPriceLak).toBe(2500);
+
+    const list = mockRes();
+    await router(mockReq('GET', '/v1/pricing/near-expiry'), list.res);
+    expect(list.res.statusCode).toBe(200);
+    expect(
+      (list.body().requests as Array<{ requestId: string; status: string }>).some(
+        (r) => r.requestId === requestId && r.status === 'approved',
+      ),
+    ).toBe(true);
+  });
 });

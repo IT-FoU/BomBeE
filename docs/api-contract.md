@@ -63,6 +63,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/pricing/requests` | List price change requests (local ops) |
 | POST | `/v1/ops/pricing/mock-propose` | Local/mock propose price (optional `belowCost`) |
 | POST | `/v1/ops/pricing/:requestId/approve` | Approve price (maker≠approver; below-cost Owner+2FA) |
+| GET | `/v1/pricing/near-expiry` | List near-expiry discount requests |
+| POST | `/v1/ops/pricing/near-expiry/mock-propose` | Local/mock near-expiry discount (links lot when available) |
+| POST | `/v1/ops/pricing/near-expiry/:id/approve` | Approve near-expiry discount (maker≠approver) |
 | POST | `/v1/ops/refunds/mock-create` | Local/mock refund request+approval for paid delivered child |
 | POST | `/v1/ops/refunds/:approvalId/approve` | Local/mock approve (distinct finance actor) |
 | POST | `/v1/ops/refunds/:approvalId/mock-pay` | Local/mock ledger pay |

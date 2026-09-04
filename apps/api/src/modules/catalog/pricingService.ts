@@ -166,6 +166,76 @@ export class PricingService {
     return row.rows[0]!.id;
   }
 
+  async approveNearExpiryDiscount(input: {
+    requestId: string;
+    approverIdentityId: string;
+  }) {
+    const req = await this.db.query<{
+      id: string;
+      maker_identity_id: string;
+      status: string;
+      variant_id: string;
+      proposed_selling_price_lak: number;
+    }>(
+      `SELECT id, maker_identity_id, status, variant_id, proposed_selling_price_lak
+       FROM finance.near_expiry_discount_requests WHERE id = $1`,
+      [input.requestId],
+    );
+    const current = req.rows[0];
+    if (!current) return { ok: false as const, reason: 'not_found' };
+    if (current.status !== 'pending') return { ok: false as const, reason: 'not_pending' };
+    if (current.maker_identity_id === input.approverIdentityId) {
+      return { ok: false as const, reason: 'self_approval' };
+    }
+    await this.db.query(
+      `UPDATE finance.near_expiry_discount_requests
+       SET status = 'approved', approver_identity_id = $2,
+           decided_at = timezone('utc', now())
+       WHERE id = $1`,
+      [current.id, input.approverIdentityId],
+    );
+    return {
+      ok: true as const,
+      requestId: current.id,
+      variantId: current.variant_id,
+      proposedSellingPriceLak: Number(current.proposed_selling_price_lak),
+    };
+  }
+
+  async listNearExpiryDiscounts(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      variant_id: string;
+      proposed_selling_price_lak: number;
+      reason: string;
+      status: string;
+      maker_identity_id: string;
+      approver_identity_id: string | null;
+      created_at: string;
+      decided_at: string | null;
+    }>(
+      `SELECT id, variant_id, proposed_selling_price_lak, reason, status,
+              maker_identity_id, approver_identity_id,
+              created_at::text, decided_at::text
+       FROM finance.near_expiry_discount_requests
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      requestId: r.id,
+      variantId: r.variant_id,
+      proposedSellingPriceLak: Number(r.proposed_selling_price_lak),
+      reason: r.reason,
+      status: r.status,
+      makerIdentityId: r.maker_identity_id,
+      approverIdentityId: r.approver_identity_id,
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+    }));
+  }
+
   async listPriceRequests(limit = 50) {
     const capped = Math.min(Math.max(limit, 1), 100);
     const rows = await this.db.query<{

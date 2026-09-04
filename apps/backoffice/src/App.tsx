@@ -45,6 +45,9 @@ import {
   listPriceRequests,
   mockProposePrice,
   approvePriceRequest,
+  listNearExpiryRequests,
+  mockProposeNearExpiry,
+  approveNearExpiryRequest,
   listContracts,
   mockCreateContract,
   listPayoutRequests,
@@ -98,6 +101,7 @@ import {
   type PromotionRow,
   type RefundApprovalRow,
   type PriceRequestRow,
+  type NearExpiryRequestRow,
   type ContractVersionRow,
   type PayoutRequestRow,
   type PayoutAccountRow,
@@ -186,6 +190,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [refundNote, setRefundNote] = useState('');
   const [priceRequests, setPriceRequests] = useState<PriceRequestRow[]>([]);
   const [pricingNote, setPricingNote] = useState('');
+  const [nearExpiryRequests, setNearExpiryRequests] = useState<NearExpiryRequestRow[]>([]);
   const [contractVersions, setContractVersions] = useState<ContractVersionRow[]>([]);
   const [payoutRequests, setPayoutRequests] = useState<PayoutRequestRow[]>([]);
   const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccountRow[]>([]);
@@ -242,6 +247,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           promos,
           refundRows,
           priceRows,
+          nearExpiryRows,
           contractRows,
           payoutBundle,
           auditRows,
@@ -271,6 +277,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listPromotions(50),
           listRefunds(50),
           listPriceRequests(50),
+          listNearExpiryRequests(50),
           listContracts(50),
           listPayoutRequests(50),
           listAuditEvents(50),
@@ -300,6 +307,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setPromotions(promos);
         setRefunds(refundRows);
         setPriceRequests(priceRows);
+        setNearExpiryRequests(nearExpiryRows);
         setContractVersions(contractRows);
         setPayoutRequests(payoutBundle.requests);
         setPayoutAccounts(payoutBundle.accounts);
@@ -1810,9 +1818,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ອະນຸມັດ</span>
             </h2>
             <p className="lede">
-              Local refund, price, and payout approvals — mock create, approve (maker-checker;
-              below-cost / payout changes need Owner + 2FA; payouts get 48h hold), then mock-pay
-              refunds.
+              Local refund, price, near-expiry, and payout approvals — mock create, approve
+              (maker-checker; below-cost / payouts need Owner + 2FA; payouts get 48h hold), then
+              mock-pay refunds.
             </p>
             {refundNote ? (
               <p className="lede" role="status">
@@ -2045,6 +2053,103 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh prices
+            </button>
+            <ul className="roles" aria-label="Near-expiry discount requests">
+              {nearExpiryRequests.length === 0 ? <li>No near-expiry requests yet</li> : null}
+              {nearExpiryRequests.map((row) => (
+                <li key={row.requestId}>
+                  {row.status} · {formatLak(LAK(row.proposedSellingPriceLak))} ·{' '}
+                  {row.reason} · variant {row.variantId.slice(0, 8)}…
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setPricingNote('');
+                          void (async () => {
+                            try {
+                              const result = await approveNearExpiryRequest(row.requestId);
+                              if (result.requests) setNearExpiryRequests(result.requests);
+                              setPricingNote(
+                                `Approved near-expiry ${row.requestId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'near_expiry_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve near-expiry
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setPricingNote('');
+                void (async () => {
+                  try {
+                    const result = await mockProposeNearExpiry({
+                      proposedSellingPriceLak: 3000,
+                      reason: 'BO mock near-expiry clearance',
+                    });
+                    setNearExpiryRequests(result.requests);
+                    setPricingNote(
+                      `Near-expiry ${result.requestId.slice(0, 8)}…` +
+                        (result.linkedLotId
+                          ? ` linked lot ${result.linkedLotId.slice(0, 8)}…`
+                          : ''),
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'near_expiry_propose_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock near-expiry discount
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setNearExpiryRequests(await listNearExpiryRequests(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'near_expiry_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh near-expiry
             </button>
             {payoutNote ? (
               <p className="lede" role="status">

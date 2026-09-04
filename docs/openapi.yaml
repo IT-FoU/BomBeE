@@ -820,6 +820,40 @@ paths:
           description: Owner or 2FA required
         '409':
           description: Not pending or self-approval
+  /v1/pricing/near-expiry:
+    get:
+      summary: List near-expiry discount requests
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Near-expiry requests array
+  /v1/ops/pricing/near-expiry/mock-propose:
+    post:
+      summary: Local mock near-expiry discount request
+      responses:
+        '201':
+          description: Pending near-expiry request
+        '403':
+          description: Mock ops disabled
+  /v1/ops/pricing/near-expiry/{requestId}/approve:
+    post:
+      summary: Approve near-expiry discount (maker-checker)
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approved
+        '409':
+          description: Not pending or self-approval
   /v1/ops/refunds/mock-create:
     post:
       summary: Local/mock refund request for paid delivered child

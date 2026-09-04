@@ -27,6 +27,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/stores/:id/reactivate` | Local/mock reactivate suspended store with evidence |
 | GET | `/v1/catalog/categories` | Non-prohibited categories |
 | GET | `/v1/catalog/products` | Active products + approved prices + `availableQty` (local seed) |
+| GET | `/v1/catalog/import/batches` | List catalog import batches (local ops) |
+| POST | `/v1/ops/catalog/import/preview` | Local/mock preview import (idempotent; default sample row) |
+| POST | `/v1/ops/catalog/import/:batchId/commit` | Commit valid preview batch (rejects invalid rows) |
 | GET | `/v1/inventory/stock?variantId=` | Lot balances + available qty for a variant |
 | POST | `/v1/carts` | Create cart (customer Bearer) |
 | POST | `/v1/carts/:id/items` | Upsert cart line |

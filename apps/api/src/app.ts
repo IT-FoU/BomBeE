@@ -602,6 +602,137 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/catalog/import/batches') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const batches = await services.catalog.listImportBatches(limit);
+      sendJson(res, 200, { ok: true, batches });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/catalog/import/preview') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        idempotencyKey?: string;
+        idempotency_key?: string;
+        rows?: Array<{
+          storeProductId?: string;
+          store_product_id?: string;
+          sku?: string;
+          barcode?: string;
+          titleLo?: string;
+          title_lo?: string;
+          titleEn?: string;
+          title_en?: string;
+          categorySlug?: string;
+          category_slug?: string;
+          costLak?: number;
+          cost_lak?: number;
+          sellingPriceLak?: number;
+          selling_price_lak?: number;
+        }>;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 409, { error: 'no_active_store' });
+          return;
+        }
+        const rawRows = Array.isArray(body.rows) ? body.rows : [];
+        const rows =
+          rawRows.length > 0
+            ? rawRows.map((r) => ({
+                storeProductId: String(r.storeProductId ?? r.store_product_id ?? ''),
+                sku: String(r.sku ?? ''),
+                barcode: r.barcode,
+                titleLo: String(r.titleLo ?? r.title_lo ?? ''),
+                titleEn: String(r.titleEn ?? r.title_en ?? ''),
+                categorySlug: String(r.categorySlug ?? r.category_slug ?? 'general'),
+                costLak: Math.floor(Number(r.costLak ?? r.cost_lak ?? 0)),
+                sellingPriceLak: Math.floor(
+                  Number(r.sellingPriceLak ?? r.selling_price_lak ?? 0),
+                ),
+              }))
+            : [
+                {
+                  storeProductId: `IMP-${Date.now().toString().slice(-6)}`,
+                  sku: `SKU-${Date.now().toString().slice(-6)}`,
+                  titleLo: 'ສິນຄ້າທົດສອບ',
+                  titleEn: 'Import QA Item',
+                  categorySlug: 'general',
+                  costLak: 2000,
+                  sellingPriceLak: 3500,
+                },
+              ];
+        const idempotencyKey =
+          (body.idempotencyKey ?? body.idempotency_key)?.trim() ||
+          `local-import-${Date.now()}`;
+        const maker = await services.identity.ensureStaff(
+          'staff:local-catalog-maker',
+          'Catalog Maker',
+          '+8562087000001',
+        );
+        const preview = await services.catalog.previewImport({
+          storeId,
+          idempotencyKey,
+          rows,
+          createdBy: maker.identityId,
+        });
+        const batches = await services.catalog.listImportBatches(50);
+        sendJson(res, 201, { ok: true, ...preview, storeId, batches });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'catalog_import_preview_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const catalogImportCommitMatch = url.pathname.match(
+      /^\/v1\/ops\/catalog\/import\/([^/]+)\/commit$/,
+    );
+    if (req.method === 'POST' && catalogImportCommitMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const batchId = decodeURIComponent(catalogImportCommitMatch[1]!);
+      try {
+        const committed = await services.catalog.commitImport(batchId);
+        const batches = await services.catalog.listImportBatches(50);
+        if (!committed.ok) {
+          sendJson(res, 409, {
+            ok: false,
+            error: committed.reason,
+            batchId,
+            batches,
+          });
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          batchId,
+          replay: committed.replay,
+          status: 'committed',
+          batches,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'catalog_import_commit_failed';
+        sendJson(res, message === 'batch_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/inventory/stock') {
       const variantId = url.searchParams.get('variantId')?.trim();
       if (!variantId) {

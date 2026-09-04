@@ -463,4 +463,33 @@ export class CatalogService {
       [batchId],
     );
   }
+
+  async listImportBatches(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      idempotency_key: string;
+      status: string;
+      preview_report: { valid?: number; invalid?: number } | null;
+      created_by: string | null;
+      created_at: string;
+    }>(
+      `SELECT id, store_id, idempotency_key, status, preview_report,
+              created_by, created_at::text
+       FROM private.catalog_import_batches
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      batchId: r.id,
+      storeId: r.store_id,
+      idempotencyKey: r.idempotency_key,
+      status: r.status,
+      previewReport: r.preview_report,
+      createdBy: r.created_by,
+      createdAt: r.created_at,
+    }));
+  }
 }

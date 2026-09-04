@@ -276,6 +276,39 @@ paths:
       responses:
         '200':
           description: Product browse DTOs (includes availableQty from local stock seed)
+  /v1/catalog/import/batches:
+    get:
+      summary: List catalog import batches
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Import batches array
+  /v1/ops/catalog/import/preview:
+    post:
+      summary: Local mock preview catalog import
+      responses:
+        '201':
+          description: Preview report + batch id
+        '403':
+          description: Mock ops disabled
+  /v1/ops/catalog/import/{batchId}/commit:
+    post:
+      summary: Commit valid catalog import batch
+      parameters:
+        - in: path
+          name: batchId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Committed
+        '409':
+          description: Invalid rows
   /v1/inventory/stock:
     get:
       summary: Stock balances for a variant

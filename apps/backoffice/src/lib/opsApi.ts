@@ -201,6 +201,77 @@ export async function listCatalogProducts(limit = 50): Promise<OpsCatalogProduct
   return body.products;
 }
 
+export type CatalogImportBatchRow = {
+  batchId: string;
+  storeId: string;
+  idempotencyKey: string;
+  status: string;
+  previewReport: { valid?: number; invalid?: number } | null;
+  createdBy: string | null;
+  createdAt: string;
+};
+
+export async function listCatalogImportBatches(
+  limit = 50,
+): Promise<CatalogImportBatchRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/catalog/import/batches?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`catalog_import_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { batches: CatalogImportBatchRow[] };
+  return body.batches;
+}
+
+export async function previewCatalogImport(input: {
+  idempotencyKey?: string;
+  rows?: Array<{
+    storeProductId: string;
+    sku: string;
+    titleLo: string;
+    titleEn: string;
+    categorySlug: string;
+    costLak: number;
+    sellingPriceLak: number;
+  }>;
+} = {}): Promise<{
+  batchId: string;
+  report: { valid: number; invalid: number };
+  batches: CatalogImportBatchRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/catalog/import/preview`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_import_preview_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    batchId: string;
+    report: { valid: number; invalid: number };
+    batches: CatalogImportBatchRow[];
+  };
+}
+
+export async function commitCatalogImport(
+  batchId: string,
+): Promise<{ batches?: CatalogImportBatchRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/catalog/import/${encodeURIComponent(batchId)}/commit`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_import_commit_failed_${res.status}`);
+  }
+  return (await res.json()) as { batches?: CatalogImportBatchRow[]; status?: string };
+}
+
 export type OpsStockView = {
   variantId: string;
   availableQty: number;

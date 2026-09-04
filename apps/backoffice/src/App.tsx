@@ -15,6 +15,9 @@ import {
   createStoreDraft,
   fetchVariantStock,
   listCatalogProducts,
+  listCatalogImportBatches,
+  previewCatalogImport,
+  commitCatalogImport,
   listCodShipments,
   listInvites,
   listOrders,
@@ -93,6 +96,7 @@ import {
   type IssuedInvite,
   type IssuedStore,
   type OpsCatalogProduct,
+  type CatalogImportBatchRow,
   type OpsOrderRow,
   type OpsStockView,
   type SettlementBatchRow,
@@ -177,6 +181,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [codShipments, setCodShipments] = useState<CodShipmentRow[]>([]);
   const [opsOrders, setOpsOrders] = useState<OpsOrderRow[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<OpsCatalogProduct[]>([]);
+  const [importBatches, setImportBatches] = useState<CatalogImportBatchRow[]>([]);
+  const [catalogNote, setCatalogNote] = useState('');
   const [stockDetail, setStockDetail] = useState<OpsStockView | null>(null);
   const [settlementBatches, setSettlementBatches] = useState<SettlementBatchRow[]>([]);
   const [settlementNote, setSettlementNote] = useState('');
@@ -241,6 +247,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           cod,
           orders,
           products,
+          importBatchRows,
           batches,
           tickets,
           returns,
@@ -271,6 +278,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listCodShipments(),
           listOrders(30),
           listCatalogProducts(50),
+          listCatalogImportBatches(50),
           listSettlementBatches(50),
           listSupportTickets(50),
           listReturns(50),
@@ -301,6 +309,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setCodShipments(cod);
         setOpsOrders(orders);
         setCatalogProducts(products);
+        setImportBatches(importBatchRows);
         setSettlementBatches(batches);
         setSupportTickets(tickets);
         setReturnRequests(returns);
@@ -871,7 +880,15 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               {' / '}
               <span lang="lo">ສິນຄ້າ</span>
             </h2>
-            <p className="lede">Active products from local catalog API (with available qty).</p>
+            <p className="lede">
+              Active products from local catalog API (with available qty). Preview/commit CSV-style
+              import batches (prohibited categories rejected).
+            </p>
+            {catalogNote ? (
+              <p className="lede" role="status">
+                {catalogNote}
+              </p>
+            ) : null}
             <button
               type="button"
               className="cta"
@@ -882,6 +899,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 void (async () => {
                   try {
                     setCatalogProducts(await listCatalogProducts(50));
+                    setImportBatches(await listCatalogImportBatches(50));
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : 'catalog_failed');
                   } finally {
@@ -891,7 +909,81 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh catalog
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setCatalogNote('');
+                void (async () => {
+                  try {
+                    const result = await previewCatalogImport({
+                      idempotencyKey: `bo-import-${Date.now()}`,
+                    });
+                    setImportBatches(result.batches);
+                    setCatalogNote(
+                      `Preview ${result.batchId.slice(0, 8)}… valid=${result.report.valid} invalid=${result.report.invalid}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'catalog_import_preview_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock import preview
             </button>
+            <ul className="roles" aria-label="Catalog import batches">
+              {importBatches.length === 0 ? <li>No import batches yet</li> : null}
+              {importBatches.map((row) => (
+                <li key={row.batchId}>
+                  {row.status} · {row.idempotencyKey} · valid{' '}
+                  {row.previewReport?.valid ?? 0}/invalid {row.previewReport?.invalid ?? 0} ·{' '}
+                  {row.batchId.slice(0, 8)}…
+                  {row.status === 'preview' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setCatalogNote('');
+                          void (async () => {
+                            try {
+                              const result = await commitCatalogImport(row.batchId);
+                              if (result.batches) setImportBatches(result.batches);
+                              setCatalogProducts(await listCatalogProducts(50));
+                              setCatalogNote(
+                                `Committed ${row.batchId.slice(0, 8)}… (${result.status})`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'catalog_import_commit_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Commit
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
             <ul className="roles" aria-label="Catalog products">
               {catalogProducts.length === 0 ? <li>No products yet</li> : null}
               {catalogProducts.map((p) => (

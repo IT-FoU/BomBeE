@@ -347,7 +347,7 @@ paths:
           description: Mock ops disabled
   /v1/payments/mock-expire-due:
     post:
-      summary: Local/mock expire open QR past deadline and release reservations
+      summary: Local/mock expire open QR past deadline, release reservations, cancel awaiting children
       security:
         - bearerAuth: []
       requestBody:

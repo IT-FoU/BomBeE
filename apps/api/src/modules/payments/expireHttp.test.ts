@@ -159,6 +159,7 @@ describe('payment mock-expire-due HTTP', () => {
     const hit = payments.find((p) => p.paymentRequestId === paymentRequestId);
     expect(hit?.status).toBe('expired');
     expect(hit?.releasedReservationIds.length).toBeGreaterThan(0);
+    expect(hit?.cancelledChildIds.length).toBeGreaterThan(0);
 
     const status = mockRes();
     await router(
@@ -168,6 +169,16 @@ describe('payment mock-expire-due HTTP', () => {
       status.res,
     );
     expect((status.body().payment as { status: string }).status).toBe('expired');
+
+    const order = mockRes();
+    await router(
+      mockReq('GET', `/v1/orders/${parentId}`, undefined, {
+        authorization: `Bearer ${token}`,
+      }),
+      order.res,
+    );
+    const byStore = order.body().byStore as Array<{ status: string }>;
+    expect(byStore.every((c) => c.status === 'cancelled')).toBe(true);
 
     const stockAfter = mockRes();
     await router(mockReq('GET', `/v1/inventory/stock?variantId=${variant.id}`), stockAfter.res);

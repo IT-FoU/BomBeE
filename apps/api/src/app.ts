@@ -754,7 +754,7 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         return;
       }
       try {
-        const result = await mockExpireDue(services, now);
+        const result = await mockExpireDue(services, now, session.identityId);
         sendJson(res, 200, { ok: true, now: now.toISOString(), ...result });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'expire_due_failed';

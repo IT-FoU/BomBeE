@@ -363,6 +363,19 @@ export class InventoryService {
     return stock.availableQty;
   }
 
+  /** Pick first store-scoped balance with enough available qty (FEFO by expiry). */
+  async pickBalanceForReserve(input: {
+    storeId: string;
+    variantId: string;
+    quantity: number;
+  }): Promise<string | null> {
+    const stock = await this.listStockByVariant(input.variantId);
+    const candidate = stock.balances.find(
+      (b) => b.storeId === input.storeId && b.available >= input.quantity,
+    );
+    return candidate?.balanceId ?? null;
+  }
+
   private async lockBalance(balanceId: string) {
     const row = await this.db.query<{
       id: string;

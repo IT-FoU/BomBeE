@@ -22,6 +22,12 @@ export type QrPayment = {
   referenceCode: string;
   amountLak: number;
   expiresAt: string;
+  reservations?: Array<{
+    orderItemId: string;
+    reservationId: string;
+    balanceId: string;
+    quantity: number;
+  }>;
 };
 
 export async function confirmChildrenMock(

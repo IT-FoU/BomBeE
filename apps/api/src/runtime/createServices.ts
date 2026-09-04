@@ -7,6 +7,7 @@ import { CatalogService } from '../modules/catalog/catalogService.js';
 import { IdentityService } from '../modules/identity/service.js';
 import { MockSmsProvider } from '../modules/identity/otp.js';
 import { InventoryService } from '../modules/inventory/inventoryService.js';
+import { ReservationService } from '../modules/inventory/reservationService.js';
 import { OrderService } from '../modules/orders/orderService.js';
 import { ManualBankAdapter, PaymentService } from '../modules/payments/paymentService.js';
 import { InviteService } from '../modules/staging/inviteService.js';
@@ -23,6 +24,7 @@ export type ApiServices = {
   orders: OrderService;
   payments: PaymentService;
   inventory: InventoryService;
+  reservations: ReservationService;
 };
 
 /** Local/mock runtime: in-memory PGlite + mock SMS (no hosted DB required). */
@@ -36,6 +38,18 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
   const orders = new OrderService(db);
   const payments = new PaymentService(db, new ManualBankAdapter());
   const inventory = new InventoryService(db);
+  const reservations = new ReservationService(db, inventory);
   await seedLocalCatalog(db);
-  return { db, sms, identity, invites, stores, catalog, orders, payments, inventory };
+  return {
+    db,
+    sms,
+    identity,
+    invites,
+    stores,
+    catalog,
+    orders,
+    payments,
+    inventory,
+    reservations,
+  };
 }

@@ -468,7 +468,92 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
           childOrderIds,
           actorIdentityId: session.identityId,
         });
-        sendJson(res, 201, { ok: true, ...qr });
+
+        const lines = await services.db.query<{
+          id: string;
+          variant_id: string;
+          store_id: string;
+          quantity: number;
+        }>(
+          `SELECT oi.id, oi.variant_id, oi.store_id, oi.quantity
+           FROM app.order_items oi
+           JOIN app.child_orders co ON co.id = oi.child_order_id
+           WHERE co.parent_order_id = $1
+             AND co.id = ANY($2::uuid[])
+             AND oi.status = 'active'`,
+          [parentId, childOrderIds],
+        );
+
+        const paymentDeadlineAt = Date.parse(qr.expiresAt);
+        const correlationId = crypto.randomUUID();
+        const reservations: Array<{
+          orderItemId: string;
+          reservationId: string;
+          balanceId: string;
+          quantity: number;
+        }> = [];
+
+        for (const line of lines.rows) {
+          const balanceId = await services.inventory.pickBalanceForReserve({
+            storeId: line.store_id,
+            variantId: line.variant_id,
+            quantity: line.quantity,
+          });
+          if (!balanceId) {
+            for (const reserved of reservations) {
+              await services.reservations.release({
+                reservationId: reserved.reservationId,
+                correlationId,
+                reason: 'qr_reserve_rollback',
+              });
+            }
+            await services.db.query(
+              `UPDATE finance.payment_requests SET status = 'cancelled' WHERE id = $1 AND status = 'open'`,
+              [qr.paymentRequestId],
+            );
+            sendJson(res, 409, {
+              error: 'insufficient_available',
+              orderItemId: line.id,
+              variantId: line.variant_id,
+            });
+            return;
+          }
+          const reserved = await services.reservations.reserve({
+            balanceId,
+            quantity: line.quantity,
+            reservationType: 'qr',
+            paymentDeadlineAt,
+            idempotencyKey: `qr:${qr.paymentRequestId}:${line.id}`,
+            correlationId,
+          });
+          if (!reserved.ok) {
+            for (const prev of reservations) {
+              await services.reservations.release({
+                reservationId: prev.reservationId,
+                correlationId,
+                reason: 'qr_reserve_rollback',
+              });
+            }
+            await services.db.query(
+              `UPDATE finance.payment_requests SET status = 'cancelled' WHERE id = $1 AND status = 'open'`,
+              [qr.paymentRequestId],
+            );
+            sendJson(res, 409, {
+              error: reserved.reason,
+              orderItemId: line.id,
+              variantId: line.variant_id,
+            });
+            return;
+          }
+          reservations.push({
+            orderItemId: line.id,
+            reservationId: reserved.reservationId,
+            balanceId,
+            quantity: line.quantity,
+          });
+        }
+
+        sendJson(res, 201, { ok: true, ...qr, reservations });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'qr_create_failed';
         sendJson(res, message === 'qr_requires_supplier_confirmation' ? 409 : 400, {

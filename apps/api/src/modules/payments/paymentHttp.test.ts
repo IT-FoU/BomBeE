@@ -128,6 +128,10 @@ describe('payment QR HTTP', () => {
     expect(confirm.res.statusCode).toBe(200);
     expect((confirm.body().confirmedChildIds as string[]).length).toBeGreaterThan(0);
 
+    const stockBefore = mockRes();
+    await router(mockReq('GET', `/v1/inventory/stock?variantId=${variant.id}`), stockBefore.res);
+    const availableBefore = Number(stockBefore.body().availableQty);
+
     const qr = mockRes();
     await router(
       mockReq('POST', `/v1/orders/${parentId}/payments/qr`, {}, {
@@ -139,6 +143,14 @@ describe('payment QR HTTP', () => {
     const paymentRequestId = qr.body().paymentRequestId as string;
     expect(qr.body().referenceCode).toMatch(/^QR-/);
     expect(Number(qr.body().amountLak)).toBeGreaterThan(0);
+    const reservations = qr.body().reservations as Array<{ reservationId: string; quantity: number }>;
+    expect(reservations.length).toBeGreaterThan(0);
+
+    const stockAfter = mockRes();
+    await router(mockReq('GET', `/v1/inventory/stock?variantId=${variant.id}`), stockAfter.res);
+    expect(Number(stockAfter.body().availableQty)).toBe(
+      availableBefore - reservations.reduce((sum, r) => sum + r.quantity, 0),
+    );
 
     const mockPaid = mockRes();
     await router(

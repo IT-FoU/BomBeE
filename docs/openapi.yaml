@@ -301,7 +301,7 @@ paths:
           description: Transition forbidden
   /v1/orders/{parentId}/payments/qr:
     post:
-      summary: Create QR payment request for confirmed children
+      summary: Create QR payment request for confirmed children and reserve stock
       security:
         - bearerAuth: []
       parameters:
@@ -312,9 +312,9 @@ paths:
             type: string
       responses:
         '201':
-          description: QR created
+          description: QR created with reservations[]
         '409':
-          description: Requires supplier confirmation
+          description: Requires supplier confirmation or insufficient_available
   /v1/payments/{paymentRequestId}:
     get:
       summary: Payment request status

@@ -24,7 +24,7 @@
 - [x] ยืนยัน GitHub owner/organization และชื่อ repository กับ Owner — `IT-FoU/BomBeE` (existing remote)
 - [x] สร้าง repository ใหม่สำหรับ BomBee Market แยกจากทุกโปรเจกต์ — ใช้ repo นี้แล้ว
 - [x] ตั้ง default branch เป็น `main`
-- [x] N/A — เปิด branch protection สำหรับ `main` — Agent token ได้ 403; Owner ต้องเปิดใน GitHub settings
+- [x] N/A — เปิด branch protection สำหรับ `main` — Agent token ได้ 403; Owner ทำตาม `docs/runbooks/branch-protection.md`
 - [x] N/A — บังคับ pull request/checks ก่อน merge — CI workflow พร้อมแล้ว; ต้องคู่กับ branch protection โดย Owner
 - [x] เพิ่ม `.gitignore`, `.editorconfig`, `README` และ license ตามที่ Owner เลือก — LICENSE เป็น proprietary ชั่วคราวจนกว่า Owner เลือก
 - [x] เพิ่ม `requirements.md` และ `tasks.md` เป็น planning baseline

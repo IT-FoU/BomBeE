@@ -944,3 +944,99 @@ export async function fetchPaymentsReconcile(): Promise<PaymentsReconcile> {
   const body = (await res.json()) as { reconcile: PaymentsReconcile };
   return body.reconcile;
 }
+
+export type BackupJobRow = {
+  jobId: string;
+  jobType: string;
+  status: string;
+  checksumSha256: string | null;
+  storageUri: string | null;
+  offlineCopyUri: string | null;
+  rpoSeconds: number | null;
+  rtoSeconds: number | null;
+  error: string | null;
+  startedAt: string;
+  completedAt: string | null;
+};
+
+export type BackupAlertRow = {
+  alertId: string;
+  jobId: string;
+  message: string;
+  createdAt: string;
+};
+
+export async function listBackups(
+  limit = 50,
+): Promise<{ jobs: BackupJobRow[]; alerts: BackupAlertRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/backups?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`backups_list_failed_${res.status}`);
+  }
+  return (await res.json()) as { jobs: BackupJobRow[]; alerts: BackupAlertRow[] };
+}
+
+export async function mockRunBackup(input: {
+  jobType?: string;
+  fail?: boolean;
+} = {}): Promise<{
+  jobId: string;
+  status: string;
+  jobs: BackupJobRow[];
+  alerts: BackupAlertRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/backups/mock-run`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      job_type: input.jobType ?? 'daily_critical',
+      fail: input.fail === true,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `backup_run_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    jobId: string;
+    status: string;
+    jobs: BackupJobRow[];
+    alerts: BackupAlertRow[];
+  };
+}
+
+export async function verifyBackup(
+  jobId: string,
+): Promise<{ jobs?: BackupJobRow[]; checksum?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/backups/${encodeURIComponent(jobId)}/verify`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `backup_verify_failed_${res.status}`);
+  }
+  return (await res.json()) as { jobs?: BackupJobRow[]; checksum?: string };
+}
+
+export async function restoreDrillBackup(
+  jobId: string,
+): Promise<{ jobs?: BackupJobRow[]; ok?: boolean }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/backups/${encodeURIComponent(jobId)}/restore-drill`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `backup_drill_failed_${res.status}`);
+  }
+  return (await res.json()) as { jobs?: BackupJobRow[]; ok?: boolean };
+}

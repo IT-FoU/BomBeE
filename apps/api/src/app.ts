@@ -10,6 +10,7 @@ import { cancelOrderBeforeHandoff } from './modules/orders/cancelBeforeHandoff.j
 import { mockExpireDue } from './modules/payments/mockExpireDue.js';
 import { getHealth } from './modules/system/health.js';
 import { listRoleCatalog } from './modules/rbac/permissions.js';
+import type { BackupType } from './modules/backup/backupService.js';
 import type { ApiServices } from './runtime/createServices.js';
 import { evaluateInviteAccess, type InviteRole } from './modules/staging/inviteService.js';
 
@@ -665,6 +666,89 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'payments_reconcile_failed';
         sendJson(res, message.startsWith('forbidden_') ? 403 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/backups') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const [jobs, alerts] = await Promise.all([
+        services.backups.listJobs(limit),
+        services.backups.listAlerts(limit),
+      ]);
+      sendJson(res, 200, { ok: true, jobs, alerts });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/backups/mock-run') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        job_type?: BackupType;
+        jobType?: BackupType;
+        fail?: boolean;
+      }>(req);
+      const jobType = (body.job_type ?? body.jobType ?? 'daily_critical') as BackupType;
+      if (!['daily_critical', 'weekly_full', 'pre_migration'].includes(jobType)) {
+        sendJson(res, 400, { error: 'invalid_job_type' });
+        return;
+      }
+      try {
+        const result = await services.backups.runBackup({
+          jobType,
+          fail: body.fail === true,
+        });
+        const [jobs, alerts] = await Promise.all([
+          services.backups.listJobs(50),
+          services.backups.listAlerts(50),
+        ]);
+        sendJson(res, 201, { ok: true, ...result, jobs, alerts });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'backup_run_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const backupVerifyMatch = url.pathname.match(/^\/v1\/ops\/backups\/([^/]+)\/verify$/);
+    if (req.method === 'POST' && backupVerifyMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const jobId = decodeURIComponent(backupVerifyMatch[1]!);
+      try {
+        const verified = await services.backups.verifyChecksum(jobId);
+        const jobs = await services.backups.listJobs(50);
+        if (!verified.ok) {
+          sendJson(res, 409, { error: verified.reason ?? 'verify_failed', jobs });
+          return;
+        }
+        sendJson(res, 200, { ok: true, jobId, checksum: verified.checksum, jobs });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'backup_verify_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const backupDrillMatch = url.pathname.match(/^\/v1\/ops\/backups\/([^/]+)\/restore-drill$/);
+    if (req.method === 'POST' && backupDrillMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const jobId = decodeURIComponent(backupDrillMatch[1]!);
+      try {
+        const drill = await services.backups.restoreDrill(jobId);
+        const jobs = await services.backups.listJobs(50);
+        sendJson(res, 200, { ok: true, jobId, evidence: drill.evidence, jobs });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'backup_drill_failed';
+        sendJson(res, message === 'backup_not_ready' ? 409 : 400, { error: message });
       }
       return;
     }

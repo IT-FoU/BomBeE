@@ -846,6 +846,65 @@ paths:
           description: Reconcile summary
         '403':
           description: Forbidden for actor roles
+  /v1/backups:
+    get:
+      summary: List backup jobs + alerts (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Jobs and alerts arrays
+  /v1/ops/backups/mock-run:
+    post:
+      summary: Local/mock encrypted backup job
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                job_type:
+                  type: string
+                  enum: [daily_critical, weekly_full, pre_migration]
+                fail:
+                  type: boolean
+      responses:
+        '201':
+          description: Backup job recorded
+        '403':
+          description: Mock ops disabled
+  /v1/ops/backups/{jobId}/verify:
+    post:
+      summary: Local/mock checksum verify
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Checksum ok
+        '409':
+          description: Not completed / mismatch
+  /v1/ops/backups/{jobId}/restore-drill:
+    post:
+      summary: Local/mock restore drill evidence
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Drill evidence
+        '409':
+          description: Backup not ready
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

@@ -57,6 +57,10 @@ import {
   listStaffDirectory,
   fetchDashboardKpis,
   fetchPaymentsReconcile,
+  listBackups,
+  mockRunBackup,
+  verifyBackup,
+  restoreDrillBackup,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -77,6 +81,8 @@ import {
   type StaffRoleCatalogRow,
   type DashboardKpis,
   type PaymentsReconcile,
+  type BackupJobRow,
+  type BackupAlertRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -98,6 +104,7 @@ const navItems = [
   { id: 'invites', label: { lo: 'ເຊີນເຂົ້າ', en: 'Beta invites' } },
   { id: 'audit', label: { lo: 'ອອດິດ', en: 'Audit' } },
   { id: 'exports', label: { lo: 'ສົ່ງອອກ', en: 'Exports' } },
+  { id: 'backups', label: { lo: 'ສຳຮອງ', en: 'Backups' } },
 ] as const;
 
 const SAMPLE_AMOUNT = LAK(1_250_000);
@@ -150,6 +157,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [dashboardKpis, setDashboardKpis] = useState<DashboardKpis | null>(null);
   const [paymentsReconcile, setPaymentsReconcile] = useState<PaymentsReconcile | null>(null);
   const [dashboardNote, setDashboardNote] = useState('');
+  const [backupJobs, setBackupJobs] = useState<BackupJobRow[]>([]);
+  const [backupAlerts, setBackupAlerts] = useState<BackupAlertRow[]>([]);
+  const [backupNote, setBackupNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -179,6 +189,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           staffBundle,
           kpis,
           reconcile,
+          backupBundle,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -197,6 +208,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listStaffDirectory(50),
           fetchDashboardKpis(),
           fetchPaymentsReconcile(),
+          listBackups(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -217,6 +229,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setStaffDirectory(staffBundle.staff);
         setDashboardKpis(kpis);
         setPaymentsReconcile(reconcile);
+        setBackupJobs(backupBundle.jobs);
+        setBackupAlerts(backupBundle.alerts);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -1959,6 +1973,161 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh exports
             </button>
           </section>
+          <section aria-labelledby="backups-heading" id="backups">
+            <h2 id="backups-heading">
+              <span lang="en">Backups</span>
+              {' / '}
+              <span lang="lo">ສຳຮອງ</span>
+            </h2>
+            <p className="lede">
+              Local encrypted backup jobs — mock run, checksum verify, restore drill (no cloud
+              upload).
+            </p>
+            {backupNote ? (
+              <p className="lede" role="status">
+                {backupNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Backup jobs">
+              {backupJobs.length === 0 ? <li>No backup jobs yet</li> : null}
+              {backupJobs.map((job) => (
+                <li key={job.jobId}>
+                  {job.status} · {job.jobType} · {job.jobId.slice(0, 8)}…
+                  {job.status === 'completed' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setBackupNote('');
+                          void (async () => {
+                            try {
+                              const result = await verifyBackup(job.jobId);
+                              if (result.jobs) setBackupJobs(result.jobs);
+                              setBackupNote(`Verified ${job.jobId.slice(0, 8)}…`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'backup_verify_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Verify
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setBackupNote('');
+                          void (async () => {
+                            try {
+                              const result = await restoreDrillBackup(job.jobId);
+                              if (result.jobs) setBackupJobs(result.jobs);
+                              setBackupNote(`Restore drill ok for ${job.jobId.slice(0, 8)}…`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'backup_drill_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Restore drill
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="Backup alerts">
+              {backupAlerts.length === 0 ? <li>No backup alerts</li> : null}
+              {backupAlerts.map((alert) => (
+                <li key={alert.alertId}>
+                  {alert.message} · job {alert.jobId.slice(0, 8)}…
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setBackupNote('');
+                void (async () => {
+                  try {
+                    const result = await mockRunBackup({ jobType: 'daily_critical' });
+                    setBackupJobs(result.jobs);
+                    setBackupAlerts(result.alerts);
+                    setBackupNote(`Ran ${result.status} job ${result.jobId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'backup_run_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock daily backup
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setBackupNote('');
+                void (async () => {
+                  try {
+                    const result = await mockRunBackup({
+                      jobType: 'pre_migration',
+                      fail: true,
+                    });
+                    setBackupJobs(result.jobs);
+                    setBackupAlerts(result.alerts);
+                    setBackupNote(`Simulated failure ${result.jobId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'backup_run_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Simulate failure
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    const result = await listBackups(50);
+                    setBackupJobs(result.jobs);
+                    setBackupAlerts(result.alerts);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'backups_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh backups
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -1981,6 +2150,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'audit',
                   'exports',
                   'notifications',
+                  'backups',
                 ].includes(item.id),
             )
             .map((item) => (

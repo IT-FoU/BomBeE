@@ -62,6 +62,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/staff` | Role catalog defaults + staff directory (local ops, read-only) |
 | GET | `/v1/reports/dashboard` | Live dashboard KPIs (local ops; optional `store_id`) |
 | GET | `/v1/reports/payments/reconcile` | Payment request vs allocation/receipt reconcile |
+| GET | `/v1/backups` | List backup jobs + alerts (local ops) |
+| POST | `/v1/ops/backups/mock-run` | Local/mock encrypted backup job (`job_type`, optional `fail`) |
+| POST | `/v1/ops/backups/:id/verify` | Local/mock checksum verify |
+| POST | `/v1/ops/backups/:id/restore-drill` | Local/mock restore drill evidence |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

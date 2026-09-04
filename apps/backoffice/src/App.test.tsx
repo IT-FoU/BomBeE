@@ -27,6 +27,7 @@ describe('backoffice shell QA', () => {
         'invites',
         'audit',
         'exports',
+        'backups',
       ]),
     );
   });

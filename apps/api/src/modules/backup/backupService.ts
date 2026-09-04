@@ -159,4 +159,63 @@ export class BackupService {
       },
     };
   }
+
+  async listJobs(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      job_type: string;
+      status: string;
+      checksum_sha256: string | null;
+      storage_uri: string | null;
+      offline_copy_uri: string | null;
+      rpo_seconds: number | null;
+      rto_seconds: number | null;
+      error: string | null;
+      started_at: string;
+      completed_at: string | null;
+    }>(
+      `SELECT id, job_type, status, checksum_sha256, storage_uri, offline_copy_uri,
+              rpo_seconds, rto_seconds, error, started_at::text, completed_at::text
+       FROM private.backup_jobs
+       ORDER BY started_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      jobId: r.id,
+      jobType: r.job_type,
+      status: r.status,
+      checksumSha256: r.checksum_sha256,
+      storageUri: r.storage_uri,
+      offlineCopyUri: r.offline_copy_uri,
+      rpoSeconds: r.rpo_seconds,
+      rtoSeconds: r.rto_seconds,
+      error: r.error,
+      startedAt: r.started_at,
+      completedAt: r.completed_at,
+    }));
+  }
+
+  async listAlerts(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      backup_job_id: string;
+      message: string;
+      created_at: string;
+    }>(
+      `SELECT id, backup_job_id, message, created_at::text
+       FROM private.backup_alerts
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      alertId: r.id,
+      jobId: r.backup_job_id,
+      message: r.message,
+      createdAt: r.created_at,
+    }));
+  }
 }

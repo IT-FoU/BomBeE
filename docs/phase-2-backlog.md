@@ -53,6 +53,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B33 | Staff roles catalog + directory (read-only) | **Done** — `GET /v1/staff` roles+directory; seed local role assignments; Staff section |
 | P2-B34 | Reports dashboard KPIs + payment reconcile | **Done** — `GET /v1/reports/dashboard`, `/v1/reports/payments/reconcile`; Dashboard section |
 | P2-B35 | Checkout promo code (percent-off) | **Done** — `promoCode` on cart checkout; seed `LOCAL10`; customer checkout field |
+| P2-B36 | Backups list + mock run/verify/drill | **Done** — `GET /v1/backups`, mock-run/verify/restore-drill; Backups section |
 
 ## C — Hard rules that stay
 

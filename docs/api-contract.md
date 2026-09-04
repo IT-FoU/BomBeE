@@ -49,6 +49,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/refunds/:approvalId/mock-pay` | Local/mock ledger pay |
 | GET | `/v1/audit/events` | List recent audit events (local ops) |
 | POST | `/v1/ops/audit/mock-event` | Local/mock append audit event |
+| GET | `/v1/exports` | List export requests (no ciphertext) |
+| POST | `/v1/ops/exports/mock-create` | Local/mock encrypted export request |
+| POST | `/v1/ops/exports/:id/approve` | Local/mock approve (distinct actor) |
+| POST | `/v1/ops/exports/:id/mock-download` | Local/mock download counter (metadata only) |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

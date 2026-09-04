@@ -644,3 +644,77 @@ export async function mockAuditEvent(input: {
   }
   return (await res.json()) as { eventId: string; events: AuditEventRow[] };
 }
+
+export type ExportRequestRow = {
+  exportId: string;
+  exportType: string;
+  reason: string;
+  status: string;
+  downloadCount: number;
+  downloadLimit: number;
+  requesterIdentityId: string;
+  createdAt: string;
+  expiresAt: string | null;
+};
+
+export async function listExports(limit = 50): Promise<ExportRequestRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/exports?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`exports_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { exports: ExportRequestRow[] };
+  return body.exports;
+}
+
+export async function mockCreateExport(input: {
+  exportType?: string;
+  reason?: string;
+} = {}): Promise<{ exportId: string; exports: ExportRequestRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/exports/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      export_type: input.exportType,
+      reason: input.reason,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `export_create_failed_${res.status}`);
+  }
+  return (await res.json()) as { exportId: string; exports: ExportRequestRow[] };
+}
+
+export async function approveExportRequest(
+  exportId: string,
+): Promise<{ exports?: ExportRequestRow[]; status?: string }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/exports/${exportId}/approve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `export_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as { exports?: ExportRequestRow[]; status?: string };
+}
+
+export async function mockDownloadExport(
+  exportId: string,
+): Promise<{ exports?: ExportRequestRow[]; status?: string; downloadCount?: number }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/exports/${exportId}/mock-download`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `export_download_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    exports?: ExportRequestRow[];
+    status?: string;
+    downloadCount?: number;
+  };
+}

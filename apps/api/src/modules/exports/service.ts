@@ -143,4 +143,37 @@ export class ExportService {
       [exportId, actorIdentityId, eventType],
     );
   }
+
+  async listExports(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      export_type: string;
+      reason: string;
+      status: string;
+      download_count: number;
+      download_limit: number;
+      requester_identity_id: string;
+      created_at: string;
+      expires_at: string | null;
+    }>(
+      `SELECT id, export_type, reason, status, download_count, download_limit,
+              requester_identity_id, created_at::text, expires_at::text
+       FROM security.export_requests
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      exportId: r.id,
+      exportType: r.export_type,
+      reason: r.reason,
+      status: r.status,
+      downloadCount: Number(r.download_count),
+      downloadLimit: Number(r.download_limit),
+      requesterIdentityId: r.requester_identity_id,
+      createdAt: r.created_at,
+      expiresAt: r.expires_at,
+    }));
+  }
 }

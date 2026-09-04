@@ -672,6 +672,64 @@ paths:
           description: Event appended
         '403':
           description: Mock ops disabled
+  /v1/exports:
+    get:
+      summary: List export requests (ciphertext never returned)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Exports array
+  /v1/ops/exports/mock-create:
+    post:
+      summary: Local/mock encrypted export request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                export_type:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Export created (pending)
+        '403':
+          description: Mock ops disabled
+  /v1/ops/exports/{exportId}/approve:
+    post:
+      summary: Local/mock approve export (distinct actor)
+      parameters:
+        - in: path
+          name: exportId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status approved
+        '409':
+          description: Self-approval forbidden or not pending
+  /v1/ops/exports/{exportId}/mock-download:
+    post:
+      summary: Local/mock download (increments counter; no ciphertext)
+      parameters:
+        - in: path
+          name: exportId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Download recorded
+        '409':
+          description: Not ready / expired / limit
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

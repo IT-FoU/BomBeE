@@ -44,6 +44,10 @@ import {
   mockPayRefund,
   listAuditEvents,
   mockAuditEvent,
+  listExports,
+  mockCreateExport,
+  approveExportRequest,
+  mockDownloadExport,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -56,6 +60,7 @@ import {
   type PromotionRow,
   type RefundApprovalRow,
   type AuditEventRow,
+  type ExportRequestRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -117,6 +122,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [refundNote, setRefundNote] = useState('');
   const [auditEvents, setAuditEvents] = useState<AuditEventRow[]>([]);
   const [auditNote, setAuditNote] = useState('');
+  const [exportRequests, setExportRequests] = useState<ExportRequestRow[]>([]);
+  const [exportNote, setExportNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -140,6 +147,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           promos,
           refundRows,
           auditRows,
+          exportRows,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -152,6 +160,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listPromotions(50),
           listRefunds(50),
           listAuditEvents(50),
+          listExports(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -164,6 +173,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setPromotions(promos);
         setRefunds(refundRows);
         setAuditEvents(auditRows);
+        setExportRequests(exportRows);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -1424,6 +1434,138 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh audit
             </button>
           </section>
+          <section aria-labelledby="exports-heading" id="exports">
+            <h2 id="exports-heading">
+              <span lang="en">Exports</span>
+              {' / '}
+              <span lang="lo">ສົ່ງອອກ</span>
+            </h2>
+            <p className="lede">
+              Encrypted export requests — mock create, approve (maker-checker), then mock download
+              (metadata only; ciphertext never returned).
+            </p>
+            {exportNote ? (
+              <p className="lede" role="status">
+                {exportNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Export requests">
+              {exportRequests.length === 0 ? <li>No export requests yet</li> : null}
+              {exportRequests.map((row) => (
+                <li key={row.exportId}>
+                  {row.status} · {row.exportType} · {row.downloadCount}/{row.downloadLimit} ·{' '}
+                  {row.reason}
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setExportNote('');
+                          void (async () => {
+                            try {
+                              const result = await approveExportRequest(row.exportId);
+                              if (result.exports) setExportRequests(result.exports);
+                              setExportNote(`Approved ${row.exportId.slice(0, 8)}…`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'export_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve
+                      </button>
+                    </>
+                  ) : null}
+                  {row.status === 'approved' || row.status === 'ready' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setExportNote('');
+                          void (async () => {
+                            try {
+                              const result = await mockDownloadExport(row.exportId);
+                              if (result.exports) setExportRequests(result.exports);
+                              setExportNote(
+                                `Downloaded ${row.exportId.slice(0, 8)}… · count ${result.downloadCount ?? ''}`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'export_download_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Mock download
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setExportNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateExport({
+                      exportType: 'orders_summary',
+                      reason: 'BO mock compliance extract',
+                    });
+                    setExportRequests(result.exports);
+                    setExportNote(`Created ${result.exportId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'export_create_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create export
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setExportRequests(await listExports(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'exports_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh exports
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -1444,6 +1586,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'promotions',
                   'approvals',
                   'audit',
+                  'exports',
                 ].includes(item.id),
             )
             .map((item) => (

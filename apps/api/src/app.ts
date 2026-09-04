@@ -518,6 +518,113 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/exports') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const exports = await services.exports.listExports(limit);
+      sendJson(res, 200, { ok: true, exports });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/exports/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        export_type?: string;
+        reason?: string;
+        payload?: string;
+      }>(req);
+      const reason = body.reason?.trim() || 'local mock compliance extract';
+      try {
+        const requesterIdentityId = await resolveOpsActor(services);
+        const exportId = await services.exports.requestExport({
+          requesterIdentityId,
+          exportType: body.export_type?.trim() || 'orders_summary',
+          reason,
+          payload: Buffer.from(body.payload ?? '{"rows":[],"source":"local_mock"}', 'utf8'),
+        });
+        const exports = await services.exports.listExports(50);
+        sendJson(res, 201, { ok: true, exportId, exports });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'export_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const exportApproveMatch = url.pathname.match(/^\/v1\/ops\/exports\/([^/]+)\/approve$/);
+    if (req.method === 'POST' && exportApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const exportId = decodeURIComponent(exportApproveMatch[1]!);
+      try {
+        const row = await services.db.query<{ requester_identity_id: string }>(
+          `SELECT requester_identity_id FROM security.export_requests WHERE id = $1`,
+          [exportId],
+        );
+        if (!row.rows[0]) {
+          sendJson(res, 404, { error: 'export_not_found' });
+          return;
+        }
+        const actorIdentityId = await resolveOpsApprover(
+          services,
+          row.rows[0].requester_identity_id,
+        );
+        const approved = await services.exports.approve({ exportId, actorIdentityId });
+        const exports = await services.exports.listExports(50);
+        sendJson(res, 200, {
+          ok: true,
+          exportId,
+          status: approved.status,
+          expiresAt: approved.expiresAt,
+          exports,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'export_approve_failed';
+        const status =
+          message === 'export not found'
+            ? 404
+            : message.includes('self approval') || message.includes('not pending')
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    const exportDownloadMatch = url.pathname.match(/^\/v1\/ops\/exports\/([^/]+)\/mock-download$/);
+    if (req.method === 'POST' && exportDownloadMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const exportId = decodeURIComponent(exportDownloadMatch[1]!);
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const result = await services.exports.download({ exportId, actorIdentityId });
+        const exports = await services.exports.listExports(50);
+        if (!result.ok) {
+          sendJson(res, 409, { error: result.reason, exports });
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          exportId,
+          status: result.next.status,
+          downloadCount: result.next.downloadCount,
+          exports,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'export_download_failed';
+        sendJson(res, message === 'export not found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/audit/mock-event') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

@@ -524,6 +524,60 @@ paths:
           description: Status approved
         '409':
           description: Return not pending
+  /v1/promotions:
+    get:
+      summary: List promotions (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Promotions array
+  /v1/ops/promotions/mock-create:
+    post:
+      summary: Local/mock create active promotion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                title_en:
+                  type: string
+                title_lo:
+                  type: string
+                percent_off:
+                  type: integer
+                amount_off_lak:
+                  type: integer
+                funding:
+                  type: string
+                budget_lak:
+                  type: integer
+      responses:
+        '201':
+          description: Promotion created
+        '403':
+          description: Mock ops disabled
+  /v1/ops/promotions/{promotionId}/pause:
+    post:
+      summary: Local/mock pause active promotion
+      parameters:
+        - in: path
+          name: promotionId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status paused
+        '409':
+          description: Promotion not active
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

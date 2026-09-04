@@ -40,6 +40,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/returns` | List return requests (local ops) |
 | POST | `/v1/ops/returns/mock-create` | Local/mock return for delivered child (optional `child_order_id`) |
 | POST | `/v1/ops/returns/:id/approve` | Local/mock approve pending return |
+| GET | `/v1/promotions` | List promotions (local ops) |
+| POST | `/v1/ops/promotions/mock-create` | Local/mock create active promotion |
+| POST | `/v1/ops/promotions/:id/pause` | Local/mock pause active promotion |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

@@ -35,6 +35,9 @@ import {
   listReturns,
   mockCreateReturn,
   approveReturn,
+  listPromotions,
+  mockCreatePromotion,
+  pausePromotion,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -44,6 +47,7 @@ import {
   type SettlementBatchRow,
   type SupportTicketRow,
   type ReturnRequestRow,
+  type PromotionRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -99,6 +103,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [supportNote, setSupportNote] = useState('');
   const [returnRequests, setReturnRequests] = useState<ReturnRequestRow[]>([]);
   const [returnNote, setReturnNote] = useState('');
+  const [promotions, setPromotions] = useState<PromotionRow[]>([]);
+  const [promoNote, setPromoNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -110,7 +116,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [invites, stores, cod, orders, products, batches, tickets, returns] =
+        const [invites, stores, cod, orders, products, batches, tickets, returns, promos] =
           await Promise.all([
             listInvites(),
             listStores(),
@@ -120,6 +126,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             listSettlementBatches(50),
             listSupportTickets(50),
             listReturns(50),
+            listPromotions(50),
           ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -129,6 +136,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setSettlementBatches(batches);
         setSupportTickets(tickets);
         setReturnRequests(returns);
+        setPromotions(promos);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -1082,6 +1090,112 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh returns
             </button>
           </section>
+          <section aria-labelledby="promotions-heading" id="promotions">
+            <h2 id="promotions-heading">
+              <span lang="en">Promotions</span>
+              {' / '}
+              <span lang="lo">ໂປຣໂມຊັນ</span>
+            </h2>
+            <p className="lede">
+              Local promotions — mock create active codes and pause them for QA.
+            </p>
+            {promoNote ? (
+              <p className="lede" role="status">
+                {promoNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Promotions">
+              {promotions.length === 0 ? <li>No promotions yet</li> : null}
+              {promotions.map((promo) => (
+                <li key={promo.promotionId}>
+                  {promo.status} · {promo.code} ·{' '}
+                  {promo.percentOff != null
+                    ? `${promo.percentOff}%`
+                    : formatLak(LAK(promo.amountOffLak ?? 0))}{' '}
+                  · budget {formatLak(LAK(promo.budgetLak))}
+                  {promo.status === 'active' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setPromoNote('');
+                          void (async () => {
+                            try {
+                              const result = await pausePromotion(promo.promotionId);
+                              if (result.promotions) setPromotions(result.promotions);
+                              setPromoNote(`Paused ${promo.code}`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'promotion_pause_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Pause
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setPromoNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreatePromotion({
+                      titleEn: 'BO mock 10% off',
+                      percentOff: 10,
+                    });
+                    setPromotions(result.promotions);
+                    setPromoNote(`Created ${result.promotionId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'promotion_create_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create promo
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setPromotions(await listPromotions(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'promotions_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh promotions
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -1099,6 +1213,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'settlements',
                   'support',
                   'returns',
+                  'promotions',
                 ].includes(item.id),
             )
             .map((item) => (

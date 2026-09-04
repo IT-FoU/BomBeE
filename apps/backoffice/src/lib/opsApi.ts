@@ -467,3 +467,64 @@ export async function approveReturn(
   }
   return (await res.json()) as { returns?: ReturnRequestRow[]; status?: string };
 }
+
+export type PromotionRow = {
+  promotionId: string;
+  code: string;
+  titleEn: string;
+  titleLo: string;
+  status: string;
+  funding: string;
+  percentOff: number | null;
+  amountOffLak: number | null;
+  budgetLak: number;
+  spentLak: number;
+  redeemedCount: number;
+  effectiveFrom: string;
+  effectiveTo: string;
+};
+
+export async function listPromotions(limit = 50): Promise<PromotionRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/promotions?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`promotions_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { promotions: PromotionRow[] };
+  return body.promotions;
+}
+
+export async function mockCreatePromotion(input: {
+  code?: string;
+  titleEn?: string;
+  percentOff?: number;
+} = {}): Promise<{ promotionId: string; promotions: PromotionRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/promotions/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      code: input.code,
+      title_en: input.titleEn,
+      percent_off: input.percentOff,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `promotion_create_failed_${res.status}`);
+  }
+  return (await res.json()) as { promotionId: string; promotions: PromotionRow[] };
+}
+
+export async function pausePromotion(
+  promotionId: string,
+): Promise<{ promotions?: PromotionRow[]; status?: string }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/promotions/${promotionId}/pause`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `promotion_pause_failed_${res.status}`);
+  }
+  return (await res.json()) as { promotions?: PromotionRow[]; status?: string };
+}

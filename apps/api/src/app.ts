@@ -494,6 +494,87 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/promotions') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const promotions = await services.promotions.listPromotions(limit);
+      sendJson(res, 200, { ok: true, promotions });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/promotions/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        code?: string;
+        title_en?: string;
+        title_lo?: string;
+        percent_off?: number;
+        amount_off_lak?: number;
+        funding?: 'platform' | 'supplier' | 'split';
+        budget_lak?: number;
+      }>(req);
+      const code =
+        body.code?.trim().toUpperCase() ||
+        `LOCAL${Date.now().toString(36).toUpperCase().slice(-6)}`;
+      const percentOff =
+        typeof body.percent_off === 'number' && Number.isFinite(body.percent_off)
+          ? body.percent_off
+          : undefined;
+      const amountOffLak =
+        typeof body.amount_off_lak === 'number' && Number.isFinite(body.amount_off_lak)
+          ? body.amount_off_lak
+          : undefined;
+      try {
+        const from = new Date();
+        const to = new Date(from.getTime() + 30 * 24 * 60 * 60_000);
+        const promotionId = await services.promotions.createPromotion({
+          code,
+          titleEn: body.title_en?.trim() || 'Local mock promo',
+          titleLo: body.title_lo?.trim() || 'ໂປຣໂມຊັນ mock',
+          percentOff: amountOffLak == null ? (percentOff ?? 10) : undefined,
+          amountOffLak: amountOffLak != null && percentOff == null ? amountOffLak : undefined,
+          funding: body.funding ?? 'platform',
+          budgetLak: body.budget_lak ?? 500_000,
+          effectiveFrom: from,
+          effectiveTo: to,
+          allowStack: false,
+        });
+        const promotions = await services.promotions.listPromotions(50);
+        sendJson(res, 201, { ok: true, promotionId, promotions });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'promotion_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const promoPauseMatch = url.pathname.match(/^\/v1\/ops\/promotions\/([^/]+)\/pause$/);
+    if (req.method === 'POST' && promoPauseMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const promotionId = decodeURIComponent(promoPauseMatch[1]!);
+      try {
+        await services.promotions.pausePromotion(promotionId);
+        const promotions = await services.promotions.listPromotions(50);
+        sendJson(res, 200, { ok: true, promotionId, status: 'paused', promotions });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'promotion_pause_failed';
+        const status =
+          message === 'promotion_not_found'
+            ? 404
+            : message === 'promotion_not_active'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/returns/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

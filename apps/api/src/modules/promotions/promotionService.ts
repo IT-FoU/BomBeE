@@ -241,4 +241,58 @@ export class PromotionService {
   }) {
     return recalculateAfterCancel(input);
   }
+
+  async listPromotions(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      code: string;
+      title_en: string;
+      title_lo: string;
+      status: string;
+      funding: string;
+      percent_off: number | null;
+      amount_off_lak: number | null;
+      budget_lak: number;
+      spent_lak: number;
+      redeemed_count: number;
+      effective_from: string;
+      effective_to: string;
+    }>(
+      `SELECT id, code, title_en, title_lo, status, funding, percent_off, amount_off_lak,
+              budget_lak, spent_lak, redeemed_count,
+              effective_from::text, effective_to::text
+       FROM app.promotions
+       ORDER BY effective_from DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      promotionId: r.id,
+      code: r.code,
+      titleEn: r.title_en,
+      titleLo: r.title_lo,
+      status: r.status,
+      funding: r.funding,
+      percentOff: r.percent_off,
+      amountOffLak: r.amount_off_lak == null ? null : Number(r.amount_off_lak),
+      budgetLak: Number(r.budget_lak),
+      spentLak: Number(r.spent_lak),
+      redeemedCount: Number(r.redeemed_count),
+      effectiveFrom: r.effective_from,
+      effectiveTo: r.effective_to,
+    }));
+  }
+
+  async pausePromotion(promotionId: string) {
+    const row = await this.db.query<{ status: string }>(
+      `SELECT status FROM app.promotions WHERE id = $1`,
+      [promotionId],
+    );
+    if (!row.rows[0]) throw new Error('promotion_not_found');
+    if (row.rows[0].status !== 'active') throw new Error('promotion_not_active');
+    await this.db.query(`UPDATE app.promotions SET status = 'paused' WHERE id = $1`, [
+      promotionId,
+    ]);
+  }
 }

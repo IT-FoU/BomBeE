@@ -44,6 +44,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B24 | Settlement submit / approve / dispute | **Done** — ops submit/approve/dispute + lines GET; Settlements buttons; maker-checker |
 | P2-B25 | Support tickets list + mock ops | **Done** — `GET /v1/support/tickets`, mock-create/reply/resolve; Support section |
 | P2-B26 | Returns list + mock create/approve | **Done** — `GET /v1/returns`, ops mock-create/approve; Returns section |
+| P2-B27 | Promotions list + mock create/pause | **Done** — `GET /v1/promotions`, ops mock-create/pause; Promotions section |
 
 ## C — Hard rules that stay
 

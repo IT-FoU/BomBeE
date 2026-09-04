@@ -22,6 +22,11 @@ export type CheckoutResult = {
   parentId: string;
   orderNumber: string;
   childIds: string[];
+  promo?: {
+    code: string;
+    percentOff: number;
+    discountLak: number;
+  } | null;
 };
 
 export type OrderView = {
@@ -31,6 +36,7 @@ export type OrderView = {
     order_number: string;
     status: string;
     total_lak: number | string;
+    discount_lak?: number | string;
   };
   byStore: Array<{
     id: string;
@@ -44,6 +50,7 @@ export async function checkoutLocalCart(input: {
   sessionToken: string;
   lines: Array<{ storeId: string; variantId: string; quantity: number }>;
   shippingLakByStore?: Record<string, number>;
+  promoCode?: string;
 }): Promise<CheckoutResult> {
   const cartRes = await fetch(`${apiBaseUrl()}/v1/carts`, {
     method: 'POST',
@@ -71,7 +78,10 @@ export async function checkoutLocalCart(input: {
   const checkoutRes = await fetch(`${apiBaseUrl()}/v1/carts/${cartId}/checkout`, {
     method: 'POST',
     headers: authHeaders(input.sessionToken),
-    body: JSON.stringify({ shippingLakByStore: input.shippingLakByStore ?? {} }),
+    body: JSON.stringify({
+      shippingLakByStore: input.shippingLakByStore ?? {},
+      promoCode: input.promoCode?.trim() || undefined,
+    }),
   });
   if (!checkoutRes.ok) {
     const err = (await checkoutRes.json().catch(() => ({}))) as { error?: string };

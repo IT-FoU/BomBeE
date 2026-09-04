@@ -126,6 +126,64 @@ describe('checkout HTTP', () => {
     expect((orderRes.body().combined as { status: string }).status).toBe('pending_supplier');
   });
 
+  it('applies LOCAL10 promo code at checkout', async () => {
+    const productsRes = mockRes();
+    await router(mockReq('GET', '/v1/catalog/products'), productsRes.res);
+    const products = productsRes.body().products as Array<{
+      storeId: string;
+      variants: Array<{ id: string }>;
+    }>;
+    const product = products[0]!;
+    const variant = product.variants[0]!;
+
+    const cartRes = mockRes();
+    await router(
+      mockReq('POST', '/v1/carts', {}, { authorization: `Bearer ${token}` }),
+      cartRes.res,
+    );
+    const cartId = cartRes.body().cartId as string;
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/items`,
+        { storeId: product.storeId, variantId: variant.id, quantity: 2 },
+        { authorization: `Bearer ${token}` },
+      ),
+      mockRes().res,
+    );
+
+    const checkoutRes = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/checkout`,
+        { shippingLakByStore: { [product.storeId]: 0 }, promoCode: 'LOCAL10' },
+        { authorization: `Bearer ${token}` },
+      ),
+      checkoutRes.res,
+    );
+    expect(checkoutRes.res.statusCode).toBe(201);
+    const promo = checkoutRes.body().promo as {
+      code: string;
+      percentOff: number;
+      discountLak: number;
+    };
+    expect(promo.code).toBe('LOCAL10');
+    expect(promo.percentOff).toBe(10);
+    expect(promo.discountLak).toBeGreaterThan(0);
+
+    const parentId = checkoutRes.body().parentId as string;
+    const orderRes = mockRes();
+    await router(
+      mockReq('GET', `/v1/orders/${parentId}`, undefined, {
+        authorization: `Bearer ${token}`,
+      }),
+      orderRes.res,
+    );
+    const combined = orderRes.body().combined as { discount_lak: number | string };
+    expect(Number(combined.discount_lak)).toBe(promo.discountLak);
+  });
+
   it('rejects cart create without bearer', async () => {
     const res = mockRes();
     await router(mockReq('POST', '/v1/carts'), res.res);

@@ -447,25 +447,66 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         sendJson(res, 403, { error: 'cart_forbidden' });
         return;
       }
-      const body = await readJsonBody<{ shippingLakByStore?: Record<string, number> }>(req);
+      const body = await readJsonBody<{
+        shippingLakByStore?: Record<string, number>;
+        promoCode?: string;
+        promo_code?: string;
+      }>(req);
       try {
+        const rawCode = (body.promoCode ?? body.promo_code)?.trim();
+        let promo: Awaited<ReturnType<typeof services.promotions.findActiveByCode>> | null =
+          null;
+        let promoPercentOff: number | undefined;
+        if (rawCode) {
+          promo = await services.promotions.findActiveByCode(rawCode);
+          promoPercentOff = promo.percentOff;
+        }
         const result = await services.orders.checkout({
           cartId,
           customerIdentityId: session.identityId,
           actorIdentityId: session.identityId,
           shippingLakByStore: body.shippingLakByStore,
+          promoPercentOff,
           correlationId: crypto.randomUUID(),
         });
-        sendJson(res, 201, { ok: true, ...result });
+        let promoApplied: {
+          code: string;
+          percentOff: number;
+          discountLak: number;
+        } | null = null;
+        if (promo) {
+          const parent = await services.db.query<{ discount_lak: number }>(
+            `SELECT discount_lak FROM app.parent_orders WHERE id = $1`,
+            [result.parentId],
+          );
+          const discountLak = Number(parent.rows[0]?.discount_lak ?? 0);
+          await services.promotions.recordCheckoutRedemption({
+            promotionId: promo.promotionId,
+            parentOrderId: result.parentId,
+            amountLak: discountLak,
+            idempotencyKey: `checkout:${result.parentId}:${promo.promotionId}`,
+          });
+          promoApplied = {
+            code: promo.code,
+            percentOff: promo.percentOff,
+            discountLak,
+          };
+        }
+        sendJson(res, 201, { ok: true, ...result, promo: promoApplied });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'checkout_failed';
         const status =
           message === 'cart_empty' ||
           message === 'variant_not_active' ||
           message === 'store_not_accepting_orders' ||
-          message === 'price_not_approved'
+          message === 'price_not_approved' ||
+          message === 'promotion_inactive' ||
+          message === 'promotion_cap_exceeded' ||
+          message === 'promo_percent_required'
             ? 409
-            : 400;
+            : message === 'promotion_not_found'
+              ? 404
+              : 400;
         sendJson(res, status, { error: message });
       }
       return;

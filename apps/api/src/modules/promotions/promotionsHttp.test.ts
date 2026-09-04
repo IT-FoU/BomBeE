@@ -67,7 +67,8 @@ describe('promotions HTTP', () => {
     const empty = mockRes();
     await router(mockReq('GET', '/v1/promotions'), empty.res);
     expect(empty.res.statusCode).toBe(200);
-    expect(empty.body().promotions).toEqual([]);
+    const seeded = empty.body().promotions as Array<{ code: string; status: string }>;
+    expect(seeded.some((p) => p.code === 'LOCAL10' && p.status === 'active')).toBe(true);
 
     const created = mockRes();
     await router(

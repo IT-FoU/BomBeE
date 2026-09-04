@@ -295,4 +295,107 @@ export class PromotionService {
       promotionId,
     ]);
   }
+
+  async findActiveByCode(code: string, now = new Date()) {
+    const normalized = code.trim().toUpperCase();
+    if (!normalized) throw new Error('promo_code_required');
+    const row = await this.db.query<{
+      id: string;
+      code: string;
+      title_en: string;
+      title_lo: string;
+      status: string;
+      percent_off: number | null;
+      amount_off_lak: number | null;
+      budget_lak: number;
+      spent_lak: number;
+      redeemed_count: number;
+      quantity_cap: number | null;
+      effective_from: string;
+      effective_to: string;
+    }>(
+      `SELECT id, code, title_en, title_lo, status, percent_off, amount_off_lak,
+              budget_lak, spent_lak, redeemed_count, quantity_cap,
+              effective_from::text, effective_to::text
+       FROM app.promotions
+       WHERE upper(code) = $1
+       LIMIT 1`,
+      [normalized],
+    );
+    const p = row.rows[0];
+    if (!p) throw new Error('promotion_not_found');
+    const active = isPromotionActive(
+      {
+        percentOff: p.percent_off ?? undefined,
+        amountOffLak: p.amount_off_lak == null ? undefined : Number(p.amount_off_lak),
+        budgetLak: Number(p.budget_lak),
+        quantityCap: p.quantity_cap ?? undefined,
+        spentLak: Number(p.spent_lak),
+        redeemedCount: p.redeemed_count,
+        allowStack: false,
+        stackingGroup: 'default',
+        funding: 'platform',
+        platformFundBps: 10000,
+        effectiveFrom: new Date(p.effective_from),
+        effectiveTo: new Date(p.effective_to),
+        status: p.status,
+      },
+      now,
+    );
+    if (!active) throw new Error('promotion_inactive');
+    if (p.percent_off == null || !Number.isFinite(Number(p.percent_off))) {
+      throw new Error('promo_percent_required');
+    }
+    if (
+      wouldExceedCap({
+        spentLak: Number(p.spent_lak),
+        budgetLak: Number(p.budget_lak),
+        redeemAmountLak: 1,
+        redeemedCount: p.redeemed_count,
+        quantityCap: p.quantity_cap ?? undefined,
+      })
+    ) {
+      throw new Error('promotion_cap_exceeded');
+    }
+    return {
+      promotionId: p.id,
+      code: p.code,
+      titleEn: p.title_en,
+      titleLo: p.title_lo,
+      percentOff: Number(p.percent_off),
+    };
+  }
+
+  async recordCheckoutRedemption(input: {
+    promotionId: string;
+    parentOrderId: string;
+    amountLak: number;
+    idempotencyKey: string;
+  }) {
+    const existing = await this.db.query<{ id: string }>(
+      `SELECT id FROM app.promotion_redemptions WHERE idempotency_key = $1`,
+      [input.idempotencyKey],
+    );
+    if (existing.rows[0]) return { redemptionId: existing.rows[0].id, idempotentReplay: true as const };
+
+    const row = await this.db.query<{ id: string }>(
+      `INSERT INTO app.promotion_redemptions
+        (promotion_id, parent_order_id, amount_lak, idempotency_key)
+       VALUES ($1,$2,$3,$4) RETURNING id`,
+      [input.promotionId, input.parentOrderId, input.amountLak, input.idempotencyKey],
+    );
+    await this.db.query(
+      `UPDATE app.promotions
+       SET spent_lak = spent_lak + $2,
+           redeemed_count = redeemed_count + 1,
+           status = CASE
+             WHEN spent_lak + $2 >= budget_lak THEN 'exhausted'
+             WHEN quantity_cap IS NOT NULL AND redeemed_count + 1 >= quantity_cap THEN 'exhausted'
+             ELSE status
+           END
+       WHERE id = $1`,
+      [input.promotionId, input.amountLak],
+    );
+    return { redemptionId: row.rows[0]!.id, idempotentReplay: false as const };
+  }
 }

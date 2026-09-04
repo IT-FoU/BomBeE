@@ -22,7 +22,7 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/inventory/stock?variantId=` | Lot balances + available qty for a variant |
 | POST | `/v1/carts` | Create cart (customer Bearer) |
 | POST | `/v1/carts/:id/items` | Upsert cart line |
-| POST | `/v1/carts/:id/checkout` | Create parent/child orders (no payment) |
+| POST | `/v1/carts/:id/checkout` | Create parent/child orders; optional `promoCode` (percent-off; seed `LOCAL10`) |
 | GET | `/v1/orders` | List recent parent orders + child summaries (local ops) |
 | POST | `/v1/ops/orders/:parentId/confirm-children` | Local ops supplier confirm (no customer session) |
 | POST | `/v1/ops/orders/:parentId/fulfillment/mock-advance` | Local ops packing→in_transit |

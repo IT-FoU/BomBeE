@@ -239,7 +239,7 @@ paths:
           description: Cart not owned
   /v1/carts/{cartId}/checkout:
     post:
-      summary: Checkout cart into parent/child orders (no payment)
+      summary: Checkout cart into parent/child orders (optional promoCode)
       security:
         - bearerAuth: []
       parameters:
@@ -258,11 +258,16 @@ paths:
                   type: object
                   additionalProperties:
                     type: integer
+                promoCode:
+                  type: string
+                  description: Active percent-off promo code (local seed LOCAL10)
       responses:
         '201':
-          description: Order created
+          description: Order created (includes promo summary when applied)
+        '404':
+          description: Promo code not found
         '409':
-          description: Domain conflict (empty cart, inactive variant, store closed, …)
+          description: Domain conflict (empty cart, inactive promo, cap exceeded, …)
   /v1/orders:
     get:
       summary: List recent parent orders with child summaries (local ops)

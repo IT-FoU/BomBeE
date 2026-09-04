@@ -56,10 +56,28 @@ async function ensureLocalStaffRoles(db: PGlite): Promise<void> {
   await identity.ensureStaffRole(owner.staffProfileId, 'owner', owner.identityId);
 }
 
+async function ensureLocalCheckoutPromo(db: PGlite): Promise<void> {
+  const existing = await db.query<{ id: string }>(
+    `SELECT id FROM app.promotions WHERE upper(code) = 'LOCAL10' LIMIT 1`,
+  );
+  if (existing.rows[0]) return;
+  const from = new Date();
+  const to = new Date(from.getTime() + 365 * 24 * 60 * 60_000);
+  await db.query(
+    `INSERT INTO app.promotions
+      (code, title_lo, title_en, status, percent_off, allow_stack, stacking_group,
+       funding, platform_fund_bps, budget_lak, effective_from, effective_to)
+     VALUES ('LOCAL10','ສ່ວນຫຼຸດ 10%','Local 10% off','active',10,false,'default',
+             'platform',10000,5_000_000,$1,$2)`,
+    [from.toISOString(), to.toISOString()],
+  );
+}
+
 /** Seed a tiny active catalog + stock for local API browse (mock only). */
 export async function seedLocalCatalog(db: PGlite): Promise<void> {
   await ensureMockCourier(db);
   await ensureLocalStaffRoles(db);
+  await ensureLocalCheckoutPromo(db);
 
   const existing = await db.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM app.products WHERE status = 'active'`,

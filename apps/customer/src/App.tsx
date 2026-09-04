@@ -84,6 +84,8 @@ export function App() {
   const [apiOrderLabel, setApiOrderLabel] = useState('');
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromoNote, setAppliedPromoNote] = useState('');
   const [qrPayment, setQrPayment] = useState<QrPayment | null>(null);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [payBusy, setPayBusy] = useState(false);
@@ -215,9 +217,15 @@ export function App() {
             quantity: l.quantity,
           })),
           shippingLakByStore,
+          promoCode: promoCode.trim() || undefined,
         });
         setApiOrderId(result.parentId);
         setApiOrderLabel(result.orderNumber);
+        setAppliedPromoNote(
+          result.promo
+            ? `${result.promo.code} −${result.promo.percentOff}% (−${formatLak(LAK(result.promo.discountLak))})`
+            : '',
+        );
         setOrderStatus('awaiting_supplier');
         try {
           const view = await fetchOrderView(token, result.parentId);
@@ -775,6 +783,16 @@ export function App() {
             <p>
               <strong>Grand total {formatLak(LAK(totals.totalLak))}</strong>
             </p>
+            <label className="field">
+              Promo code
+              <input
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                placeholder="LOCAL10"
+                autoComplete="off"
+              />
+            </label>
+            <p className="muted">Local seed code: LOCAL10 (10% off)</p>
             <fieldset>
               <legend>Payment method</legend>
               <label>
@@ -870,6 +888,7 @@ export function App() {
               Parent {apiOrderLabel || sampleOrder.parentId} — {sampleOrder.status}
             </p>
             {apiOrderId ? <p className="muted">API order id: {apiOrderId}</p> : null}
+            {appliedPromoNote ? <p className="muted">Promo: {appliedPromoNote}</p> : null}
             {paymentStatus ? <p className="muted">Payment: {paymentStatus}</p> : null}
             <h2>Combined</h2>
             <p>Total {formatLak(LAK(orderSummary.combinedTotalLak))}</p>

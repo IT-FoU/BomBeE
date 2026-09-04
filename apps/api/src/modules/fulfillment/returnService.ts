@@ -182,4 +182,52 @@ export class ReturnService {
       paidAt.getTime() <= Date.parse(approval.rows[0].sla_due_at);
     return { paymentRefundId: ledger.rows[0]!.id, withinSla };
   }
+
+  async listReturns(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      child_order_id: string;
+      parent_order_id: string;
+      reason: string;
+      status: string;
+      shipping_liability: string | null;
+      total_lak: number;
+      requested_at: string;
+      delivered_at: string;
+    }>(
+      `SELECT r.id, r.child_order_id, co.parent_order_id, r.reason, r.status,
+              r.shipping_liability, co.total_lak,
+              r.requested_at::text, r.delivered_at::text
+       FROM app.return_requests r
+       JOIN app.child_orders co ON co.id = r.child_order_id
+       ORDER BY r.requested_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      returnRequestId: r.id,
+      childOrderId: r.child_order_id,
+      parentOrderId: r.parent_order_id,
+      reason: r.reason,
+      status: r.status,
+      shippingLiability: r.shipping_liability,
+      amountLak: Number(r.total_lak),
+      requestedAt: r.requested_at,
+      deliveredAt: r.delivered_at,
+    }));
+  }
+
+  async approveReturn(returnRequestId: string) {
+    const row = await this.db.query<{ status: string }>(
+      `SELECT status FROM app.return_requests WHERE id = $1`,
+      [returnRequestId],
+    );
+    if (!row.rows[0]) throw new Error('return_not_found');
+    if (row.rows[0].status !== 'pending') throw new Error('return_not_pending');
+    await this.db.query(
+      `UPDATE app.return_requests SET status = 'approved' WHERE id = $1`,
+      [returnRequestId],
+    );
+  }
 }

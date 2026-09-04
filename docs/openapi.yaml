@@ -480,6 +480,50 @@ paths:
           description: Status resolved_pending_confirm
         '404':
           description: Ticket not found
+  /v1/returns:
+    get:
+      summary: List return requests (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Returns array
+  /v1/ops/returns/mock-create:
+    post:
+      summary: Local/mock return for a delivered child
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Return request created
+        '409':
+          description: No eligible delivered child or ineligible reason/window
+  /v1/ops/returns/{returnRequestId}/approve:
+    post:
+      summary: Local/mock approve pending return
+      parameters:
+        - in: path
+          name: returnRequestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status approved
+        '409':
+          description: Return not pending
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

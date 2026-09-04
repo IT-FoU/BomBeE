@@ -412,3 +412,58 @@ export async function resolveSupportTicket(
   }
   return (await res.json()) as { tickets?: SupportTicketRow[]; status?: string };
 }
+
+export type ReturnRequestRow = {
+  returnRequestId: string;
+  childOrderId: string;
+  parentOrderId: string;
+  reason: string;
+  status: string;
+  shippingLiability: string | null;
+  amountLak: number;
+  requestedAt: string;
+  deliveredAt: string;
+};
+
+export async function listReturns(limit = 50): Promise<ReturnRequestRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/returns?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`returns_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { returns: ReturnRequestRow[] };
+  return body.returns;
+}
+
+export async function mockCreateReturn(input: {
+  childOrderId?: string;
+  reason?: string;
+} = {}): Promise<{ returnRequestId: string; returns: ReturnRequestRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/returns/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      child_order_id: input.childOrderId,
+      reason: input.reason,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `return_create_failed_${res.status}`);
+  }
+  return (await res.json()) as { returnRequestId: string; returns: ReturnRequestRow[] };
+}
+
+export async function approveReturn(
+  returnRequestId: string,
+): Promise<{ returns?: ReturnRequestRow[]; status?: string }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/returns/${returnRequestId}/approve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `return_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as { returns?: ReturnRequestRow[]; status?: string };
+}

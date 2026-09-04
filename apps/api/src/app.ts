@@ -486,6 +486,124 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/returns') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const returns = await services.returns.listReturns(limit);
+      sendJson(res, 200, { ok: true, returns });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/returns/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        child_order_id?: string;
+        childOrderId?: string;
+        reason?: string;
+      }>(req);
+      let childOrderId = body.child_order_id ?? body.childOrderId;
+      if (!childOrderId) {
+        const eligible = await services.db.query<{
+          id: string;
+          delivered_at: string | null;
+        }>(
+          `SELECT co.id, sd.delivered_at::text
+           FROM app.child_orders co
+           JOIN app.shipment_deliveries sd ON sd.child_order_id = co.id
+           WHERE co.status = 'delivered'
+             AND sd.status = 'delivered'
+             AND NOT EXISTS (
+               SELECT 1 FROM app.return_requests rr WHERE rr.child_order_id = co.id
+             )
+           ORDER BY sd.delivered_at DESC
+           LIMIT 1`,
+        );
+        childOrderId = eligible.rows[0]?.id;
+      }
+      if (!childOrderId) {
+        sendJson(res, 409, { error: 'no_eligible_delivered_child' });
+        return;
+      }
+      const delivery = await services.db.query<{
+        delivered_at: string | null;
+        status: string;
+        customer_identity_id: string;
+      }>(
+        `SELECT sd.delivered_at::text, co.status, po.customer_identity_id
+         FROM app.child_orders co
+         JOIN app.parent_orders po ON po.id = co.parent_order_id
+         LEFT JOIN app.shipment_deliveries sd ON sd.child_order_id = co.id AND sd.status = 'delivered'
+         WHERE co.id = $1
+         ORDER BY sd.delivered_at DESC NULLS LAST
+         LIMIT 1`,
+        [childOrderId],
+      );
+      const child = delivery.rows[0];
+      if (!child) {
+        sendJson(res, 404, { error: 'child_order_not_found' });
+        return;
+      }
+      if (child.status !== 'delivered' || !child.delivered_at) {
+        sendJson(res, 409, { error: 'child_not_delivered' });
+        return;
+      }
+      const reasonRaw = body.reason ?? 'defective';
+      const allowed = [
+        'defective',
+        'wrong_item',
+        'incomplete',
+        'materially_not_described',
+      ] as const;
+      if (!(allowed as readonly string[]).includes(reasonRaw)) {
+        sendJson(res, 400, { error: 'invalid_return_reason' });
+        return;
+      }
+      try {
+        const created = await services.returns.requestReturn({
+          childOrderId,
+          reason: reasonRaw as (typeof allowed)[number],
+          deliveredAt: new Date(child.delivered_at),
+          evidenceKeys: [`mock/return/${childOrderId}.jpg`],
+          createdBy: child.customer_identity_id,
+        });
+        const returns = await services.returns.listReturns(50);
+        sendJson(res, 201, { ok: true, ...created, returns });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'return_create_failed';
+        const status =
+          message === 'return_window_exceeded' ||
+          message === 'change_of_mind_not_allowed' ||
+          message === 'invalid_return_reason'
+            ? 409
+            : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    const returnApproveMatch = url.pathname.match(/^\/v1\/ops\/returns\/([^/]+)\/approve$/);
+    if (req.method === 'POST' && returnApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const returnRequestId = decodeURIComponent(returnApproveMatch[1]!);
+      try {
+        await services.returns.approveReturn(returnRequestId);
+        const returns = await services.returns.listReturns(50);
+        sendJson(res, 200, { ok: true, returnRequestId, status: 'approved', returns });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'return_approve_failed';
+        const status =
+          message === 'return_not_found' ? 404 : message === 'return_not_pending' ? 409 : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/support/tickets/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

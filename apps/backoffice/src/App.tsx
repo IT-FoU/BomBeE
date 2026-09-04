@@ -32,6 +32,9 @@ import {
   mockCreateSupportTicket,
   replySupportTicket,
   resolveSupportTicket,
+  listReturns,
+  mockCreateReturn,
+  approveReturn,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -40,6 +43,7 @@ import {
   type OpsStockView,
   type SettlementBatchRow,
   type SupportTicketRow,
+  type ReturnRequestRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -53,6 +57,7 @@ const navItems = [
   { id: 'settlements', label: { lo: 'ຈ່າຍຮ້ານ', en: 'Settlements' } },
   { id: 'promotions', label: { lo: 'ໂປຣໂມຊັນ', en: 'Promotions' } },
   { id: 'support', label: { lo: 'ສະໜັບສະໜູນ', en: 'Support' } },
+  { id: 'returns', label: { lo: 'ສົ່ງຄືນ', en: 'Returns' } },
   { id: 'integrations', label: { lo: 'ການເຊື່ອມຕໍ່', en: 'Integrations' } },
   { id: 'notifications', label: { lo: 'ແຈ້ງເຕືອນ', en: 'Notifications' } },
   { id: 'approvals', label: { lo: 'ອະນຸມັດ', en: 'Approvals' } },
@@ -92,6 +97,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [settlementNote, setSettlementNote] = useState('');
   const [supportTickets, setSupportTickets] = useState<SupportTicketRow[]>([]);
   const [supportNote, setSupportNote] = useState('');
+  const [returnRequests, setReturnRequests] = useState<ReturnRequestRow[]>([]);
+  const [returnNote, setReturnNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -103,15 +110,17 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [invites, stores, cod, orders, products, batches, tickets] = await Promise.all([
-          listInvites(),
-          listStores(),
-          listCodShipments(),
-          listOrders(30),
-          listCatalogProducts(50),
-          listSettlementBatches(50),
-          listSupportTickets(50),
-        ]);
+        const [invites, stores, cod, orders, products, batches, tickets, returns] =
+          await Promise.all([
+            listInvites(),
+            listStores(),
+            listCodShipments(),
+            listOrders(30),
+            listCatalogProducts(50),
+            listSettlementBatches(50),
+            listSupportTickets(50),
+            listReturns(50),
+          ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
         setCodShipments(cod);
@@ -119,6 +128,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setCatalogProducts(products);
         setSettlementBatches(batches);
         setSupportTickets(tickets);
+        setReturnRequests(returns);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -973,6 +983,105 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh tickets
             </button>
           </section>
+          <section aria-labelledby="returns-heading" id="returns">
+            <h2 id="returns-heading">
+              <span lang="en">Returns</span>
+              {' / '}
+              <span lang="lo">ສົ່ງຄືນ</span>
+            </h2>
+            <p className="lede">
+              Local return requests for delivered children (eligible reasons within the return
+              window).
+            </p>
+            {returnNote ? (
+              <p className="lede" role="status">
+                {returnNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Return requests">
+              {returnRequests.length === 0 ? <li>No return requests yet</li> : null}
+              {returnRequests.map((row) => (
+                <li key={row.returnRequestId}>
+                  {row.status} · {row.reason} · {formatLak(LAK(row.amountLak))} · child{' '}
+                  {row.childOrderId.slice(0, 8)}…
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setReturnNote('');
+                          void (async () => {
+                            try {
+                              const result = await approveReturn(row.returnRequestId);
+                              if (result.returns) setReturnRequests(result.returns);
+                              setReturnNote(
+                                `Approved ${row.returnRequestId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'return_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setReturnNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateReturn({ reason: 'defective' });
+                    setReturnRequests(result.returns);
+                    setReturnNote(`Opened ${result.returnRequestId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'return_create_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create return
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setReturnRequests(await listReturns(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'returns_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh returns
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -989,6 +1098,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'inventory',
                   'settlements',
                   'support',
+                  'returns',
                 ].includes(item.id),
             )
             .map((item) => (

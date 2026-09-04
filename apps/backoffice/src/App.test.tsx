@@ -19,6 +19,7 @@ describe('backoffice shell QA', () => {
         'settlements',
         'promotions',
         'support',
+        'returns',
         'integrations',
         'notifications',
         'approvals',

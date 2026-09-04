@@ -541,6 +541,11 @@ export function App() {
             <img className="product-hero" src={selectedProduct.image} alt="" />
             <h1>{productTitle(selectedProduct, locale)}</h1>
             <p className="price">{formatLak(LAK(selectedProduct.priceLak), locale === 'lo' ? 'lo-LA' : 'en-US')}</p>
+            {typeof selectedProduct.availableQty === 'number' ? (
+              <p className="muted">
+                {locale === 'lo' ? 'ສະຕັອກ' : 'In stock'}: {selectedProduct.availableQty}
+              </p>
+            ) : null}
             <p>
               {selectedProduct.storeName} · {selectedProduct.brandName}
             </p>
@@ -1098,6 +1103,9 @@ function ProductRow(props: {
             <img src={p.image} alt="" width={72} height={72} />
             <span>{productTitle(p, props.locale)}</span>
             <span>{formatLak(LAK(p.priceLak))}</span>
+            {typeof p.availableQty === 'number' ? (
+              <span className="muted">stock {p.availableQty}</span>
+            ) : null}
           </button>
           <button type="button" className="add-btn" onClick={() => props.onAdd(p)}>
             +

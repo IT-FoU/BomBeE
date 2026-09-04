@@ -319,6 +319,50 @@ export class InventoryService {
     };
   }
 
+  async listStockByVariant(variantId: string) {
+    const row = await this.db.query<{
+      id: string;
+      store_id: string;
+      variant_id: string;
+      lot_id: string;
+      on_hand: number;
+      reserved: number;
+      safety_buffer: number;
+      lot_code: string | null;
+      expiry_date: string | null;
+    }>(
+      `SELECT b.id, b.store_id, b.variant_id, b.lot_id, b.on_hand, b.reserved, b.safety_buffer,
+              l.lot_code, l.expiry_date::text AS expiry_date
+       FROM private.inventory_balances b
+       JOIN private.inventory_lots l ON l.id = b.lot_id
+       WHERE b.variant_id = $1
+       ORDER BY l.expiry_date NULLS LAST, b.updated_at DESC`,
+      [variantId],
+    );
+    const balances = row.rows.map((bal) => ({
+      balanceId: bal.id,
+      storeId: bal.store_id,
+      variantId: bal.variant_id,
+      lotId: bal.lot_id,
+      lotCode: bal.lot_code,
+      expiryDate: bal.expiry_date,
+      onHand: Number(bal.on_hand),
+      reserved: Number(bal.reserved),
+      safetyBuffer: Number(bal.safety_buffer),
+      available: availableQty(bal.on_hand, bal.reserved, bal.safety_buffer),
+    }));
+    return {
+      variantId,
+      availableQty: balances.reduce((sum, b) => sum + b.available, 0),
+      balances,
+    };
+  }
+
+  async availableQtyForVariant(variantId: string): Promise<number> {
+    const stock = await this.listStockByVariant(variantId);
+    return stock.availableQty;
+  }
+
   private async lockBalance(balanceId: string) {
     const row = await this.db.query<{
       id: string;

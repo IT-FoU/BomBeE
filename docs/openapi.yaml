@@ -180,7 +180,21 @@ paths:
             maximum: 100
       responses:
         '200':
-          description: Product browse DTOs
+          description: Product browse DTOs (includes availableQty from local stock seed)
+  /v1/inventory/stock:
+    get:
+      summary: Stock balances for a variant
+      parameters:
+        - in: query
+          name: variantId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: availableQty + balances
+        '400':
+          description: Missing variantId
   /v1/carts:
     post:
       summary: Create cart for customer session

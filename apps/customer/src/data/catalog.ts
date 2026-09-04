@@ -21,6 +21,7 @@ export type CatalogProduct = {
   shippingNoteEn: string;
   tiktokUrl?: string;
   deal?: boolean;
+  availableQty?: number;
 };
 
 export const CATEGORIES = [

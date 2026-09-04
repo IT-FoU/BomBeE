@@ -27,6 +27,7 @@ type ApiProduct = {
   categoryEn: string;
   priceLak: number;
   compareAtLak: number | null;
+  availableQty?: number;
   variants: Array<{ id: string; label: string; priceLak: number; sku: string }>;
 };
 
@@ -53,6 +54,7 @@ function mapProduct(p: ApiProduct): CatalogProduct {
     })),
     shippingNoteLo: 'ສົ່ງທ້ອງຖິ່ນ',
     shippingNoteEn: 'Local delivery',
+    availableQty: p.availableQty,
   };
 }
 

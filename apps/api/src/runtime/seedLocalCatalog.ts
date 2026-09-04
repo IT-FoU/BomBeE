@@ -4,9 +4,10 @@ import { CatalogService } from '../modules/catalog/catalogService.js';
 import { PricingService } from '../modules/catalog/pricingService.js';
 import { IdentityService } from '../modules/identity/service.js';
 import { MockSmsProvider } from '../modules/identity/otp.js';
+import { InventoryService } from '../modules/inventory/inventoryService.js';
 import { StoreService } from '../modules/stores/storeService.js';
 
-/** Seed a tiny active catalog for local API browse (mock only). */
+/** Seed a tiny active catalog + stock for local API browse (mock only). */
 export async function seedLocalCatalog(db: PGlite): Promise<void> {
   const existing = await db.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM app.products WHERE status = 'active'`,
@@ -17,6 +18,7 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
   const stores = new StoreService(db);
   const catalog = new CatalogService(db);
   const pricing = new PricingService(db);
+  const inventory = new InventoryService(db);
 
   const maker = await identity.ensureStaff('staff:local-catalog-maker', 'Catalog Maker', '+8562087000001');
   const owner = await identity.ensureStaff('staff:local-catalog-owner', 'Catalog Owner', '+8562087000002');
@@ -34,17 +36,18 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
       });
       await stores.verifyDocument(docId, storeId);
     }
-    await stores.addFulfillmentLocation({
+    const locationId = await stores.addFulfillmentLocation({
       storeId,
       name: 'Main',
       addressLine: 'Vientiane',
       active: true,
     });
     await stores.activateIfReady(storeId);
+    return locationId;
   }
 
-  await activateStore(storeFresh);
-  await activateStore(storeHome);
+  const locationFresh = await activateStore(storeFresh);
+  const locationHome = await activateStore(storeHome);
   const brandWater = await catalog.createBrand({
     slug: 'mekong-pure',
     name: 'Mekong Pure',
@@ -60,6 +63,7 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
 
   async function sellable(input: {
     storeId: string;
+    locationId: string;
     categorySlug: string;
     brandId: string;
     storeProductId: string;
@@ -69,6 +73,7 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
     costLak: number;
     sellingPriceLak: number;
     compareAtPriceLak?: number;
+    receiveQty: number;
   }) {
     const productId = await catalog.createProduct({
       storeId: input.storeId,
@@ -102,10 +107,36 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
       actorRoles: ['owner'],
       stepUpVerified: false,
     });
+
+    await inventory.setSafetyBuffer(input.storeId, variantId, 2);
+    const lotId = await inventory.createLot({
+      storeId: input.storeId,
+      variantId,
+      locationId: input.locationId,
+      lotCode: `LOT-${input.sku}`,
+      productionDate: '2026-01-01',
+      expiryDate: '2027-12-01',
+      categorySlug: input.categorySlug,
+    });
+    const balanceId = await inventory.ensureBalance({
+      storeId: input.storeId,
+      locationId: input.locationId,
+      variantId,
+      lotId,
+    });
+    await inventory.receive({
+      balanceId,
+      quantity: input.receiveQty,
+      correlationId: crypto.randomUUID(),
+      actorIdentityId: maker.identityId,
+      reason: 'local_seed_receive',
+    });
+    return variantId;
   }
 
   await sellable({
     storeId: storeFresh,
+    locationId: locationFresh,
     categorySlug: 'food',
     brandId: brandWater,
     storeProductId: 'drinking-water',
@@ -115,9 +146,11 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
     costLak: 30000,
     sellingPriceLak: 45000,
     compareAtPriceLak: 52000,
+    receiveQty: 24,
   });
   await sellable({
     storeId: storeHome,
+    locationId: locationHome,
     categorySlug: 'general',
     brandId: brandHome,
     storeProductId: 'ceramic-mug',
@@ -126,9 +159,11 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
     titleEn: 'Ceramic Mug',
     costLak: 15000,
     sellingPriceLak: 35000,
+    receiveQty: 40,
   });
   await sellable({
     storeId: storeFresh,
+    locationId: locationFresh,
     categorySlug: 'cosmetics',
     brandId: brandWater,
     storeProductId: 'aloe-gel',
@@ -137,5 +172,6 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
     titleEn: 'Aloe Gel 100ml',
     costLak: 20000,
     sellingPriceLak: 42000,
+    receiveQty: 18,
   });
 }

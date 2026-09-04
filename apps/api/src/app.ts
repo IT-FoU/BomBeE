@@ -271,7 +271,26 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 100) : 50;
       const products = await services.catalog.listActiveProducts(limit);
-      sendJson(res, 200, { ok: true, products });
+      const withStock = [];
+      for (const product of products) {
+        const primary = product.variants[0];
+        const availableQty = primary
+          ? await services.inventory.availableQtyForVariant(primary.id)
+          : 0;
+        withStock.push({ ...product, availableQty });
+      }
+      sendJson(res, 200, { ok: true, products: withStock });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/inventory/stock') {
+      const variantId = url.searchParams.get('variantId')?.trim();
+      if (!variantId) {
+        sendJson(res, 400, { error: 'variant_id_required' });
+        return;
+      }
+      const stock = await services.inventory.listStockByVariant(variantId);
+      sendJson(res, 200, { ok: true, ...stock });
       return;
     }
 

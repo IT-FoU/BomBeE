@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 local — order split shipment request/approve HTTP
 - Phase 2 local — inventory stock import preview/commit HTTP
 - Phase 2 local — catalog media list/upload/signed-url HTTP (MediaService wired)
 - Phase 2 local — inventory receive + one-shot maker-checker adjust HTTP

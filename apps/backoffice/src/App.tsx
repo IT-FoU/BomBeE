@@ -44,6 +44,9 @@ import {
   opsConfirmChildren,
   opsMockAdvance,
   opsMockDeliver,
+  listSplitShipments,
+  mockRequestSplitShipment,
+  approveSplitShipment,
   submitSettlementBatch,
   approveSettlementBatch,
   disputeSettlementBatch,
@@ -122,6 +125,7 @@ import {
   type CatalogImportBatchRow,
   type CatalogMediaRow,
   type OpsOrderRow,
+  type SplitShipmentRequestRow,
   type OpsStockView,
   type InventoryAdjustmentRow,
   type StockImportBatchRow,
@@ -211,6 +215,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [onboardNote, setOnboardNote] = useState('');
   const [codShipments, setCodShipments] = useState<CodShipmentRow[]>([]);
   const [opsOrders, setOpsOrders] = useState<OpsOrderRow[]>([]);
+  const [splitShipments, setSplitShipments] = useState<SplitShipmentRequestRow[]>([]);
+  const [ordersNote, setOrdersNote] = useState('');
   const [catalogProducts, setCatalogProducts] = useState<OpsCatalogProduct[]>([]);
   const [importBatches, setImportBatches] = useState<CatalogImportBatchRow[]>([]);
   const [catalogMedia, setCatalogMedia] = useState<CatalogMediaRow[]>([]);
@@ -285,6 +291,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           storeDocs,
           cod,
           orders,
+          splitRows,
           products,
           importBatchRows,
           mediaRows,
@@ -322,6 +329,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listStoreDocuments(50),
           listCodShipments(),
           listOrders(30),
+          listSplitShipments(50),
           listCatalogProducts(50),
           listCatalogImportBatches(50),
           listCatalogMedia(50),
@@ -359,6 +367,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setStoreDocuments(storeDocs);
         setCodShipments(cod);
         setOpsOrders(orders);
+        setSplitShipments(splitRows);
         setCatalogProducts(products);
         setImportBatches(importBatchRows);
         setCatalogMedia(mediaRows);
@@ -1555,7 +1564,15 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               {' / '}
               <span lang="lo">ອໍເດີ</span>
             </h2>
-            <p className="lede">Recent parent orders from local API (PGlite mock).</p>
+            <p className="lede">
+              Recent parent orders from local API (PGlite mock). Request split shipments that need
+              Owner approval (maker≠approver).
+            </p>
+            {ordersNote ? (
+              <p className="lede" role="status">
+                {ordersNote}
+              </p>
+            ) : null}
             <button
               type="button"
               className="cta"
@@ -1566,6 +1583,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 void (async () => {
                   try {
                     setOpsOrders(await listOrders(30));
+                    setSplitShipments(await listSplitShipments(50));
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : 'orders_list_failed');
                   } finally {
@@ -1575,6 +1593,31 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh orders
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setOrdersNote('');
+                void (async () => {
+                  try {
+                    const result = await mockRequestSplitShipment({});
+                    if (result.requests) setSplitShipments(result.requests);
+                    setOrdersNote(
+                      `Split request ${result.requestId.slice(0, 8)}… · shipment ${result.shipmentId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'split_request_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock split request
             </button>
             <ul className="roles" aria-label="Recent orders">
               {opsOrders.length === 0 ? <li>No orders yet</li> : null}
@@ -1649,6 +1692,48 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                       Deliver
                     </button>
                   </div>
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="Split shipment requests">
+              {splitShipments.length === 0 ? <li>No split shipment requests yet</li> : null}
+              {splitShipments.map((row) => (
+                <li key={row.requestId}>
+                  {row.status} · {row.orderNumber} · items {row.itemCount} ·{' '}
+                  {row.requestId.slice(0, 8)}…
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setOrdersNote('');
+                          void (async () => {
+                            try {
+                              const result = await approveSplitShipment(
+                                row.requestId,
+                                row.shipmentId ?? undefined,
+                              );
+                              if (result.requests) setSplitShipments(result.requests);
+                              setOrdersNote(`Approved split ${row.requestId.slice(0, 8)}…`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'split_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve split
+                      </button>
+                    </>
+                  ) : null}
                 </li>
               ))}
             </ul>

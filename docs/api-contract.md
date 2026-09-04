@@ -51,6 +51,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/carts/:id/items` | Upsert cart line |
 | POST | `/v1/carts/:id/checkout` | Create parent/child orders; optional `promoCode` (percent-off; seed `LOCAL10`) |
 | GET | `/v1/orders` | List recent parent orders + child summaries (local ops) |
+| GET | `/v1/orders/split-shipments` | List split shipment requests (local ops) |
+| POST | `/v1/ops/orders/split-shipments/mock-request` | Local/mock create pending split shipment |
+| POST | `/v1/ops/orders/split-shipments/:id/approve` | Approve split (owner≠maker) |
 | POST | `/v1/ops/orders/:parentId/confirm-children` | Local ops supplier confirm (no customer session) |
 | POST | `/v1/ops/orders/:parentId/fulfillment/mock-advance` | Local ops packing→in_transit |
 | POST | `/v1/ops/orders/:parentId/fulfillment/mock-deliver` | Local ops POD→delivered |

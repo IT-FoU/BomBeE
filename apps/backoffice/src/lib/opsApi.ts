@@ -362,6 +362,74 @@ export async function opsMockDeliver(parentId: string) {
   return opsOrderAction(`/v1/ops/orders/${parentId}/fulfillment/mock-deliver`);
 }
 
+export type SplitShipmentRequestRow = {
+  requestId: string;
+  childOrderId: string;
+  parentOrderId: string;
+  orderNumber: string;
+  shipmentId: string | null;
+  status: string;
+  reason: string;
+  makerIdentityId: string;
+  approverIdentityId: string | null;
+  itemCount: number;
+  createdAt: string;
+  decidedAt: string | null;
+};
+
+export async function listSplitShipments(
+  limit = 50,
+): Promise<SplitShipmentRequestRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/orders/split-shipments?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`split_shipments_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { requests: SplitShipmentRequestRow[] };
+  return body.requests;
+}
+
+export async function mockRequestSplitShipment(
+  input: { childOrderId?: string; reason?: string } = {},
+): Promise<{
+  requestId: string;
+  shipmentId: string;
+  requests?: SplitShipmentRequestRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/orders/split-shipments/mock-request`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `split_request_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    requestId: string;
+    shipmentId: string;
+    requests?: SplitShipmentRequestRow[];
+  };
+}
+
+export async function approveSplitShipment(
+  requestId: string,
+  shipmentId?: string,
+): Promise<{ requests?: SplitShipmentRequestRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/orders/split-shipments/${encodeURIComponent(requestId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(shipmentId ? { shipmentId } : {}),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `split_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as { requests?: SplitShipmentRequestRow[]; status?: string };
+}
+
 export type OpsCatalogProduct = {
   id: string;
   titleEn: string;

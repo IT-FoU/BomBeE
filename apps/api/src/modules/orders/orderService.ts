@@ -490,6 +490,7 @@ export class OrderService {
     );
     const current = req.rows[0];
     if (!current) return { ok: false as const, reason: 'not_found' };
+    if (current.status !== 'pending') return { ok: false as const, reason: 'not_pending' };
     if (current.maker_identity_id === input.approverIdentityId) {
       return { ok: false as const, reason: 'self_approval' };
     }
@@ -504,6 +505,58 @@ export class OrderService {
       [input.shipmentId, input.approverIdentityId],
     );
     return { ok: true as const };
+  }
+
+  async listSplitShipmentRequests(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      child_order_id: string;
+      parent_order_id: string;
+      order_number: string;
+      shipment_id: string | null;
+      status: string;
+      reason: string;
+      maker_identity_id: string;
+      approver_identity_id: string | null;
+      item_count: number;
+      created_at: string;
+      decided_at: string | null;
+    }>(
+      `SELECT r.id, r.child_order_id, c.parent_order_id, p.order_number,
+              s.id AS shipment_id, r.status, r.reason, r.maker_identity_id,
+              r.approver_identity_id,
+              coalesce((
+                SELECT count(*)::int FROM app.shipment_items si WHERE si.shipment_id = s.id
+              ), 0) AS item_count,
+              r.created_at::text, r.decided_at::text
+       FROM app.split_shipment_requests r
+       JOIN app.child_orders c ON c.id = r.child_order_id
+       JOIN app.parent_orders p ON p.id = c.parent_order_id
+       LEFT JOIN LATERAL (
+         SELECT id FROM app.shipments
+         WHERE child_order_id = r.child_order_id AND requires_admin_approval = true
+         ORDER BY created_at DESC
+         LIMIT 1
+       ) s ON true
+       ORDER BY r.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      requestId: r.id,
+      childOrderId: r.child_order_id,
+      parentOrderId: r.parent_order_id,
+      orderNumber: r.order_number,
+      shipmentId: r.shipment_id,
+      status: r.status,
+      reason: r.reason,
+      makerIdentityId: r.maker_identity_id,
+      approverIdentityId: r.approver_identity_id,
+      itemCount: Number(r.item_count),
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+    }));
   }
 
   async getOrderViews(parentOrderId: string) {

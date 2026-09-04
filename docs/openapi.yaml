@@ -618,6 +618,44 @@ paths:
       responses:
         '200':
           description: Orders array
+  /v1/orders/split-shipments:
+    get:
+      summary: List split shipment requests
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Split shipment requests array
+  /v1/ops/orders/split-shipments/mock-request:
+    post:
+      summary: Local mock create pending split shipment
+      responses:
+        '201':
+          description: Pending split request created
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No child order or items
+  /v1/ops/orders/split-shipments/{requestId}/approve:
+    post:
+      summary: Approve split shipment (owner ≠ maker)
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approved
+        '404':
+          description: Request or shipment not found
+        '409':
+          description: Not pending or self-approval
   /v1/ops/orders/{parentId}/confirm-children:
     post:
       summary: Local ops supplier confirm (no customer session)

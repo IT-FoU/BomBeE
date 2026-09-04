@@ -72,6 +72,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B52 | Inventory receive + adjust HTTP | **Done** — receive/adjust ops; adjustments list; Inventory BO |
 | P2-B53 | Catalog media upload + signed URL HTTP | **Done** — media list/mock-upload/signed-url; Catalog BO; MediaService wired |
 | P2-B54 | Inventory stock import preview/commit HTTP | **Done** — import batches list, preview + commit; Inventory BO |
+| P2-B55 | Order split shipment request/approve HTTP | **Done** — split list/mock-request/approve (Owner≠maker); Orders BO |
 
 ## C — Hard rules that stay
 

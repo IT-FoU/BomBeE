@@ -3730,6 +3730,177 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/orders/split-shipments') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const requests = await services.orders.listSplitShipmentRequests(limit);
+      sendJson(res, 200, { ok: true, requests });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/orders/split-shipments/mock-request') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        childOrderId?: string;
+        child_order_id?: string;
+        reason?: string;
+        itemQuantities?: Array<{
+          orderItemId?: string;
+          order_item_id?: string;
+          quantity?: number;
+        }>;
+        item_quantities?: Array<{
+          orderItemId?: string;
+          order_item_id?: string;
+          quantity?: number;
+        }>;
+      }>(req);
+      try {
+        let childOrderId = (body.childOrderId ?? body.child_order_id)?.trim();
+        if (!childOrderId) {
+          const child = await services.db.query<{ id: string }>(
+            `SELECT c.id FROM app.child_orders c
+             JOIN app.order_items i ON i.child_order_id = c.id
+             ORDER BY c.created_at DESC
+             LIMIT 1`,
+          );
+          childOrderId = child.rows[0]?.id;
+        }
+        if (!childOrderId) {
+          sendJson(res, 409, { error: 'no_child_order' });
+          return;
+        }
+
+        let itemQuantities = (body.itemQuantities ?? body.item_quantities ?? [])
+          .map((line) => ({
+            orderItemId: (line.orderItemId ?? line.order_item_id ?? '').trim(),
+            quantity:
+              typeof line.quantity === 'number' && line.quantity > 0
+                ? Math.floor(line.quantity)
+                : 1,
+          }))
+          .filter((line) => line.orderItemId);
+
+        if (itemQuantities.length === 0) {
+          const item = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.order_items WHERE child_order_id = $1 ORDER BY created_at LIMIT 1`,
+            [childOrderId],
+          );
+          if (!item.rows[0]) {
+            sendJson(res, 409, { error: 'no_order_item' });
+            return;
+          }
+          itemQuantities = [{ orderItemId: item.rows[0].id, quantity: 1 }];
+        }
+
+        const maker = await services.identity.ensureStaff(
+          'staff:local-catalog-maker',
+          'Catalog Maker',
+          '+8562087000001',
+        );
+        const created = await services.orders.requestSplitShipment({
+          childOrderId,
+          makerIdentityId: maker.identityId,
+          reason: body.reason?.trim() || 'local_mock_split_shipment',
+          itemQuantities,
+        });
+        const requests = await services.orders.listSplitShipmentRequests(50);
+        sendJson(res, 201, {
+          ok: true,
+          requestId: created.requestId,
+          shipmentId: created.shipmentId,
+          childOrderId,
+          status: 'pending',
+          requests,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'split_request_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const splitApproveMatch = url.pathname.match(
+      /^\/v1\/ops\/orders\/split-shipments\/([^/]+)\/approve$/,
+    );
+    if (req.method === 'POST' && splitApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const requestId = decodeURIComponent(splitApproveMatch[1]!);
+      const body = await readJsonBody<{
+        shipmentId?: string;
+        shipment_id?: string;
+      }>(req);
+      try {
+        let shipmentId = (body.shipmentId ?? body.shipment_id)?.trim();
+        if (!shipmentId) {
+          const linked = await services.db.query<{ shipment_id: string }>(
+            `SELECT s.id AS shipment_id
+             FROM app.split_shipment_requests r
+             JOIN app.shipments s
+               ON s.child_order_id = r.child_order_id AND s.requires_admin_approval = true
+             WHERE r.id = $1
+             ORDER BY s.created_at DESC
+             LIMIT 1`,
+            [requestId],
+          );
+          shipmentId = linked.rows[0]?.shipment_id;
+        }
+        if (!shipmentId) {
+          sendJson(res, 404, { error: 'shipment_not_found' });
+          return;
+        }
+        const makerRow = await services.db.query<{ maker_identity_id: string }>(
+          `SELECT maker_identity_id FROM app.split_shipment_requests WHERE id = $1`,
+          [requestId],
+        );
+        if (!makerRow.rows[0]) {
+          sendJson(res, 404, { error: 'not_found' });
+          return;
+        }
+        const owner = await services.identity.ensureStaff(
+          'staff:local-catalog-owner',
+          'Catalog Owner',
+          '+8562087000002',
+        );
+        const approved = await services.orders.approveSplitShipment({
+          requestId,
+          shipmentId,
+          approverIdentityId: owner.identityId,
+          actorRoles: ['owner'],
+        });
+        const requests = await services.orders.listSplitShipmentRequests(50);
+        if (!approved.ok) {
+          const status =
+            approved.reason === 'not_found'
+              ? 404
+              : approved.reason === 'self_approval' ||
+                  approved.reason === 'not_pending' ||
+                  approved.reason === 'admin_required'
+                ? 409
+                : 400;
+          sendJson(res, status, { ok: false, error: approved.reason, requests });
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          requestId,
+          shipmentId,
+          status: 'approved',
+          requests,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'split_approve_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     const opsAdvanceMatch = url.pathname.match(
       /^\/v1\/ops\/orders\/([^/]+)\/fulfillment\/mock-advance$/,
     );

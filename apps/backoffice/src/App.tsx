@@ -61,6 +61,8 @@ import {
   mockRunBackup,
   verifyBackup,
   restoreDrillBackup,
+  listDeletionRequests,
+  approveDeletionRequest,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -83,6 +85,7 @@ import {
   type PaymentsReconcile,
   type BackupJobRow,
   type BackupAlertRow,
+  type DeletionRequestRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -105,6 +108,7 @@ const navItems = [
   { id: 'audit', label: { lo: 'ອອດິດ', en: 'Audit' } },
   { id: 'exports', label: { lo: 'ສົ່ງອອກ', en: 'Exports' } },
   { id: 'backups', label: { lo: 'ສຳຮອງ', en: 'Backups' } },
+  { id: 'privacy', label: { lo: 'ຄວາມເປັນສ່ວນຕົວ', en: 'Privacy' } },
 ] as const;
 
 const SAMPLE_AMOUNT = LAK(1_250_000);
@@ -160,6 +164,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [backupJobs, setBackupJobs] = useState<BackupJobRow[]>([]);
   const [backupAlerts, setBackupAlerts] = useState<BackupAlertRow[]>([]);
   const [backupNote, setBackupNote] = useState('');
+  const [deletionRequests, setDeletionRequests] = useState<DeletionRequestRow[]>([]);
+  const [privacyNote, setPrivacyNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -190,6 +196,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           kpis,
           reconcile,
           backupBundle,
+          deletionRows,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -209,6 +216,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           fetchDashboardKpis(),
           fetchPaymentsReconcile(),
           listBackups(50),
+          listDeletionRequests(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -231,6 +239,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setPaymentsReconcile(reconcile);
         setBackupJobs(backupBundle.jobs);
         setBackupAlerts(backupBundle.alerts);
+        setDeletionRequests(deletionRows);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -2128,6 +2137,84 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh backups
             </button>
           </section>
+          <section aria-labelledby="privacy-heading" id="privacy">
+            <h2 id="privacy-heading">
+              <span lang="en">Privacy</span>
+              {' / '}
+              <span lang="lo">ຄວາມເປັນສ່ວນຕົວ</span>
+            </h2>
+            <p className="lede">
+              Account deletion requests — approve anonymizes profile/phone; orders retained.
+            </p>
+            {privacyNote ? (
+              <p className="lede" role="status">
+                {privacyNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Deletion requests">
+              {deletionRequests.length === 0 ? <li>No deletion requests</li> : null}
+              {deletionRequests.map((row) => (
+                <li key={row.requestId}>
+                  {row.status} · {row.requestId.slice(0, 8)}… · customer{' '}
+                  {row.customerIdentityId.slice(0, 8)}…
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setPrivacyNote('');
+                          void (async () => {
+                            try {
+                              const result = await approveDeletionRequest(row.requestId);
+                              if (result.requests) setDeletionRequests(result.requests);
+                              setPrivacyNote(
+                                `Anonymized ${row.requestId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'deletion_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve & anonymize
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setDeletionRequests(await listDeletionRequests(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'deletion_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh deletion queue
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -2151,6 +2238,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'exports',
                   'notifications',
                   'backups',
+                  'privacy',
                 ].includes(item.id),
             )
             .map((item) => (

@@ -70,6 +70,12 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/search/image` | Local image-search upload metadata + match (consent search-only; 24h TTL) |
 | GET | `/v1/search/uploads` | List recent search image uploads (local ops) |
 | POST | `/v1/ops/search/purge-expired` | Local/mock purge expired search uploads |
+| GET | `/v1/me/privacy` | Customer profile + addresses (Bearer) |
+| POST | `/v1/me/addresses` | Add customer address |
+| POST | `/v1/me/marketing-opt-in` | Set marketing opt-in boolean |
+| POST | `/v1/me/deletion-request` | Request account deletion (session = OTP gate locally) |
+| GET | `/v1/privacy/deletion-requests` | List deletion requests (local ops) |
+| POST | `/v1/ops/privacy/deletion-requests/:id/approve` | Approve + anonymize (orders retained) |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

@@ -17,6 +17,14 @@ import {
 } from './lib/checkoutApi';
 import { searchByImageMeta, type SearchMatch } from './lib/searchApi';
 import {
+  addMyAddress,
+  fetchMyPrivacy,
+  requestAccountDeletion,
+  setMarketingOptIn,
+  type PrivacyAddress,
+  type PrivacyProfile,
+} from './lib/privacyApi';
+import {
   confirmChildrenMock,
   createCodPayment,
   createQrPayment,
@@ -92,6 +100,10 @@ export function App() {
   const [imageMatches, setImageMatches] = useState<SearchMatch[]>([]);
   const [imageSearchNote, setImageSearchNote] = useState('');
   const [imageSearchBusy, setImageSearchBusy] = useState(false);
+  const [privacyProfile, setPrivacyProfile] = useState<PrivacyProfile | null>(null);
+  const [privacyAddresses, setPrivacyAddresses] = useState<PrivacyAddress[]>([]);
+  const [privacyNote, setPrivacyNote] = useState('');
+  const [privacyBusy, setPrivacyBusy] = useState(false);
   const [qrPayment, setQrPayment] = useState<QrPayment | null>(null);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [payBusy, setPayBusy] = useState(false);
@@ -1221,12 +1233,58 @@ export function App() {
               Log out
             </button>
             <h2>Addresses</h2>
-            <ul>
-              <li>Home — Ban Hatsady (default)</li>
-              <li>Office — That Luang (recipient: ທ້າວ ສົມ)</li>
+            <ul aria-label="Saved addresses">
+              {privacyAddresses.length === 0 ? (
+                <li className="muted">No saved addresses yet</li>
+              ) : (
+                privacyAddresses.map((a) => (
+                  <li key={a.addressId}>
+                    {a.label ?? 'home'} — {a.addressLine}
+                    {a.isDefault ? ' (default)' : ''}
+                  </li>
+                ))
+              )}
             </ul>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || privacyBusy || !online}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token) return;
+                setPrivacyBusy(true);
+                setPrivacyNote('');
+                void (async () => {
+                  try {
+                    const result = await addMyAddress(token, {
+                      recipientName: privacyProfile?.displayName || 'Customer',
+                      recipientPhoneE164: privacyProfile?.phoneE164 || otpPhone || '+8562000000000',
+                      addressLine: 'Ban Hatsady, Vientiane',
+                      label: 'home',
+                      isDefault: privacyAddresses.length === 0,
+                    });
+                    setPrivacyAddresses(result.addresses);
+                    setPrivacyNote(`Saved address ${result.addressId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setPrivacyNote(err instanceof Error ? err.message : 'address_failed');
+                  } finally {
+                    setPrivacyBusy(false);
+                  }
+                })();
+              }}
+            >
+              Add sample address
+            </button>
             <h2>Notifications</h2>
             <ul>
+              <li>
+                Marketing:{' '}
+                {privacyProfile
+                  ? privacyProfile.marketingOptIn
+                    ? 'opted in'
+                    : 'opted out'
+                  : 'unknown — refresh privacy'}
+              </li>
               {notifications.map((n) => (
                 <li key={n.id}>
                   {n.unread ? '● ' : ''}
@@ -1234,6 +1292,83 @@ export function App() {
                 </li>
               ))}
             </ul>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || privacyBusy || !online}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token) return;
+                setPrivacyBusy(true);
+                setPrivacyNote('');
+                void (async () => {
+                  try {
+                    const next = !(privacyProfile?.marketingOptIn ?? true);
+                    const profile = await setMarketingOptIn(token, next);
+                    setPrivacyProfile(profile);
+                    setPrivacyNote(next ? 'Marketing opted in' : 'Marketing opted out');
+                  } catch (err) {
+                    setPrivacyNote(err instanceof Error ? err.message : 'marketing_opt_failed');
+                  } finally {
+                    setPrivacyBusy(false);
+                  }
+                })();
+              }}
+            >
+              Toggle marketing opt-in
+            </button>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || privacyBusy || !online}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token) return;
+                setPrivacyBusy(true);
+                setPrivacyNote('');
+                void (async () => {
+                  try {
+                    const data = await fetchMyPrivacy(token);
+                    setPrivacyProfile(data.profile);
+                    setPrivacyAddresses(data.addresses);
+                    setPrivacyNote('Privacy profile refreshed');
+                  } catch (err) {
+                    setPrivacyNote(err instanceof Error ? err.message : 'privacy_failed');
+                  } finally {
+                    setPrivacyBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh privacy
+            </button>
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={!loggedIn || privacyBusy || !online}
+              onClick={() => {
+                const token = sessionStorage.getItem('bombee_session');
+                if (!token) return;
+                if (!window.confirm('Request account deletion? Ops must approve.')) return;
+                setPrivacyBusy(true);
+                setPrivacyNote('');
+                void (async () => {
+                  try {
+                    const requestId = await requestAccountDeletion(token);
+                    setPrivacyNote(`Deletion requested ${requestId.slice(0, 8)}… (pending ops)`);
+                  } catch (err) {
+                    setPrivacyNote(
+                      err instanceof Error ? err.message : 'deletion_request_failed',
+                    );
+                  } finally {
+                    setPrivacyBusy(false);
+                  }
+                })();
+              }}
+            >
+              Request account deletion
+            </button>
+            {privacyNote ? <p className="muted">{privacyNote}</p> : null}
             <button type="button" className="cta ghost" onClick={() => go('favorites')}>
               Favorites & recent
             </button>

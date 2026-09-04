@@ -27,6 +27,7 @@ import { PromotionService } from '../modules/promotions/promotionService.js';
 import { ReportService } from '../modules/reports/reportService.js';
 import { BackupService } from '../modules/backup/backupService.js';
 import { ImageSearchService } from '../modules/search/imageSearchService.js';
+import { CustomerPrivacyService } from '../modules/customers/privacyService.js';
 import { InviteService } from '../modules/staging/inviteService.js';
 import { StoreService } from '../modules/stores/storeService.js';
 import { SupportService } from '../modules/support/supportService.js';
@@ -55,6 +56,7 @@ export type ApiServices = {
   reports: ReportService;
   backups: BackupService;
   imageSearch: ImageSearchService;
+  privacy: CustomerPrivacyService;
 };
 
 /** Local/mock runtime: in-memory PGlite + mock SMS (no hosted DB required). */
@@ -84,6 +86,7 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
   const reports = new ReportService(db);
   const backups = new BackupService(db);
   const imageSearch = new ImageSearchService(db);
+  const privacy = new CustomerPrivacyService(db, sms, audit);
   await seedLocalCatalog(db);
   return {
     db,
@@ -108,5 +111,6 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     reports,
     backups,
     imageSearch,
+    privacy,
   };
 }

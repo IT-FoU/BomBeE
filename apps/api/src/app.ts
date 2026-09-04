@@ -2337,6 +2337,148 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/me/privacy') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      try {
+        const [profile, addresses] = await Promise.all([
+          services.privacy.getProfile(session.identityId),
+          services.privacy.listAddresses(session.identityId),
+        ]);
+        sendJson(res, 200, { ok: true, profile, addresses });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'privacy_profile_failed';
+        sendJson(res, message === 'customer_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/me/addresses') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{
+        label?: string;
+        recipientName?: string;
+        recipient_name?: string;
+        recipientPhoneE164?: string;
+        recipient_phone_e164?: string;
+        addressLine?: string;
+        address_line?: string;
+        district?: string;
+        province?: string;
+        isDefault?: boolean;
+        is_default?: boolean;
+      }>(req);
+      const recipientName = body.recipientName ?? body.recipient_name;
+      const recipientPhoneE164 = body.recipientPhoneE164 ?? body.recipient_phone_e164;
+      const addressLine = body.addressLine ?? body.address_line;
+      if (!recipientName?.trim() || !recipientPhoneE164?.trim() || !addressLine?.trim()) {
+        sendJson(res, 400, { error: 'invalid_address' });
+        return;
+      }
+      try {
+        const addressId = await services.privacy.addAddress({
+          customerIdentityId: session.identityId,
+          label: body.label,
+          recipientName: recipientName.trim(),
+          recipientPhoneE164: recipientPhoneE164.trim(),
+          addressLine: addressLine.trim(),
+          district: body.district,
+          province: body.province,
+          isDefault: body.isDefault ?? body.is_default,
+        });
+        const addresses = await services.privacy.listAddresses(session.identityId);
+        sendJson(res, 201, { ok: true, addressId, addresses });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'address_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/me/marketing-opt-in') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{ optIn?: boolean; opt_in?: boolean }>(req);
+      const optIn = body.optIn ?? body.opt_in;
+      if (typeof optIn !== 'boolean') {
+        sendJson(res, 400, { error: 'opt_in_required' });
+        return;
+      }
+      try {
+        await services.privacy.setMarketingOptIn(session.identityId, optIn);
+        const profile = await services.privacy.getProfile(session.identityId);
+        sendJson(res, 200, { ok: true, profile });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'marketing_opt_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/me/deletion-request') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{ otpVerified?: boolean; otp_verified?: boolean }>(req);
+      // Local/mock: authenticated session counts as OTP-verified gate for deletion request.
+      const otpVerified = body.otpVerified ?? body.otp_verified ?? true;
+      try {
+        const requestId = await services.privacy.requestDeletion({
+          customerIdentityId: session.identityId,
+          otpVerified,
+        });
+        sendJson(res, 201, { ok: true, requestId, status: 'pending' });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'deletion_request_failed';
+        sendJson(res, message === 'otp_required' ? 403 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/privacy/deletion-requests') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const requests = await services.privacy.listDeletionRequests(limit);
+      sendJson(res, 200, { ok: true, requests });
+      return;
+    }
+
+    const deletionApproveMatch = url.pathname.match(
+      /^\/v1\/ops\/privacy\/deletion-requests\/([^/]+)\/approve$/,
+    );
+    if (req.method === 'POST' && deletionApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const requestId = decodeURIComponent(deletionApproveMatch[1]!);
+      try {
+        const approverIdentityId = await resolveOpsActor(services);
+        await services.privacy.approveAndAnonymizeDeletion({
+          requestId,
+          approverIdentityId,
+        });
+        const requests = await services.privacy.listDeletionRequests(50);
+        sendJson(res, 200, { ok: true, requestId, status: 'completed', requests });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'deletion_approve_failed';
+        sendJson(res, message === 'deletion_not_pending' ? 409 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/search/catalog') {
       const q = url.searchParams.get('q')?.trim() || undefined;
       const barcode = url.searchParams.get('barcode')?.trim() || undefined;

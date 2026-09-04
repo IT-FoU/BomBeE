@@ -1040,3 +1040,40 @@ export async function restoreDrillBackup(
   }
   return (await res.json()) as { jobs?: BackupJobRow[]; ok?: boolean };
 }
+
+export type DeletionRequestRow = {
+  requestId: string;
+  customerIdentityId: string;
+  status: string;
+  otpVerified: boolean;
+  approvedBy: string | null;
+  createdAt: string;
+  completedAt: string | null;
+};
+
+export async function listDeletionRequests(limit = 50): Promise<DeletionRequestRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/privacy/deletion-requests?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`deletion_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { requests: DeletionRequestRow[] };
+  return body.requests;
+}
+
+export async function approveDeletionRequest(
+  requestId: string,
+): Promise<{ requests?: DeletionRequestRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/privacy/deletion-requests/${encodeURIComponent(requestId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `deletion_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as { requests?: DeletionRequestRow[]; status?: string };
+}

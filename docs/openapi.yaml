@@ -969,6 +969,62 @@ paths:
           description: Purge counts
         '403':
           description: Mock ops disabled
+  /v1/me/privacy:
+    get:
+      summary: Customer privacy profile + addresses
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile and addresses
+        '401':
+          description: Unauthorized
+  /v1/me/addresses:
+    post:
+      summary: Add customer address
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Address created
+        '401':
+          description: Unauthorized
+  /v1/me/marketing-opt-in:
+    post:
+      summary: Set marketing opt-in
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile updated
+  /v1/me/deletion-request:
+    post:
+      summary: Request account deletion
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Deletion pending
+  /v1/privacy/deletion-requests:
+    get:
+      summary: List account deletion requests (local ops)
+      responses:
+        '200':
+          description: Requests array
+  /v1/ops/privacy/deletion-requests/{requestId}/approve:
+    post:
+      summary: Approve deletion and anonymize identity
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Anonymized
+        '409':
+          description: Not pending
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

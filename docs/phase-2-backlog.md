@@ -55,6 +55,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B35 | Checkout promo code (percent-off) | **Done** — `promoCode` on cart checkout; seed `LOCAL10`; customer checkout field |
 | P2-B36 | Backups list + mock run/verify/drill | **Done** — `GET /v1/backups`, mock-run/verify/restore-drill; Backups section |
 | P2-B37 | Image search HTTP + customer wiring | **Done** — catalog/image search endpoints, seed barcode, customer image-search panel |
+| P2-B38 | Customer privacy addresses + deletion | **Done** — `/v1/me/privacy|addresses|marketing-opt-in|deletion-request`, ops approve anonymize; Privacy BO |
 
 ## C — Hard rules that stay
 

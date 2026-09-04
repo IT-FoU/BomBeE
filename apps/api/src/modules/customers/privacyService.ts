@@ -264,4 +264,85 @@ export class CustomerPrivacyService {
       [customerIdentityId, optIn],
     );
   }
+
+  async getProfile(customerIdentityId: string) {
+    const row = await this.db.query<{
+      display_name: string;
+      marketing_opt_in: boolean;
+      phone_e164: string | null;
+    }>(
+      `SELECT cp.display_name, cp.marketing_opt_in, i.phone_e164
+       FROM app.customer_profiles cp
+       JOIN security.auth_identities i ON i.id = cp.auth_identity_id
+       WHERE cp.auth_identity_id = $1
+       LIMIT 1`,
+      [customerIdentityId],
+    );
+    const r = row.rows[0];
+    if (!r) throw new Error('customer_not_found');
+    return {
+      displayName: r.display_name,
+      marketingOptIn: r.marketing_opt_in,
+      phoneE164: r.phone_e164,
+    };
+  }
+
+  async listAddresses(customerIdentityId: string) {
+    const rows = await this.db.query<{
+      id: string;
+      label: string | null;
+      recipient_name: string;
+      recipient_phone_e164: string;
+      address_line: string;
+      district: string | null;
+      province: string | null;
+      is_default: boolean;
+    }>(
+      `SELECT id, label, recipient_name, recipient_phone_e164, address_line,
+              district, province, is_default
+       FROM app.customer_addresses
+       WHERE customer_identity_id = $1 AND archived_at IS NULL
+       ORDER BY is_default DESC, created_at DESC`,
+      [customerIdentityId],
+    );
+    return rows.rows.map((r) => ({
+      addressId: r.id,
+      label: r.label,
+      recipientName: r.recipient_name,
+      recipientPhoneE164: r.recipient_phone_e164,
+      addressLine: r.address_line,
+      district: r.district,
+      province: r.province,
+      isDefault: r.is_default,
+    }));
+  }
+
+  async listDeletionRequests(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      customer_identity_id: string;
+      status: string;
+      otp_verified: boolean;
+      approved_by: string | null;
+      created_at: string;
+      completed_at: string | null;
+    }>(
+      `SELECT id, customer_identity_id, status, otp_verified, approved_by,
+              created_at::text, completed_at::text
+       FROM app.account_deletion_requests
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      requestId: r.id,
+      customerIdentityId: r.customer_identity_id,
+      status: r.status,
+      otpVerified: r.otp_verified,
+      approvedBy: r.approved_by,
+      createdAt: r.created_at,
+      completedAt: r.completed_at,
+    }));
+  }
 }

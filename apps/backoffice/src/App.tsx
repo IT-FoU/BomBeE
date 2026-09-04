@@ -14,6 +14,9 @@ import {
   createInvite,
   createStoreDraft,
   fetchVariantStock,
+  listInventoryAdjustments,
+  opsReceiveStock,
+  opsAdjustStock,
   listCatalogProducts,
   listCatalogImportBatches,
   previewCatalogImport,
@@ -113,6 +116,7 @@ import {
   type CatalogImportBatchRow,
   type OpsOrderRow,
   type OpsStockView,
+  type InventoryAdjustmentRow,
   type SettlementBatchRow,
   type SupportTicketRow,
   type ReturnRequestRow,
@@ -203,6 +207,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [importBatches, setImportBatches] = useState<CatalogImportBatchRow[]>([]);
   const [catalogNote, setCatalogNote] = useState('');
   const [stockDetail, setStockDetail] = useState<OpsStockView | null>(null);
+  const [inventoryAdjustments, setInventoryAdjustments] = useState<InventoryAdjustmentRow[]>([]);
+  const [inventoryNote, setInventoryNote] = useState('');
   const [settlementBatches, setSettlementBatches] = useState<SettlementBatchRow[]>([]);
   const [settlementNote, setSettlementNote] = useState('');
   const [supportTickets, setSupportTickets] = useState<SupportTicketRow[]>([]);
@@ -271,6 +277,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           orders,
           products,
           importBatchRows,
+          inventoryAdjRows,
           batches,
           tickets,
           returns,
@@ -305,6 +312,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listOrders(30),
           listCatalogProducts(50),
           listCatalogImportBatches(50),
+          listInventoryAdjustments(50),
           listSettlementBatches(50),
           listSupportTickets(50),
           listReturns(50),
@@ -339,6 +347,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setOpsOrders(orders);
         setCatalogProducts(products);
         setImportBatches(importBatchRows);
+        setInventoryAdjustments(inventoryAdjRows);
         setSettlementBatches(batches);
         setSupportTickets(tickets);
         setReturnRequests(returns);
@@ -1254,9 +1263,14 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ສະຕັອກ</span>
             </h2>
             <p className="lede">
-              Lot balances for a selected variant (use Stock on a catalog row). Available qty already
-              shown on Catalog.
+              Lot balances for a selected variant (use Stock on a catalog row). Mock receive adds
+              units; adjust applies maker-checker in one shot.
             </p>
+            {inventoryNote ? (
+              <p className="lede" role="status">
+                {inventoryNote}
+              </p>
+            ) : null}
             {stockDetail ? (
               <ul className="roles" aria-label="Stock balances">
                 <li>
@@ -1266,13 +1280,108 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   <li key={b.balanceId}>
                     {b.lotCode ?? b.lotId.slice(0, 8)} · on hand {b.onHand} · reserved {b.reserved} ·
                     avail {b.available}
-                    {b.expiryDate ? ` · exp ${b.expiryDate}` : ''}
+                    {b.expiryDate ? ` · exp ${b.expiryDate}` : ''}{' '}
+                    <button
+                      type="button"
+                      className="cta"
+                      disabled={formBusy}
+                      onClick={() => {
+                        setFormBusy(true);
+                        setFormError('');
+                        setInventoryNote('');
+                        void (async () => {
+                          try {
+                            const result = await opsReceiveStock({
+                              balanceId: b.balanceId,
+                              quantity: 5,
+                            });
+                            if (result.stock) setStockDetail(result.stock);
+                            if (result.adjustments) setInventoryAdjustments(result.adjustments);
+                            setInventoryNote(
+                              `Received +5 on ${b.lotCode ?? b.balanceId.slice(0, 8)}… · on hand ${result.onHand ?? ''}`,
+                            );
+                          } catch (err) {
+                            setFormError(
+                              err instanceof Error ? err.message : 'inventory_receive_failed',
+                            );
+                          } finally {
+                            setFormBusy(false);
+                          }
+                        })();
+                      }}
+                    >
+                      Receive +5
+                    </button>{' '}
+                    <button
+                      type="button"
+                      className="cta"
+                      disabled={formBusy}
+                      onClick={() => {
+                        setFormBusy(true);
+                        setFormError('');
+                        setInventoryNote('');
+                        void (async () => {
+                          try {
+                            const result = await opsAdjustStock({
+                              balanceId: b.balanceId,
+                              delta: -1,
+                              reason: 'BO mock cycle count',
+                            });
+                            if (result.stock) setStockDetail(result.stock);
+                            if (result.adjustments) setInventoryAdjustments(result.adjustments);
+                            setInventoryNote(
+                              `Adjusted −1 on ${b.lotCode ?? b.balanceId.slice(0, 8)}… · on hand ${result.onHand ?? ''}`,
+                            );
+                          } catch (err) {
+                            setFormError(
+                              err instanceof Error ? err.message : 'inventory_adjust_failed',
+                            );
+                          } finally {
+                            setFormBusy(false);
+                          }
+                        })();
+                      }}
+                    >
+                      Adjust −1
+                    </button>
                   </li>
                 ))}
               </ul>
             ) : (
               <p className="lede">No variant selected yet.</p>
             )}
+            <ul className="roles" aria-label="Inventory adjustments">
+              {inventoryAdjustments.length === 0 ? <li>No inventory adjustments yet</li> : null}
+              {inventoryAdjustments.map((row) => (
+                <li key={row.adjustmentId}>
+                  {row.status} · Δ {row.delta} · {row.reason} · bal {row.balanceId.slice(0, 8)}…
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setInventoryAdjustments(await listInventoryAdjustments(50));
+                    if (stockDetail?.variantId) {
+                      setStockDetail(await fetchVariantStock(stockDetail.variantId));
+                    }
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'inventory_refresh_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh inventory
+            </button>
           </section>
           <section aria-labelledby="orders-heading" id="orders">
             <h2 id="orders-heading">

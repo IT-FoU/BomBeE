@@ -24,17 +24,25 @@ function mockRes() {
   };
 }
 
-function mockReq(method: string, url: string): IncomingMessage {
+function mockReq(
+  method: string,
+  url: string,
+  body?: unknown,
+  headers: Record<string, string> = {},
+): IncomingMessage {
+  const payload = body === undefined ? '' : JSON.stringify(body);
   const stream = {
     method,
     url,
-    headers: { host: 'localhost' },
-    async *[Symbol.asyncIterator]() {},
+    headers: { host: 'localhost', 'content-type': 'application/json', ...headers },
+    async *[Symbol.asyncIterator]() {
+      if (payload) yield Buffer.from(payload);
+    },
   };
   return stream as unknown as IncomingMessage;
 }
 
-describe('inventory HTTP stock', () => {
+describe('inventory HTTP stock + receive/adjust', () => {
   const env = parseEnv({
     APP_ENV: 'local',
     PUBLIC_API_URL: 'http://localhost:8787',
@@ -72,5 +80,65 @@ describe('inventory HTTP stock', () => {
     expect(stockRes.res.statusCode).toBe(200);
     expect(Number(stockRes.body().availableQty)).toBeGreaterThan(0);
     expect((stockRes.body().balances as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it('receives stock, adjusts with maker-checker, and lists adjustments', async () => {
+    const productsRes = mockRes();
+    await router(mockReq('GET', '/v1/catalog/products'), productsRes.res);
+    const products = productsRes.body().products as Array<{
+      variants: Array<{ id: string }>;
+    }>;
+    const variantId = products[0]!.variants[0]!.id;
+
+    const stockBefore = mockRes();
+    await router(mockReq('GET', `/v1/inventory/stock?variantId=${variantId}`), stockBefore.res);
+    const balances = stockBefore.body().balances as Array<{
+      balanceId: string;
+      onHand: number;
+    }>;
+    const balanceId = balances[0]!.balanceId;
+    const onHand0 = balances[0]!.onHand;
+
+    const received = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/inventory/receive', { balanceId, quantity: 3 }),
+      received.res,
+    );
+    expect(received.res.statusCode).toBe(201);
+    expect(Number(received.body().onHand)).toBe(onHand0 + 3);
+
+    const adjusted = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/inventory/adjust', {
+        balanceId,
+        delta: -1,
+        reason: 'local mock cycle count',
+      }),
+      adjusted.res,
+    );
+    expect(adjusted.res.statusCode).toBe(200);
+    expect(adjusted.body().status).toBe('approved');
+    expect(Number(adjusted.body().onHand)).toBe(onHand0 + 2);
+
+    const list = mockRes();
+    await router(mockReq('GET', '/v1/inventory/adjustments'), list.res);
+    expect(list.res.statusCode).toBe(200);
+    expect(
+      (list.body().adjustments as Array<{ balanceId: string; delta: number; status: string }>).some(
+        (a) => a.balanceId === balanceId && a.delta === -1 && a.status === 'approved',
+      ),
+    ).toBe(true);
+
+    const denied = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/inventory/adjust', {
+        balanceId,
+        delta: -(onHand0 + 1000),
+        reason: 'local mock overshoot adjust',
+      }),
+      denied.res,
+    );
+    expect(denied.res.statusCode).toBe(409);
+    expect(denied.body().error).toBe('insufficient_stock');
   });
 });

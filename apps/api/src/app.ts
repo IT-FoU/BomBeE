@@ -765,6 +765,161 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/inventory/adjustments') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const adjustments = await services.inventory.listAdjustmentRequests(limit);
+      sendJson(res, 200, { ok: true, adjustments });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/receive') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        balanceId?: string;
+        balance_id?: string;
+        quantity?: number;
+        reason?: string;
+        correlationId?: string;
+        correlation_id?: string;
+      }>(req);
+      try {
+        let balanceId = (body.balanceId ?? body.balance_id)?.trim();
+        let variantId: string | undefined;
+        if (!balanceId) {
+          const bal = await services.db.query<{ id: string; variant_id: string }>(
+            `SELECT id, variant_id FROM private.inventory_balances
+             ORDER BY updated_at DESC LIMIT 1`,
+          );
+          balanceId = bal.rows[0]?.id;
+          variantId = bal.rows[0]?.variant_id;
+        }
+        if (!balanceId) {
+          sendJson(res, 409, { error: 'no_balance' });
+          return;
+        }
+        if (!variantId) {
+          const bal = await services.inventory.getBalance(balanceId);
+          variantId = bal.variant_id;
+        }
+        const quantity =
+          typeof body.quantity === 'number' && body.quantity > 0
+            ? Math.floor(body.quantity)
+            : 5;
+        const actorIdentityId = await resolveOpsActor(services);
+        const balance = await services.inventory.receive({
+          balanceId,
+          quantity,
+          actorIdentityId,
+          correlationId: body.correlationId ?? body.correlation_id ?? crypto.randomUUID(),
+          reason: body.reason?.trim() || 'local_mock_receive',
+        });
+        const stock = await services.inventory.listStockByVariant(variantId);
+        const adjustments = await services.inventory.listAdjustmentRequests(50);
+        sendJson(res, 201, {
+          ok: true,
+          balanceId,
+          variantId,
+          onHand: Number(balance.on_hand),
+          reserved: Number(balance.reserved),
+          safetyBuffer: Number(balance.safety_buffer),
+          available: Number(balance.available),
+          stock,
+          adjustments,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'inventory_receive_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/adjust') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        balanceId?: string;
+        balance_id?: string;
+        delta?: number;
+        reason?: string;
+        correlationId?: string;
+        correlation_id?: string;
+      }>(req);
+      try {
+        let balanceId = (body.balanceId ?? body.balance_id)?.trim();
+        let variantId: string | undefined;
+        if (!balanceId) {
+          const bal = await services.db.query<{ id: string; variant_id: string }>(
+            `SELECT id, variant_id FROM private.inventory_balances
+             ORDER BY updated_at DESC LIMIT 1`,
+          );
+          balanceId = bal.rows[0]?.id;
+          variantId = bal.rows[0]?.variant_id;
+        }
+        if (!balanceId) {
+          sendJson(res, 409, { error: 'no_balance' });
+          return;
+        }
+        if (!variantId) {
+          const bal = await services.inventory.getBalance(balanceId);
+          variantId = bal.variant_id;
+        }
+        const delta =
+          typeof body.delta === 'number' && body.delta !== 0
+            ? Math.trunc(body.delta)
+            : -1;
+        const reason = body.reason?.trim() || 'local mock cycle count';
+        const maker = await services.identity.ensureStaff(
+          'staff:local-catalog-maker',
+          'Catalog Maker',
+          '+8562087000001',
+        );
+        const approverIdentityId = await resolveOpsApprover(services, maker.identityId);
+        const result = await services.inventory.adjust({
+          balanceId,
+          delta,
+          reason,
+          makerIdentityId: maker.identityId,
+          approverIdentityId,
+          actorRoles: ['operations'],
+          correlationId: body.correlationId ?? body.correlation_id ?? crypto.randomUUID(),
+        });
+        const stock = await services.inventory.listStockByVariant(variantId);
+        const adjustments = await services.inventory.listAdjustmentRequests(50);
+        if (!result.ok) {
+          sendJson(res, 409, {
+            ok: false,
+            error: result.reason,
+            balanceId,
+            stock,
+            adjustments,
+          });
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          balanceId,
+          delta,
+          status: 'approved',
+          onHand: Number(result.balance.on_hand),
+          reserved: Number(result.balance.reserved),
+          safetyBuffer: Number(result.balance.safety_buffer),
+          available: Number(result.balance.available),
+          stock,
+          adjustments,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'inventory_adjust_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/carts') {
       const session = await requireCustomerSession(req, services);
       if (!session) {

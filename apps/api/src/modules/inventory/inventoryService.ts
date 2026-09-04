@@ -319,6 +319,39 @@ export class InventoryService {
     };
   }
 
+  async listAdjustmentRequests(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      balance_id: string;
+      delta: number;
+      reason: string;
+      status: string;
+      maker_identity_id: string;
+      approver_identity_id: string | null;
+      created_at: string;
+      decided_at: string | null;
+    }>(
+      `SELECT id, balance_id, delta, reason, status, maker_identity_id, approver_identity_id,
+              created_at::text, decided_at::text
+       FROM private.inventory_adjustment_requests
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      adjustmentId: r.id,
+      balanceId: r.balance_id,
+      delta: Number(r.delta),
+      reason: r.reason,
+      status: r.status,
+      makerIdentityId: r.maker_identity_id,
+      approverIdentityId: r.approver_identity_id,
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+    }));
+  }
+
   async listStockByVariant(variantId: string) {
     const row = await this.db.query<{
       id: string;

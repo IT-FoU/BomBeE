@@ -38,6 +38,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/catalog/import/preview` | Local/mock preview import (idempotent; default sample row) |
 | POST | `/v1/ops/catalog/import/:batchId/commit` | Commit valid preview batch (rejects invalid rows) |
 | GET | `/v1/inventory/stock?variantId=` | Lot balances + available qty for a variant |
+| GET | `/v1/inventory/adjustments` | List inventory adjustment requests (local ops) |
+| POST | `/v1/ops/inventory/receive` | Local/mock receive units onto a balance |
+| POST | `/v1/ops/inventory/adjust` | Local/mock adjust (one-shot maker≠approver) |
 | POST | `/v1/carts` | Create cart (customer Bearer) |
 | POST | `/v1/carts/:id/items` | Upsert cart line |
 | POST | `/v1/carts/:id/checkout` | Create parent/child orders; optional `promoCode` (percent-off; seed `LOCAL10`) |

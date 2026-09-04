@@ -488,6 +488,81 @@ export async function fetchVariantStock(variantId: string): Promise<OpsStockView
   };
 }
 
+export type InventoryAdjustmentRow = {
+  adjustmentId: string;
+  balanceId: string;
+  delta: number;
+  reason: string;
+  status: string;
+  makerIdentityId: string;
+  approverIdentityId: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+};
+
+export async function listInventoryAdjustments(
+  limit = 50,
+): Promise<InventoryAdjustmentRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/inventory/adjustments?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`inventory_adjustments_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { adjustments: InventoryAdjustmentRow[] };
+  return body.adjustments;
+}
+
+export async function opsReceiveStock(input: {
+  balanceId?: string;
+  quantity?: number;
+  reason?: string;
+} = {}): Promise<{
+  stock?: OpsStockView;
+  adjustments?: InventoryAdjustmentRow[];
+  onHand?: number;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/inventory/receive`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `inventory_receive_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    stock?: OpsStockView;
+    adjustments?: InventoryAdjustmentRow[];
+    onHand?: number;
+  };
+}
+
+export async function opsAdjustStock(input: {
+  balanceId?: string;
+  delta?: number;
+  reason?: string;
+} = {}): Promise<{
+  stock?: OpsStockView;
+  adjustments?: InventoryAdjustmentRow[];
+  onHand?: number;
+  status?: string;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/inventory/adjust`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `inventory_adjust_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    stock?: OpsStockView;
+    adjustments?: InventoryAdjustmentRow[];
+    onHand?: number;
+    status?: string;
+  };
+}
+
 export type SettlementBatchRow = {
   batchId: string;
   storeId: string;

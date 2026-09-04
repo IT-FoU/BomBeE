@@ -421,6 +421,36 @@ paths:
           description: availableQty + balances
         '400':
           description: Missing variantId
+  /v1/inventory/adjustments:
+    get:
+      summary: List inventory adjustment requests
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Adjustments array
+  /v1/ops/inventory/receive:
+    post:
+      summary: Local mock receive units onto a balance
+      responses:
+        '201':
+          description: Balance updated
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No balance
+  /v1/ops/inventory/adjust:
+    post:
+      summary: Local mock inventory adjust (one-shot maker-checker)
+      responses:
+        '200':
+          description: Adjustment approved and applied
+        '409':
+          description: Self-approval, unauthorized, or insufficient stock
   /v1/carts:
     post:
       summary: Create cart for customer session

@@ -788,6 +788,26 @@ paths:
           description: Mock ops disabled
         '404':
           description: Inbox not found
+  /v1/integrations:
+    get:
+      summary: Integration Center status (mode flags, checklist, EGO store rows)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Mode flags + checklist + store EGO rows
+  /v1/ops/integrations/ego/mock-ensure:
+    post:
+      summary: Local/mock ensure disabled EGO profiles for active stores
+      responses:
+        '200':
+          description: Profiles ensured (disabled)
+        '403':
+          description: Mock ops disabled
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

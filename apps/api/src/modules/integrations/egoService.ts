@@ -244,6 +244,50 @@ export class EgoIntegrationService {
     ]);
   }
 
+  async listStoreStatuses(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const stores = await this.db.query<{
+      id: string;
+      code: string;
+      name: string;
+      can_accept_orders: boolean;
+    }>(
+      `SELECT id, code, name, can_accept_orders
+       FROM app.stores
+       WHERE status = 'active'
+       ORDER BY code ASC
+       LIMIT $1`,
+      [capped],
+    );
+    const rows = [];
+    for (const store of stores.rows) {
+      const ego = await this.integrationCenterStatus(store.id);
+      rows.push({
+        storeId: store.id,
+        storeCode: store.code,
+        storeName: store.name,
+        canAcceptOrders: store.can_accept_orders,
+        egoDisplay: ego.display,
+        egoStatus: ego.status,
+        featureFlagOn: ego.featureFlagOn,
+        credentialsConfigured: ego.credentialsConfigured,
+      });
+    }
+    return rows;
+  }
+
+  async ensureProfilesForActiveStores() {
+    const stores = await this.db.query<{ id: string }>(
+      `SELECT id FROM app.stores WHERE status = 'active'`,
+    );
+    const profiles = [];
+    for (const store of stores.rows) {
+      const profile = await this.ensureProfile(store.id);
+      profiles.push({ storeId: store.id, profileId: profile.id, status: profile.status });
+    }
+    return profiles;
+  }
+
   assertNoProductionTraffic() {
     if (this.featureFlagEnabled) throw new Error('ego_must_be_disabled_phase1');
     if (!(this.network instanceof BlockedEgoNetwork)) {

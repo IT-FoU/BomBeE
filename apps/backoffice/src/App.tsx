@@ -52,6 +52,8 @@ import {
   mockEnqueueNotification,
   mockProcessNotifications,
   markNotificationRead,
+  listIntegrations,
+  mockEnsureEgoProfiles,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -67,6 +69,7 @@ import {
   type ExportRequestRow,
   type NotificationInboxRow,
   type NotificationOutboxRow,
+  type IntegrationsStatus,
 } from './lib/opsApi';
 
 const navItems = [
@@ -133,6 +136,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [notificationInbox, setNotificationInbox] = useState<NotificationInboxRow[]>([]);
   const [notificationOutbox, setNotificationOutbox] = useState<NotificationOutboxRow[]>([]);
   const [notificationNote, setNotificationNote] = useState('');
+  const [integrations, setIntegrations] = useState<IntegrationsStatus | null>(null);
+  const [integrationsNote, setIntegrationsNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -158,6 +163,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           auditRows,
           exportRows,
           notificationBundle,
+          integrationsStatus,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -172,6 +178,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listAuditEvents(50),
           listExports(50),
           listNotifications(50),
+          listIntegrations(),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -187,6 +194,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setExportRequests(exportRows);
         setNotificationInbox(notificationBundle.inbox);
         setNotificationOutbox(notificationBundle.outbox);
+        setIntegrations(integrationsStatus);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -270,14 +278,95 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </ul>
           </section>
           <section aria-labelledby="integrations-heading" id="integrations">
-            <h2 id="integrations-heading">Integration Center</h2>
+            <h2 id="integrations-heading">
+              <span lang="en">Integrations</span>
+              {' / '}
+              <span lang="lo">ການເຊື່ອມຕໍ່</span>
+            </h2>
+            <p className="lede">
+              Local mode flags + EGO placeholder status (flag OFF, no production traffic).
+            </p>
+            {integrationsNote ? (
+              <p className="lede" role="status">
+                {integrationsNote}
+              </p>
+            ) : null}
+            {integrations ? (
+              <p className="lede">
+                mode={integrations.integrationsMode} · env={integrations.env} · SMS=
+                {integrations.smsProvider} · EGO={integrations.egoPosEnabled ? 'ON' : 'OFF'} ·
+                traffic={integrations.canSendEgoTraffic ? 'allowed' : 'blocked'}
+                {integrations.productionHold ? ' · production hold' : ''}
+              </p>
+            ) : (
+              <p className="lede">Loading integration status…</p>
+            )}
             <ul className="roles" aria-label="Integration checklist">
-              <li>EGO: Disabled/Not configured</li>
-              <li>Flag default OFF</li>
-              <li>No credentials</li>
-              <li>No mock SMS in production</li>
-              <li>No demo auth bypass</li>
+              {(integrations?.checklist ?? []).map((item) => (
+                <li key={item.id}>
+                  {item.ok ? 'ok' : 'fail'} · {item.label}
+                </li>
+              ))}
+              {!integrations ? <li>Checklist pending API</li> : null}
             </ul>
+            <ul className="roles" aria-label="EGO store profiles">
+              {(integrations?.stores ?? []).length === 0 ? (
+                <li>No active stores / profiles yet — use Ensure EGO profiles</li>
+              ) : null}
+              {(integrations?.stores ?? []).map((store) => (
+                <li key={store.storeId}>
+                  {store.storeCode} · {store.egoDisplay} · flag=
+                  {store.featureFlagOn ? 'on' : 'off'} · creds=
+                  {store.credentialsConfigured ? 'yes' : 'no'}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setIntegrationsNote('');
+                void (async () => {
+                  try {
+                    const result = await mockEnsureEgoProfiles();
+                    const next = await listIntegrations();
+                    setIntegrations({ ...next, stores: result.stores });
+                    setIntegrationsNote(
+                      `Ensured ${result.profiles.length} EGO profile(s) (disabled)`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'ego_ensure_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Ensure EGO profiles
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setIntegrations(await listIntegrations());
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'integrations_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh integrations
+            </button>
           </section>
           <section aria-labelledby="roles-heading" id="staff">
             <h2 id="roles-heading">Standard roles</h2>

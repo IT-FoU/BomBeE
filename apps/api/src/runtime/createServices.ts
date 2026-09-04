@@ -17,6 +17,10 @@ import {
   InMemoryProvider,
   NotificationDispatchService,
 } from '../modules/notifications/dispatchService.js';
+import {
+  BlockedEgoNetwork,
+  EgoIntegrationService,
+} from '../modules/integrations/egoService.js';
 import { OrderService } from '../modules/orders/orderService.js';
 import { ManualBankAdapter, PaymentService } from '../modules/payments/paymentService.js';
 import { PromotionService } from '../modules/promotions/promotionService.js';
@@ -44,6 +48,7 @@ export type ApiServices = {
   audit: AuditService;
   exports: ExportService;
   notifications: NotificationDispatchService;
+  ego: EgoIntegrationService;
 };
 
 /** Local/mock runtime: in-memory PGlite + mock SMS (no hosted DB required). */
@@ -69,6 +74,7 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     db,
     new Map([['memory', new InMemoryProvider()]]),
   );
+  const ego = new EgoIntegrationService(db, false, new BlockedEgoNetwork());
   await seedLocalCatalog(db);
   return {
     db,
@@ -89,5 +95,6 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     audit,
     exports,
     notifications,
+    ego,
   };
 }

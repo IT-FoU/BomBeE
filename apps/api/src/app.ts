@@ -537,6 +537,57 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/integrations') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const stores = await services.ego.listStoreStatuses(limit);
+      const traffic = services.ego.assertNoProductionTraffic();
+      sendJson(res, 200, {
+        ok: true,
+        env: env.APP_ENV,
+        integrationsMode: env.INTEGRATIONS_MODE,
+        egoPosEnabled: env.EGO_POS_ENABLED,
+        inviteOnlyEnabled: env.INVITE_ONLY_ENABLED,
+        productionHold: !env.OWNER_PRODUCTION_DEPLOY_APPROVED,
+        smsProvider:
+          env.INTEGRATIONS_MODE === 'mock'
+            ? 'mock'
+            : env.INTEGRATIONS_MODE === 'sandbox'
+              ? 'sandbox'
+              : 'external',
+        canSendEgoTraffic: traffic.canSendTraffic,
+        checklist: [
+          {
+            id: 'ego_disabled',
+            label: 'EGO POS flag OFF',
+            ok: !env.EGO_POS_ENABLED,
+          },
+          {
+            id: 'no_ego_traffic',
+            label: 'No EGO production traffic',
+            ok: !traffic.canSendTraffic,
+          },
+          {
+            id: 'integrations_not_live',
+            label: 'Integrations mode not live',
+            ok: env.INTEGRATIONS_MODE !== 'live',
+          },
+          {
+            id: 'sms_not_mock_in_prod',
+            label: 'SMS mock only outside production',
+            ok: env.APP_ENV !== 'production' || env.INTEGRATIONS_MODE !== 'mock',
+          },
+          {
+            id: 'no_demo_auth_bypass',
+            label: 'No demo auth bypass',
+            ok: true,
+          },
+        ],
+        stores,
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/exports/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });
@@ -714,6 +765,22 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'notification_mark_read_failed';
         sendJson(res, message === 'inbox_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/integrations/ego/mock-ensure') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      try {
+        const profiles = await services.ego.ensureProfilesForActiveStores();
+        const stores = await services.ego.listStoreStatuses(50);
+        sendJson(res, 200, { ok: true, profiles, stores });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'ego_ensure_failed';
+        sendJson(res, 400, { error: message });
       }
       return;
     }

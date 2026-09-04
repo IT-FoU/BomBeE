@@ -822,3 +822,59 @@ export async function markNotificationRead(
     outbox: NotificationOutboxRow[];
   };
 }
+
+export type IntegrationChecklistItem = {
+  id: string;
+  label: string;
+  ok: boolean;
+};
+
+export type IntegrationStoreRow = {
+  storeId: string;
+  storeCode: string;
+  storeName: string;
+  canAcceptOrders: boolean;
+  egoDisplay: string;
+  egoStatus: string;
+  featureFlagOn: boolean;
+  credentialsConfigured: boolean;
+};
+
+export type IntegrationsStatus = {
+  env: string;
+  integrationsMode: string;
+  egoPosEnabled: boolean;
+  inviteOnlyEnabled: boolean;
+  productionHold: boolean;
+  smsProvider: string;
+  canSendEgoTraffic: boolean;
+  checklist: IntegrationChecklistItem[];
+  stores: IntegrationStoreRow[];
+};
+
+export async function listIntegrations(): Promise<IntegrationsStatus> {
+  const res = await fetch(`${apiBaseUrl()}/v1/integrations`);
+  if (!res.ok) {
+    throw new Error(`integrations_list_failed_${res.status}`);
+  }
+  return (await res.json()) as IntegrationsStatus;
+}
+
+export async function mockEnsureEgoProfiles(): Promise<{
+  profiles: Array<{ storeId: string; profileId: string; status: string }>;
+  stores: IntegrationStoreRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/integrations/ego/mock-ensure`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `ego_ensure_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    profiles: Array<{ storeId: string; profileId: string; status: string }>;
+    stores: IntegrationStoreRow[];
+  };
+}

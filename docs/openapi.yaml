@@ -163,6 +163,24 @@ paths:
           description: Invalid payload
         '409':
           description: Code taken
+  /v1/catalog/categories:
+    get:
+      summary: List non-prohibited categories
+      responses:
+        '200':
+          description: Category rows
+  /v1/catalog/products:
+    get:
+      summary: List active products with approved prices
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        '200':
+          description: Product browse DTOs
 components:
   securitySchemes:
     bearerAuth:

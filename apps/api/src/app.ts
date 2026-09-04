@@ -261,6 +261,20 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/catalog/categories') {
+      const categories = await services.catalog.listCategories();
+      sendJson(res, 200, { ok: true, categories });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/catalog/products') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 100) : 50;
+      const products = await services.catalog.listActiveProducts(limit);
+      sendJson(res, 200, { ok: true, products });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/') {
       sendJson(res, 200, {
         name: BRAND_NAME,

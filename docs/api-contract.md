@@ -17,6 +17,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/invites` | Create beta invite |
 | GET | `/v1/stores` | List stores |
 | POST | `/v1/stores` | Create store draft (`onboarding`) |
+| GET | `/v1/catalog/categories` | Non-prohibited categories |
+| GET | `/v1/catalog/products` | Active products + approved prices (local seed) |
 
 ## Domain services (in-process; tested via Vitest + PGlite)
 

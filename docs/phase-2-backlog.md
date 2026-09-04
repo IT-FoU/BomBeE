@@ -25,6 +25,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B5 | Performance budgets in CI (bundle size check) | **Done** — `scripts/check-customer-bundle-budget.mjs` in CI |
 | P2-B6 | Richer synthetic seed into local Postgres | **Done** — `pnpm seed:sql` → `supabase/seed/generated_staging_qa.sql` |
 | P2-B7 | Invite redeem on OTP verify + remove demo login fallback | **Done** — verify redeems invite; customer shows API errors only |
+| P2-B8 | Customer catalog browse from local API | **Done** — `/v1/catalog/products|categories` + PGlite seed + fixture fallback |
 
 ## C — Hard rules that stay
 

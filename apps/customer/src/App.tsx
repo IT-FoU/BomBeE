@@ -7,6 +7,7 @@ import { cartTotals, groupCartByStore, loadCart, saveCart, type CartLine } from 
 import { evaluateCodUx, parentChildSummary } from './lib/checkout';
 import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './lib/offline';
 import { requestCustomerOtp, verifyCustomerOtp, fetchSessionMe, logoutSession } from './lib/authApi';
+import { loadCatalogProducts } from './lib/catalogApi';
 
 type Route =
   | 'home'
@@ -40,6 +41,8 @@ export function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [products, setProducts] = useState<CatalogProduct[]>(PRODUCTS);
+  const [catalogSource, setCatalogSource] = useState<'api' | 'fixture'>('fixture');
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(PRODUCTS[0]!);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     categories: true,
@@ -68,6 +71,18 @@ export function App() {
 
   useEffect(() => {
     void loadCart().then(setCart);
+    void loadCatalogProducts().then((result) => {
+      setProducts(result.products);
+      setCatalogSource(result.source);
+      setSelectedProduct((prev) => {
+        if (prev && result.products.some((p) => p.id === prev.id)) return prev;
+        return result.products[0] ?? null;
+      });
+      if (result.source === 'api') {
+        setFavorites((fav) => fav.filter((id) => result.products.some((p) => p.id === id)));
+        setRecent((r) => r.filter((id) => result.products.some((p) => p.id === id)));
+      }
+    });
     const sync = () => setOnline(readNetworkStatus().online);
     sync();
     window.addEventListener('online', sync);
@@ -154,7 +169,7 @@ export function App() {
     go('orders');
   }
 
-  const filteredProducts = PRODUCTS.filter((p) => {
+  const filteredProducts = products.filter((p) => {
     if (selectedCategory && p.categoryId !== selectedCategory) return false;
     if (selectedStore && p.storeId !== selectedStore) return false;
     if (selectedBrand && p.brandId !== selectedBrand) return false;
@@ -167,6 +182,36 @@ export function App() {
       p.brandName.toLowerCase().includes(q)
     );
   });
+
+  const storeOptions = useMemo(() => {
+    const fromApi = Array.from(
+      new Map(products.map((p) => [p.storeId, { id: p.storeId, name: p.storeName }])).values(),
+    );
+    return fromApi.length > 0 ? fromApi : [...STORES];
+  }, [products]);
+
+  const brandOptions = useMemo(() => {
+    const fromApi = Array.from(
+      new Map(
+        products
+          .filter((p) => p.brandId)
+          .map((p) => [p.brandId, { id: p.brandId, name: p.brandName }]),
+      ).values(),
+    );
+    return fromApi.length > 0 ? fromApi : [...BRANDS];
+  }, [products]);
+
+  const categoryOptions = useMemo(() => {
+    const fromApi = Array.from(
+      new Map(
+        products.map((p) => [
+          p.categoryId,
+          { id: p.categoryId, lo: p.categoryLo, en: p.categoryEn },
+        ]),
+      ).values(),
+    );
+    return fromApi.length > 0 ? fromApi : [...CATEGORIES];
+  }, [products]);
 
   return (
     <div className={`app ${!online ? 'is-offline' : ''}`}>
@@ -246,7 +291,7 @@ export function App() {
               locale={locale}
             >
               <div className="chip-row">
-                {CATEGORIES.map((c) => (
+                {categoryOptions.map((c) => (
                   <button
                     key={c.id}
                     type="button"
@@ -271,7 +316,7 @@ export function App() {
               locale={locale}
             >
               <ProductRow
-                products={PRODUCTS.filter((p) => p.deal)}
+                products={products.filter((p) => p.deal || Boolean(p.compareAtLak)).slice(0, 6)}
                 locale={locale}
                 onOpen={openProduct}
                 onAdd={addToCart}
@@ -287,7 +332,7 @@ export function App() {
               locale={locale}
             >
               <div className="chip-row">
-                {STORES.map((s) => (
+                {storeOptions.map((s) => (
                   <button
                     key={s.id}
                     type="button"
@@ -311,7 +356,10 @@ export function App() {
               onShowAll={() => go('search')}
               locale={locale}
             >
-              <ProductRow products={PRODUCTS} locale={locale} onOpen={openProduct} onAdd={addToCart} />
+              <p className="muted">
+                Catalog: {catalogSource === 'api' ? 'local API' : 'fixture fallback'}
+              </p>
+              <ProductRow products={products} locale={locale} onOpen={openProduct} onAdd={addToCart} />
             </HomeSection>
           </div>
         )}
@@ -345,8 +393,9 @@ export function App() {
             )}
             {searchTab === 'shops' && (
               <ul className="list">
-                {STORES.filter((s) => s.name.toLowerCase().includes(query.toLowerCase()) || !query).map(
-                  (s) => (
+                {storeOptions
+                  .filter((s) => s.name.toLowerCase().includes(query.toLowerCase()) || !query)
+                  .map((s) => (
                     <li key={s.id}>
                       <button
                         type="button"
@@ -358,14 +407,14 @@ export function App() {
                         {s.name}
                       </button>
                     </li>
-                  ),
-                )}
+                  ))}
               </ul>
             )}
             {searchTab === 'brands' && (
               <ul className="list">
-                {BRANDS.filter((b) => b.name.toLowerCase().includes(query.toLowerCase()) || !query).map(
-                  (b) => (
+                {brandOptions
+                  .filter((b) => b.name.toLowerCase().includes(query.toLowerCase()) || !query)
+                  .map((b) => (
                     <li key={b.id}>
                       <button
                         type="button"
@@ -377,8 +426,7 @@ export function App() {
                         {b.name}
                       </button>
                     </li>
-                  ),
-                )}
+                  ))}
               </ul>
             )}
             <div className="search-panel inline">
@@ -461,14 +509,14 @@ export function App() {
           <section className="page">
             <h1>{locale === 'lo' ? 'ລາຍການທີ່ມັກ' : 'Favorites'}</h1>
             <ProductRow
-              products={PRODUCTS.filter((p) => favorites.includes(p.id))}
+              products={products.filter((p) => favorites.includes(p.id))}
               locale={locale}
               onOpen={openProduct}
               onAdd={addToCart}
             />
             <h2>{locale === 'lo' ? 'ເບິ່ງລ່າສຸດ' : 'Recently viewed'}</h2>
             <ProductRow
-              products={PRODUCTS.filter((p) => recent.includes(p.id))}
+              products={products.filter((p) => recent.includes(p.id))}
               locale={locale}
               onOpen={openProduct}
               onAdd={addToCart}

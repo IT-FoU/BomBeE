@@ -40,4 +40,5 @@ Apply order is lexicographic. Every migration must be reviewed for apply + rollb
 ## Testing
 
 - CI runs SQL migrations against PGlite (`apps/api` integration suite)
+- Optional local Postgres: `docker compose up -d` then `pnpm db:migrate`
 - Full hosted Supabase projects are provisioned by Owner outside this repo

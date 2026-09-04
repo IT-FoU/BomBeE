@@ -16,6 +16,17 @@ pnpm dev
 
 Use mock/local only. Do not put Production secrets in git.
 
+### Optional local Postgres (Docker on your machine)
+
+```bash
+pnpm db:up
+export DATABASE_URL=postgresql://bombee:bombee@127.0.0.1:54322/bombee
+pnpm db:migrate
+```
+
+Branch protection (Owner GitHub admin): [`docs/runbooks/branch-protection.md`](./runbooks/branch-protection.md)  
+Phase 2 ideas: [`docs/phase-2-backlog.md`](./phase-2-backlog.md)
+
 ## When Supabase Production is ready
 
 1. Create a **Production** Supabase project (separate from any Staging project)
@@ -30,4 +41,4 @@ Keep `EGO_POS_ENABLED=false` and `INTEGRATIONS_MODE=sandbox` until live bank/SMS
 ## Optional hygiene
 
 - Close any leftover draft milestone PRs in GitHub if they still appear open (superseded by `main`)
-- Turn on branch protection for `main` (Agent token previously got 403)
+- Turn on branch protection for `main` — Agent cannot (403); follow [`docs/runbooks/branch-protection.md`](./runbooks/branch-protection.md)

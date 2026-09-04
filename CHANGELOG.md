@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Local Postgres docker compose + migration apply script; Phase 2 backlog; branch-protection Owner runbook
+
 - Phase 1 milestone close — Owner deferred Production live (mock / skip secrets)
   - Final Completion CLOSED; briefing in `docs/reports/why-production-blocked.md`
 

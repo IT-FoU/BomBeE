@@ -126,6 +126,11 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/payments/:id` | Payment request status |
 | POST | `/v1/payments/:id/mock-confirm` | Local/mock evidence + confirm |
 | POST | `/v1/payments/mock-expire-due` | Local/mock expire open QR past deadline + release stock + cancel `awaiting_payment` children; also grace-expire reservations |
+| GET | `/v1/payments/mismatches` | List recon mismatches (local ops) |
+| GET | `/v1/payments/adjustments` | List payment adjustments (local ops) |
+| POST | `/v1/ops/payments/mismatches/mock-create` | Local/mock open recon mismatch |
+| POST | `/v1/ops/payments/mismatches/:id/resolve` | Resolve mismatch (optional pending adjustment; maker = catalog-maker) |
+| POST | `/v1/ops/payments/adjustments/:id/approve` | Approve payment adjustment (maker≠approver) |
 | POST | `/v1/orders/:parentId/fulfillment/mock-advance` | Local/mock packing → courier handoff → `in_transit` (paid children only; consumes QR reservations at handoff) |
 | POST | `/v1/orders/:parentId/fulfillment/mock-deliver` | Local/mock POD + `delivered` for `in_transit` children |
 

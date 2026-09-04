@@ -1593,6 +1593,68 @@ paths:
           description: Mock ops disabled
         '409':
           description: Shipment failed
+  /v1/payments/mismatches:
+    get:
+      summary: List recon mismatches
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Mismatches array
+  /v1/payments/adjustments:
+    get:
+      summary: List payment adjustments
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Adjustments array
+  /v1/ops/payments/mismatches/mock-create:
+    post:
+      summary: Local mock open recon mismatch
+      responses:
+        '201':
+          description: Open mismatch created
+        '403':
+          description: Mock ops disabled
+  /v1/ops/payments/mismatches/{mismatchId}/resolve:
+    post:
+      summary: Resolve mismatch (optional pending adjustment)
+      parameters:
+        - in: path
+          name: mismatchId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resolved (adjustmentId when created)
+        '404':
+          description: Mismatch not found
+        '409':
+          description: Not open
+  /v1/ops/payments/adjustments/{adjustmentId}/approve:
+    post:
+      summary: Approve payment adjustment (maker-checker)
+      parameters:
+        - in: path
+          name: adjustmentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approved
+        '409':
+          description: Not pending or self-approval
   /v1/payments/{paymentRequestId}:
     get:
       summary: Payment request status

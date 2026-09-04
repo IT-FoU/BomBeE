@@ -67,6 +67,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B47 | Payout change approve + contracts list | **Done** — contracts list/mock-create; payouts propose/approve (Owner+2FA, 48h hold) |
 | P2-B48 | Near-expiry discount propose/approve | **Done** — `/v1/pricing/near-expiry`, mock-propose (lot link) + approve; Approvals BO |
 | P2-B49 | Catalog import preview/commit HTTP | **Done** — import batches list, preview + commit; Catalog BO |
+| P2-B50 | Payment mismatch resolve + adjustment approve | **Done** — mismatches/adjustments list; mock-create/resolve/approve; Approvals BO |
 
 ## C — Hard rules that stay
 

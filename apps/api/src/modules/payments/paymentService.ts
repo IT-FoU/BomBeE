@@ -577,20 +577,22 @@ export class PaymentService {
     mismatchId: string;
     actorIdentityId: string;
     note: string;
-    createAdjustment?: { amountLak: number; paymentRequestId: string };
+    createAdjustment?: { amountLak: number; paymentRequestId?: string | null };
   }) {
+    let adjustmentId: string | undefined;
     if (input.createAdjustment) {
-      await this.db.query(
+      const adj = await this.db.query<{ id: string }>(
         `INSERT INTO finance.payment_adjustments
           (payment_request_id, amount_lak, reason, status, maker_identity_id)
-         VALUES ($1,$2,$3,'pending',$4)`,
+         VALUES ($1,$2,$3,'pending',$4) RETURNING id`,
         [
-          input.createAdjustment.paymentRequestId,
+          input.createAdjustment.paymentRequestId ?? null,
           input.createAdjustment.amountLak,
           input.note,
           input.actorIdentityId,
         ],
       );
+      adjustmentId = adj.rows[0]!.id;
     }
     await this.db.query(
       `UPDATE finance.recon_mismatches
@@ -598,7 +600,7 @@ export class PaymentService {
        WHERE id = $1`,
       [input.mismatchId, input.note],
     );
-    return { ok: true as const };
+    return { ok: true as const, adjustmentId };
   }
 
   async approveAdjustment(input: {
@@ -611,6 +613,7 @@ export class PaymentService {
     );
     const current = row.rows[0];
     if (!current) return { ok: false as const, reason: 'not_found' };
+    if (current.status !== 'pending') return { ok: false as const, reason: 'not_pending' };
     if (current.maker_identity_id === input.approverIdentityId) {
       return { ok: false as const, reason: 'self_approval' };
     }
@@ -621,6 +624,74 @@ export class PaymentService {
       [input.adjustmentId, input.approverIdentityId],
     );
     return { ok: true as const };
+  }
+
+  async listMismatches(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      mismatch_type: string;
+      reference_id: string;
+      expected_lak: number;
+      actual_lak: number;
+      status: string;
+      resolution_note: string | null;
+      created_at: string;
+      resolved_at: string | null;
+    }>(
+      `SELECT id, mismatch_type, reference_id, expected_lak, actual_lak, status,
+              resolution_note, created_at::text, resolved_at::text
+       FROM finance.recon_mismatches
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      mismatchId: r.id,
+      mismatchType: r.mismatch_type,
+      referenceId: r.reference_id,
+      expectedLak: Number(r.expected_lak),
+      actualLak: Number(r.actual_lak),
+      status: r.status,
+      resolutionNote: r.resolution_note,
+      createdAt: r.created_at,
+      resolvedAt: r.resolved_at,
+    }));
+  }
+
+  async listAdjustments(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      payment_request_id: string | null;
+      child_order_id: string | null;
+      amount_lak: number;
+      reason: string;
+      status: string;
+      maker_identity_id: string;
+      approver_identity_id: string | null;
+      created_at: string;
+      decided_at: string | null;
+    }>(
+      `SELECT id, payment_request_id, child_order_id, amount_lak, reason, status,
+              maker_identity_id, approver_identity_id, created_at::text, decided_at::text
+       FROM finance.payment_adjustments
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      adjustmentId: r.id,
+      paymentRequestId: r.payment_request_id,
+      childOrderId: r.child_order_id,
+      amountLak: Number(r.amount_lak),
+      reason: r.reason,
+      status: r.status,
+      makerIdentityId: r.maker_identity_id,
+      approverIdentityId: r.approver_identity_id,
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+    }));
   }
 
   async dailyTotalsProof(dayUtc: string) {

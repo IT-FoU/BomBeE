@@ -812,6 +812,113 @@ export async function approveNearExpiryRequest(
   return (await res.json()) as { requests?: NearExpiryRequestRow[]; status?: string };
 }
 
+export type ReconMismatchRow = {
+  mismatchId: string;
+  mismatchType: string;
+  referenceId: string;
+  expectedLak: number;
+  actualLak: number;
+  status: string;
+  resolutionNote: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export type PaymentAdjustmentRow = {
+  adjustmentId: string;
+  paymentRequestId: string | null;
+  childOrderId: string | null;
+  amountLak: number;
+  reason: string;
+  status: string;
+  makerIdentityId: string;
+  approverIdentityId: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+};
+
+export async function listReconMismatches(limit = 50): Promise<ReconMismatchRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/payments/mismatches?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`mismatches_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { mismatches: ReconMismatchRow[] };
+  return body.mismatches;
+}
+
+export async function listPaymentAdjustments(
+  limit = 50,
+): Promise<PaymentAdjustmentRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/payments/adjustments?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`adjustments_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { adjustments: PaymentAdjustmentRow[] };
+  return body.adjustments;
+}
+
+export async function mockCreateMismatch(input: {
+  expectedLak?: number;
+  actualLak?: number;
+  mismatchType?: 'bank' | 'cod' | 'allocation';
+} = {}): Promise<{ mismatchId: string; mismatches: ReconMismatchRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/payments/mismatches/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `mismatch_create_failed_${res.status}`);
+  }
+  return (await res.json()) as { mismatchId: string; mismatches: ReconMismatchRow[] };
+}
+
+export async function resolveReconMismatch(
+  mismatchId: string,
+  input: { note?: string; createAdjustment?: boolean; amountLak?: number } = {},
+): Promise<{
+  adjustmentId?: string;
+  mismatches?: ReconMismatchRow[];
+  adjustments?: PaymentAdjustmentRow[];
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/payments/mismatches/${encodeURIComponent(mismatchId)}/resolve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `mismatch_resolve_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    adjustmentId?: string;
+    mismatches?: ReconMismatchRow[];
+    adjustments?: PaymentAdjustmentRow[];
+  };
+}
+
+export async function approvePaymentAdjustment(
+  adjustmentId: string,
+): Promise<{ adjustments?: PaymentAdjustmentRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/payments/adjustments/${encodeURIComponent(adjustmentId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `adjustment_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as { adjustments?: PaymentAdjustmentRow[]; status?: string };
+}
+
 export type ContractVersionRow = {
   contractId: string;
   storeId: string;

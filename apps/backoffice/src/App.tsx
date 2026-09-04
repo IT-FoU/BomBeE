@@ -51,6 +51,11 @@ import {
   listNearExpiryRequests,
   mockProposeNearExpiry,
   approveNearExpiryRequest,
+  listReconMismatches,
+  listPaymentAdjustments,
+  mockCreateMismatch,
+  resolveReconMismatch,
+  approvePaymentAdjustment,
   listContracts,
   mockCreateContract,
   listPayoutRequests,
@@ -106,6 +111,8 @@ import {
   type RefundApprovalRow,
   type PriceRequestRow,
   type NearExpiryRequestRow,
+  type ReconMismatchRow,
+  type PaymentAdjustmentRow,
   type ContractVersionRow,
   type PayoutRequestRow,
   type PayoutAccountRow,
@@ -197,6 +204,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [priceRequests, setPriceRequests] = useState<PriceRequestRow[]>([]);
   const [pricingNote, setPricingNote] = useState('');
   const [nearExpiryRequests, setNearExpiryRequests] = useState<NearExpiryRequestRow[]>([]);
+  const [reconMismatches, setReconMismatches] = useState<ReconMismatchRow[]>([]);
+  const [paymentAdjustments, setPaymentAdjustments] = useState<PaymentAdjustmentRow[]>([]);
+  const [adjustNote, setAdjustNote] = useState('');
   const [contractVersions, setContractVersions] = useState<ContractVersionRow[]>([]);
   const [payoutRequests, setPayoutRequests] = useState<PayoutRequestRow[]>([]);
   const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccountRow[]>([]);
@@ -255,6 +265,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           refundRows,
           priceRows,
           nearExpiryRows,
+          mismatchRows,
+          adjustmentRows,
           contractRows,
           payoutBundle,
           auditRows,
@@ -286,6 +298,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listRefunds(50),
           listPriceRequests(50),
           listNearExpiryRequests(50),
+          listReconMismatches(50),
+          listPaymentAdjustments(50),
           listContracts(50),
           listPayoutRequests(50),
           listAuditEvents(50),
@@ -317,6 +331,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setRefunds(refundRows);
         setPriceRequests(priceRows);
         setNearExpiryRequests(nearExpiryRows);
+        setReconMismatches(mismatchRows);
+        setPaymentAdjustments(adjustmentRows);
         setContractVersions(contractRows);
         setPayoutRequests(payoutBundle.requests);
         setPayoutAccounts(payoutBundle.accounts);
@@ -1910,9 +1926,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ອະນຸມັດ</span>
             </h2>
             <p className="lede">
-              Local refund, price, near-expiry, and payout approvals — mock create, approve
-              (maker-checker; below-cost / payouts need Owner + 2FA; payouts get 48h hold), then
-              mock-pay refunds.
+              Local refund, price, near-expiry, payout, and payment-adjustment approvals — mock
+              create, approve (maker-checker; below-cost / payouts need Owner + 2FA; payouts get
+              48h hold), then mock-pay refunds. Resolve recon mismatches into pending adjustments.
             </p>
             {refundNote ? (
               <p className="lede" role="status">
@@ -2337,6 +2353,167 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh payouts
+            </button>
+            {adjustNote ? (
+              <p className="lede" role="status">
+                {adjustNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Payment recon mismatches">
+              {reconMismatches.length === 0 ? <li>No recon mismatches yet</li> : null}
+              {reconMismatches.map((row) => (
+                <li key={row.mismatchId}>
+                  {row.status} · {row.mismatchType} · expected {formatLak(LAK(row.expectedLak))} /
+                  actual {formatLak(LAK(row.actualLak))} · ref {row.referenceId.slice(0, 8)}…
+                  {row.status === 'open' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setAdjustNote('');
+                          void (async () => {
+                            try {
+                              const result = await resolveReconMismatch(row.mismatchId, {
+                                note: 'BO mock mismatch resolve',
+                                createAdjustment: true,
+                              });
+                              if (result.mismatches) setReconMismatches(result.mismatches);
+                              if (result.adjustments) setPaymentAdjustments(result.adjustments);
+                              setAdjustNote(
+                                `Resolved ${row.mismatchId.slice(0, 8)}…` +
+                                  (result.adjustmentId
+                                    ? ` → adj ${result.adjustmentId.slice(0, 8)}…`
+                                    : ''),
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'mismatch_resolve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Resolve → adjustment
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setAdjustNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateMismatch({
+                      expectedLak: 10000,
+                      actualLak: 9500,
+                      mismatchType: 'bank',
+                    });
+                    setReconMismatches(result.mismatches);
+                    setAdjustNote(`Opened mismatch ${result.mismatchId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'mismatch_create_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create mismatch
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setReconMismatches(await listReconMismatches(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'mismatches_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh mismatches
+            </button>
+            <ul className="roles" aria-label="Payment adjustments">
+              {paymentAdjustments.length === 0 ? <li>No payment adjustments yet</li> : null}
+              {paymentAdjustments.map((row) => (
+                <li key={row.adjustmentId}>
+                  {row.status} · {formatLak(LAK(row.amountLak))} · {row.reason} · maker{' '}
+                  {row.makerIdentityId.slice(0, 8)}…
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setAdjustNote('');
+                          void (async () => {
+                            try {
+                              const result = await approvePaymentAdjustment(row.adjustmentId);
+                              if (result.adjustments) setPaymentAdjustments(result.adjustments);
+                              setAdjustNote(
+                                `Approved adjustment ${row.adjustmentId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'adjustment_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve adjustment
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setPaymentAdjustments(await listPaymentAdjustments(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'adjustments_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh adjustments
             </button>
           </section>
           <section aria-labelledby="audit-heading" id="audit">

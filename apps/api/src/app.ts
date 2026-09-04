@@ -1782,6 +1782,237 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/payments/mismatches') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const mismatches = await services.payments.listMismatches(limit);
+      sendJson(res, 200, { ok: true, mismatches });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/payments/adjustments') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const adjustments = await services.payments.listAdjustments(limit);
+      sendJson(res, 200, { ok: true, adjustments });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/payments/mismatches/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        mismatchType?: 'bank' | 'cod' | 'allocation';
+        mismatch_type?: 'bank' | 'cod' | 'allocation';
+        referenceId?: string;
+        reference_id?: string;
+        expectedLak?: number;
+        expected_lak?: number;
+        actualLak?: number;
+        actual_lak?: number;
+      }>(req);
+      try {
+        let referenceId = (body.referenceId ?? body.reference_id)?.trim();
+        if (!referenceId) {
+          const payment = await services.db.query<{ id: string }>(
+            `SELECT id FROM finance.payment_requests ORDER BY created_at DESC LIMIT 1`,
+          );
+          referenceId = payment.rows[0]?.id;
+        }
+        if (!referenceId) {
+          // Seed a synthetic reference for local QA when no payments exist yet.
+          referenceId = crypto.randomUUID();
+        }
+        const expectedLak =
+          typeof body.expectedLak === 'number'
+            ? Math.floor(body.expectedLak)
+            : typeof body.expected_lak === 'number'
+              ? Math.floor(body.expected_lak)
+              : 10000;
+        const actualLak =
+          typeof body.actualLak === 'number'
+            ? Math.floor(body.actualLak)
+            : typeof body.actual_lak === 'number'
+              ? Math.floor(body.actual_lak)
+              : expectedLak + 1000;
+        const mismatchType = body.mismatchType ?? body.mismatch_type ?? 'bank';
+        const inserted = await services.db.query<{ id: string }>(
+          `INSERT INTO finance.recon_mismatches
+            (mismatch_type, reference_id, expected_lak, actual_lak)
+           VALUES ($1,$2,$3,$4) RETURNING id`,
+          [mismatchType, referenceId, expectedLak, actualLak],
+        );
+        const mismatches = await services.payments.listMismatches(50);
+        sendJson(res, 201, {
+          ok: true,
+          mismatchId: inserted.rows[0]!.id,
+          referenceId,
+          expectedLak,
+          actualLak,
+          status: 'open',
+          mismatches,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'mismatch_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const mismatchResolveMatch = url.pathname.match(
+      /^\/v1\/ops\/payments\/mismatches\/([^/]+)\/resolve$/,
+    );
+    if (req.method === 'POST' && mismatchResolveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const mismatchId = decodeURIComponent(mismatchResolveMatch[1]!);
+      const body = await readJsonBody<{
+        note?: string;
+        createAdjustment?: boolean;
+        create_adjustment?: boolean;
+        amountLak?: number;
+        amount_lak?: number;
+        paymentRequestId?: string;
+        payment_request_id?: string;
+      }>(req);
+      const note = body.note?.trim() || 'local_mock_mismatch_resolved';
+      try {
+        const mismatch = await services.db.query<{
+          id: string;
+          status: string;
+          reference_id: string;
+          expected_lak: number;
+          actual_lak: number;
+        }>(
+          `SELECT id, status, reference_id, expected_lak, actual_lak
+           FROM finance.recon_mismatches WHERE id = $1`,
+          [mismatchId],
+        );
+        if (!mismatch.rows[0]) {
+          sendJson(res, 404, { error: 'mismatch_not_found' });
+          return;
+        }
+        if (mismatch.rows[0].status !== 'open') {
+          sendJson(res, 409, { error: 'not_open' });
+          return;
+        }
+        const maker = await services.identity.ensureStaff(
+          'staff:local-catalog-maker',
+          'Catalog Maker',
+          '+8562087000001',
+        );
+        const wantAdj = body.createAdjustment ?? body.create_adjustment ?? true;
+        const amountLak =
+          typeof body.amountLak === 'number'
+            ? Math.floor(body.amountLak)
+            : typeof body.amount_lak === 'number'
+              ? Math.floor(body.amount_lak)
+              : Math.max(
+                  1,
+                  Math.abs(
+                    Number(mismatch.rows[0].actual_lak) - Number(mismatch.rows[0].expected_lak),
+                  ) || 1,
+                );
+        let paymentRequestId =
+          (body.paymentRequestId ?? body.payment_request_id)?.trim() ||
+          mismatch.rows[0].reference_id;
+        const paymentExists = await services.db.query<{ id: string }>(
+          `SELECT id FROM finance.payment_requests WHERE id = $1`,
+          [paymentRequestId],
+        );
+        if (!paymentExists.rows[0]) {
+          const fallback = await services.db.query<{ id: string }>(
+            `SELECT id FROM finance.payment_requests ORDER BY created_at DESC LIMIT 1`,
+          );
+          paymentRequestId = fallback.rows[0]?.id ?? '';
+        }
+        const resolved = await services.payments.resolveMismatch({
+          mismatchId,
+          actorIdentityId: maker.identityId,
+          note,
+          createAdjustment: wantAdj
+            ? { amountLak, paymentRequestId: paymentRequestId || null }
+            : undefined,
+        });
+
+        const mismatches = await services.payments.listMismatches(50);
+        const adjustments = await services.payments.listAdjustments(50);
+        sendJson(res, 200, {
+          ok: true,
+          mismatchId,
+          status: 'resolved',
+          adjustmentId: resolved.adjustmentId,
+          mismatches,
+          adjustments,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'mismatch_resolve_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const adjustmentApproveMatch = url.pathname.match(
+      /^\/v1\/ops\/payments\/adjustments\/([^/]+)\/approve$/,
+    );
+    if (req.method === 'POST' && adjustmentApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const adjustmentId = decodeURIComponent(adjustmentApproveMatch[1]!);
+      try {
+        const adj = await services.db.query<{
+          maker_identity_id: string;
+          status: string;
+        }>(
+          `SELECT maker_identity_id, status FROM finance.payment_adjustments WHERE id = $1`,
+          [adjustmentId],
+        );
+        if (!adj.rows[0]) {
+          sendJson(res, 404, { error: 'adjustment_not_found' });
+          return;
+        }
+        if (adj.rows[0].status !== 'pending') {
+          sendJson(res, 409, { error: 'not_pending' });
+          return;
+        }
+        const approverIdentityId = await resolveOpsApprover(
+          services,
+          adj.rows[0].maker_identity_id,
+        );
+        const approved = await services.payments.approveAdjustment({
+          adjustmentId,
+          approverIdentityId,
+        });
+        if (!approved.ok) {
+          const status =
+            approved.reason === 'not_found'
+              ? 404
+              : approved.reason === 'self_approval' || approved.reason === 'not_pending'
+                ? 409
+                : 400;
+          sendJson(res, status, { error: approved.reason });
+          return;
+        }
+        const adjustments = await services.payments.listAdjustments(50);
+        sendJson(res, 200, {
+          ok: true,
+          adjustmentId,
+          status: 'approved',
+          adjustments,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'adjustment_approve_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/backups') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

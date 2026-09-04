@@ -13,8 +13,11 @@ import {
 import {
   createInvite,
   createStoreDraft,
+  listCodShipments,
   listInvites,
   listStores,
+  mockRemitCodShipment,
+  type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
 } from './lib/opsApi';
@@ -61,6 +64,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [formBusy, setFormBusy] = useState(false);
   const [storeDraftName, setStoreDraftName] = useState('');
   const [storeDrafts, setStoreDrafts] = useState<IssuedStore[]>([]);
+  const [codShipments, setCodShipments] = useState<CodShipmentRow[]>([]);
+  const [remitBusyId, setRemitBusyId] = useState('');
+  const [remitNote, setRemitNote] = useState('');
 
   const invitePreview = useMemo(
     () => inviteDraft.code.trim().toUpperCase() || 'QA-BETA-…',
@@ -70,9 +76,14 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [invites, stores] = await Promise.all([listInvites(), listStores()]);
+        const [invites, stores, cod] = await Promise.all([
+          listInvites(),
+          listStores(),
+          listCodShipments(),
+        ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
+        setCodShipments(cod);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -330,9 +341,96 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               ))}
             </ul>
           </section>
+          <section aria-labelledby="payments-heading" id="payments">
+            <h2 id="payments-heading">
+              <span lang="en">Payments</span>
+              {' / '}
+              <span lang="lo">ການຊຳລະ</span>
+            </h2>
+            <p className="lede">
+              Local COD shipments — mock remittance records courier cash-in (does not change
+              delivery status).
+            </p>
+            {remitNote ? (
+              <p className="lede" role="status">
+                {remitNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="COD shipments">
+              {codShipments.length === 0 ? <li>No COD shipments yet</li> : null}
+              {codShipments.map((row) => (
+                <li key={row.codShipmentId}>
+                  {row.status} · due {formatLak(LAK(row.balanceDueLak))} · child{' '}
+                  {row.childOrderId.slice(0, 8)}…
+                  {row.status === 'collected' || row.status === 'open' || row.status === 'remitted' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={remitBusyId === row.codShipmentId || formBusy}
+                        onClick={() => {
+                          setRemitBusyId(row.codShipmentId);
+                          setRemitNote('');
+                          setFormError('');
+                          void (async () => {
+                            try {
+                              const result = await mockRemitCodShipment(row.codShipmentId, {
+                                courierRef: 'BO-MOCK-REM',
+                              });
+                              setCodShipments((rows) =>
+                                rows.map((r) =>
+                                  r.codShipmentId === row.codShipmentId
+                                    ? { ...r, status: result.status }
+                                    : r,
+                                ),
+                              );
+                              setRemitNote(
+                                `Remitted ${formatLak(LAK(result.amountLak))} · diff ${result.reconcile.difference}${
+                                  result.idempotentReplay ? ' (replay)' : ''
+                                }`,
+                              );
+                            } catch (err) {
+                              setFormError(err instanceof Error ? err.message : 'remit_failed');
+                            } finally {
+                              setRemitBusyId('');
+                            }
+                          })();
+                        }}
+                      >
+                        Mock remit
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setCodShipments(await listCodShipments());
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'cod_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh COD list
+            </button>
+          </section>
           {navItems
             .filter(
-              (item) => !['dashboard', 'integrations', 'staff', 'invites', 'stores'].includes(item.id),
+              (item) =>
+                !['dashboard', 'integrations', 'staff', 'invites', 'stores', 'payments'].includes(
+                  item.id,
+                ),
             )
             .map((item) => (
               <section key={item.id} aria-labelledby={`${item.id}-heading`} id={item.id}>

@@ -238,6 +238,100 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/cod/shipments') {
+      const rows = await services.db.query<{
+        id: string;
+        child_order_id: string;
+        parent_order_id: string;
+        status: string;
+        amount_lak: number;
+        deposit_lak: number;
+        balance_due_lak: number;
+        created_at: string;
+      }>(
+        `SELECT cs.id, cs.child_order_id, co.parent_order_id, cs.status,
+                cs.amount_lak, cs.deposit_lak, cs.balance_due_lak, cs.created_at::text
+         FROM finance.cod_shipments cs
+         JOIN app.child_orders co ON co.id = cs.child_order_id
+         ORDER BY cs.created_at DESC
+         LIMIT 100`,
+      );
+      sendJson(res, 200, {
+        ok: true,
+        shipments: rows.rows.map((r) => ({
+          codShipmentId: r.id,
+          childOrderId: r.child_order_id,
+          parentOrderId: r.parent_order_id,
+          status: r.status,
+          amountLak: Number(r.amount_lak),
+          depositLak: Number(r.deposit_lak),
+          balanceDueLak: Number(r.balance_due_lak),
+          createdAt: r.created_at,
+        })),
+      });
+      return;
+    }
+
+    const mockRemitMatch = url.pathname.match(/^\/v1\/cod\/shipments\/([^/]+)\/mock-remit$/);
+    if (req.method === 'POST' && mockRemitMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const codShipmentId = decodeURIComponent(mockRemitMatch[1]!);
+      const body = await readJsonBody<{ courierRef?: string; amountLak?: number }>(req);
+      const row = await services.db.query<{
+        id: string;
+        status: string;
+        balance_due_lak: number;
+      }>(
+        `SELECT id, status, balance_due_lak FROM finance.cod_shipments WHERE id = $1`,
+        [codShipmentId],
+      );
+      const shipment = row.rows[0];
+      if (!shipment) {
+        sendJson(res, 404, { error: 'cod_shipment_not_found' });
+        return;
+      }
+      if (shipment.status === 'failed') {
+        sendJson(res, 409, { error: 'cod_shipment_failed' });
+        return;
+      }
+      const amountLak =
+        body.amountLak !== undefined ? Number(body.amountLak) : Number(shipment.balance_due_lak);
+      if (!Number.isInteger(amountLak) || amountLak < 0) {
+        sendJson(res, 400, { error: 'invalid_amount' });
+        return;
+      }
+
+      let remittanceId: string | undefined;
+      if (shipment.status === 'remitted') {
+        const existing = await services.db.query<{ remittance_id: string }>(
+          `SELECT remittance_id FROM finance.cod_remittance_links
+           WHERE cod_shipment_id = $1 ORDER BY remittance_id LIMIT 1`,
+          [codShipmentId],
+        );
+        remittanceId = existing.rows[0]?.remittance_id;
+      } else {
+        remittanceId = await services.payments.recordCourierRemittance({
+          courierRef: body.courierRef?.trim() || `MOCK-REM-${Date.now()}`,
+          amountLak,
+          codShipmentId,
+        });
+      }
+      const reconcile = await services.payments.reconcileCod(codShipmentId);
+      sendJson(res, 200, {
+        ok: true,
+        codShipmentId,
+        remittanceId,
+        status: 'remitted',
+        amountLak,
+        reconcile,
+        idempotentReplay: shipment.status === 'remitted',
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/stores') {
       const body = await readJsonBody<{ name?: string; code?: string }>(req);
       const name = body.name?.trim();

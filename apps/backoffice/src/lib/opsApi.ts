@@ -79,3 +79,49 @@ export async function listStores(): Promise<IssuedStore[]> {
   const body = (await res.json()) as { stores: IssuedStore[] };
   return body.stores;
 }
+
+export type CodShipmentRow = {
+  codShipmentId: string;
+  childOrderId: string;
+  parentOrderId: string;
+  status: string;
+  amountLak: number;
+  depositLak: number;
+  balanceDueLak: number;
+  createdAt: string;
+};
+
+export async function listCodShipments(): Promise<CodShipmentRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/cod/shipments`);
+  if (!res.ok) {
+    throw new Error(`cod_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { shipments: CodShipmentRow[] };
+  return body.shipments;
+}
+
+export async function mockRemitCodShipment(
+  codShipmentId: string,
+  input: { courierRef?: string; amountLak?: number } = {},
+): Promise<{
+  status: string;
+  amountLak: number;
+  reconcile: { expectedLak: number; actualLak: number; difference: number };
+  idempotentReplay?: boolean;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/cod/shipments/${codShipmentId}/mock-remit`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `cod_remit_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    status: string;
+    amountLak: number;
+    reconcile: { expectedLak: number; actualLak: number; difference: number };
+    idempotentReplay?: boolean;
+  };
+}

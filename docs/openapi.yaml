@@ -347,6 +347,28 @@ paths:
           description: COD shipments + reservations
         '409':
           description: Requires confirmation, COD ineligible, or insufficient stock
+  /v1/cod/shipments:
+    get:
+      summary: List COD shipments (local ops)
+      responses:
+        '200':
+          description: Shipments with balance due
+  /v1/cod/shipments/{codShipmentId}/mock-remit:
+    post:
+      summary: Local/mock courier remittance + COD reconcile
+      parameters:
+        - in: path
+          name: codShipmentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Remitted + reconcile totals
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: Shipment failed
   /v1/payments/{paymentRequestId}:
     get:
       summary: Payment request status

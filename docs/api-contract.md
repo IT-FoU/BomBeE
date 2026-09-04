@@ -28,6 +28,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |
 | POST | `/v1/orders/:parentId/payments/qr` | Create QR + reserve stock for order lines |
 | POST | `/v1/orders/:parentId/payments/cod` | Create COD shipments + reserve stock (confirmed children) |
+| GET | `/v1/cod/shipments` | List COD shipments (local ops) |
+| POST | `/v1/cod/shipments/:id/mock-remit` | Local/mock courier remittance + COD reconcile (does not change delivery) |
 | GET | `/v1/payments/:id` | Payment request status |
 | POST | `/v1/payments/:id/mock-confirm` | Local/mock evidence + confirm |
 | POST | `/v1/payments/mock-expire-due` | Local/mock expire open QR past deadline + release stock + cancel `awaiting_payment` children; also grace-expire reservations |

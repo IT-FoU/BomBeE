@@ -1091,6 +1091,82 @@ export async function approveReturn(
   return (await res.json()) as { returns?: ReturnRequestRow[]; status?: string };
 }
 
+export type DeliveryClaimRow = {
+  claimId: string;
+  deliveryId: string;
+  childOrderId: string;
+  claimType: string;
+  status: string;
+  liabilityParty: string | null;
+  notes: string | null;
+  deliveryStatus: string;
+  trackingNumber: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export async function listDeliveryClaims(limit = 50): Promise<DeliveryClaimRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/delivery-claims?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`delivery_claims_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { claims: DeliveryClaimRow[] };
+  return body.claims;
+}
+
+export async function mockOpenDeliveryClaim(input: {
+  deliveryId?: string;
+  claimType?: 'lost' | 'damaged';
+  notes?: string;
+} = {}): Promise<{
+  claimId: string;
+  liabilityParty?: string;
+  claims?: DeliveryClaimRow[];
+  status?: string;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/delivery-claims/mock-open`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      delivery_id: input.deliveryId,
+      claim_type: input.claimType,
+      notes: input.notes,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `delivery_claim_open_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    claimId: string;
+    liabilityParty?: string;
+    claims?: DeliveryClaimRow[];
+    status?: string;
+  };
+}
+
+export async function resolveDeliveryClaim(
+  claimId: string,
+  input: { status?: 'resolved' | 'rejected'; notes?: string } = {},
+): Promise<{ claims?: DeliveryClaimRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/delivery-claims/${encodeURIComponent(claimId)}/resolve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        status: input.status ?? 'resolved',
+        notes: input.notes,
+      }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `delivery_claim_resolve_failed_${res.status}`);
+  }
+  return (await res.json()) as { claims?: DeliveryClaimRow[]; status?: string };
+}
+
 export type PromotionRow = {
   promotionId: string;
   code: string;

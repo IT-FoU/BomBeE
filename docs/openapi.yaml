@@ -979,6 +979,71 @@ paths:
       responses:
         '200':
           description: Returns array
+  /v1/delivery-claims:
+    get:
+      summary: List delivery lost/damaged claims (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Claims array
+  /v1/ops/delivery-claims/mock-open:
+    post:
+      summary: Local/mock open lost/damaged claim on a delivered shipment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                delivery_id:
+                  type: string
+                claim_type:
+                  type: string
+                  enum: [lost, damaged]
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Claim opened; delivery claim_open
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No eligible delivery or claim already open
+  /v1/ops/delivery-claims/{claimId}/resolve:
+    post:
+      summary: Resolve or reject an open delivery claim
+      parameters:
+        - in: path
+          name: claimId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [resolved, rejected]
+                  default: resolved
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Claim closed; delivery restored to delivered
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Claim not found
+        '409':
+          description: Claim not open
   /v1/me/returns:
     get:
       summary: List own return requests

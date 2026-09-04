@@ -74,6 +74,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/support/tickets/:id/reply` | Local/mock staff reply → `awaiting_customer` |
 | POST | `/v1/ops/support/tickets/:id/resolve` | Local/mock preliminary resolve |
 | GET | `/v1/returns` | List return requests (local ops) |
+| GET | `/v1/delivery-claims` | List delivery lost/damaged claims (local ops) |
+| POST | `/v1/ops/delivery-claims/mock-open` | Local/mock open claim on delivered shipment (default damaged) |
+| POST | `/v1/ops/delivery-claims/:claimId/resolve` | Resolve or reject open claim (`status` resolved\|rejected) |
 | GET | `/v1/me/returns` | List own return requests (Bearer) |
 | POST | `/v1/me/returns` | Request return for owned delivered child (Bearer) |
 | POST | `/v1/ops/returns/mock-create` | Local/mock return for delivered child (optional `child_order_id`) |

@@ -60,6 +60,9 @@ import {
   listReturns,
   mockCreateReturn,
   approveReturn,
+  listDeliveryClaims,
+  mockOpenDeliveryClaim,
+  resolveDeliveryClaim,
   listPromotions,
   mockCreatePromotion,
   pausePromotion,
@@ -138,6 +141,7 @@ import {
   type SettlementCarryforwardRow,
   type SupportTicketRow,
   type ReturnRequestRow,
+  type DeliveryClaimRow,
   type PromotionRow,
   type RefundApprovalRow,
   type PriceRequestRow,
@@ -240,6 +244,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [supportNote, setSupportNote] = useState('');
   const [returnRequests, setReturnRequests] = useState<ReturnRequestRow[]>([]);
   const [returnNote, setReturnNote] = useState('');
+  const [deliveryClaims, setDeliveryClaims] = useState<DeliveryClaimRow[]>([]);
+  const [fulfillmentNote, setFulfillmentNote] = useState('');
   const [promotions, setPromotions] = useState<PromotionRow[]>([]);
   const [promoNote, setPromoNote] = useState('');
   const [refunds, setRefunds] = useState<RefundApprovalRow[]>([]);
@@ -311,6 +317,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           carryforwardRows,
           tickets,
           returns,
+          claimRows,
           promos,
           refundRows,
           priceRows,
@@ -350,6 +357,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listSettlementCarryforwards(50),
           listSupportTickets(50),
           listReturns(50),
+          listDeliveryClaims(50),
           listPromotions(50),
           listRefunds(50),
           listPriceRequests(50),
@@ -389,6 +397,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setSettlementCarryforwards(carryforwardRows);
         setSupportTickets(tickets);
         setReturnRequests(returns);
+        setDeliveryClaims(claimRows);
         setPromotions(promos);
         setRefunds(refundRows);
         setPriceRequests(priceRows);
@@ -1820,9 +1829,136 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ຈັດສົ່ງ</span>
             </h2>
             <p className="lede">
-              Use Confirm / Advance / Deliver on each order in the Orders section (local mock ops;
-              no customer session required).
+              Orders still use Confirm / Advance / Deliver. Here: lost/damaged delivery claims
+              (mock open + resolve/reject).
             </p>
+            {fulfillmentNote ? (
+              <p className="lede" role="status">
+                {fulfillmentNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Delivery claims">
+              {deliveryClaims.length === 0 ? <li>No delivery claims yet</li> : null}
+              {deliveryClaims.map((claim) => (
+                <li key={claim.claimId}>
+                  {claim.claimType} · {claim.status} · liability {claim.liabilityParty ?? '—'} ·
+                  delivery {claim.deliveryStatus} · child {claim.childOrderId.slice(0, 8)}…
+                  {claim.status === 'open' || claim.status === 'platform_coordinating' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setFulfillmentNote('');
+                          void (async () => {
+                            try {
+                              const result = await resolveDeliveryClaim(claim.claimId, {
+                                status: 'resolved',
+                                notes: 'BO mock resolve',
+                              });
+                              if (result.claims) setDeliveryClaims(result.claims);
+                              setFulfillmentNote(
+                                `Resolved claim ${claim.claimId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'delivery_claim_resolve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Resolve
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setFulfillmentNote('');
+                          void (async () => {
+                            try {
+                              const result = await resolveDeliveryClaim(claim.claimId, {
+                                status: 'rejected',
+                                notes: 'BO mock reject',
+                              });
+                              if (result.claims) setDeliveryClaims(result.claims);
+                              setFulfillmentNote(
+                                `Rejected claim ${claim.claimId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'delivery_claim_reject_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setFulfillmentNote('');
+                void (async () => {
+                  try {
+                    const result = await mockOpenDeliveryClaim({ claimType: 'damaged' });
+                    if (result.claims) setDeliveryClaims(result.claims);
+                    setFulfillmentNote(
+                      `Opened claim ${result.claimId.slice(0, 8)}… · ${result.status ?? 'platform_coordinating'}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'delivery_claim_open_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock open claim
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setDeliveryClaims(await listDeliveryClaims(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'delivery_claims_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh claims
+            </button>
           </section>
           <section aria-labelledby="payments-heading" id="payments">
             <h2 id="payments-heading">

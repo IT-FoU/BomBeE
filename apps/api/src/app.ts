@@ -1455,6 +1455,118 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/delivery-claims') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const claims = await services.delivery.listClaims(limit);
+      sendJson(res, 200, { ok: true, claims });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/delivery-claims/mock-open') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        deliveryId?: string;
+        delivery_id?: string;
+        claimType?: 'lost' | 'damaged';
+        claim_type?: 'lost' | 'damaged';
+        notes?: string;
+      }>(req);
+      try {
+        let deliveryId = (body.deliveryId ?? body.delivery_id)?.trim();
+        if (!deliveryId) {
+          const eligible = await services.db.query<{ id: string }>(
+            `SELECT d.id
+             FROM app.shipment_deliveries d
+             WHERE d.status = 'delivered'
+               AND NOT EXISTS (
+                 SELECT 1 FROM app.delivery_claims c
+                 WHERE c.shipment_delivery_id = d.id
+                   AND c.status IN ('open', 'platform_coordinating')
+               )
+             ORDER BY d.delivered_at DESC NULLS LAST
+             LIMIT 1`,
+          );
+          deliveryId = eligible.rows[0]?.id;
+        }
+        if (!deliveryId) {
+          sendJson(res, 409, { error: 'no_eligible_delivery' });
+          return;
+        }
+        const claimTypeRaw = body.claimType ?? body.claim_type ?? 'damaged';
+        if (claimTypeRaw !== 'lost' && claimTypeRaw !== 'damaged') {
+          sendJson(res, 400, { error: 'invalid_claim_type' });
+          return;
+        }
+        const opened = await services.delivery.openClaim({
+          deliveryId,
+          claimType: claimTypeRaw,
+          notes: body.notes?.trim() || 'local mock delivery claim',
+        });
+        const claims = await services.delivery.listClaims(50);
+        sendJson(res, 201, {
+          ok: true,
+          ...opened,
+          deliveryId,
+          claimType: claimTypeRaw,
+          status: 'platform_coordinating',
+          claims,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'claim_open_failed';
+        const status =
+          message === 'delivery_not_found'
+            ? 404
+            : message === 'delivery_not_delivered' || message === 'claim_already_open'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    const claimResolveMatch = url.pathname.match(
+      /^\/v1\/ops\/delivery-claims\/([^/]+)\/resolve$/,
+    );
+    if (req.method === 'POST' && claimResolveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const claimId = decodeURIComponent(claimResolveMatch[1]!);
+      const body = await readJsonBody<{
+        status?: 'resolved' | 'rejected';
+        notes?: string;
+      }>(req);
+      const statusRaw = body.status ?? 'resolved';
+      if (statusRaw !== 'resolved' && statusRaw !== 'rejected') {
+        sendJson(res, 400, { error: 'invalid_claim_status' });
+        return;
+      }
+      try {
+        const resolved = await services.delivery.resolveClaim({
+          claimId,
+          status: statusRaw,
+          notes: body.notes,
+        });
+        const claims = await services.delivery.listClaims(50);
+        sendJson(res, 200, { ok: true, ...resolved, claims });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'claim_resolve_failed';
+        const status =
+          message === 'claim_not_found'
+            ? 404
+            : message === 'claim_not_open'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/me/returns') {
       const session = await requireCustomerSession(req, services);
       if (!session) {

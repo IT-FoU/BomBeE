@@ -248,21 +248,33 @@ export class DeliveryService {
     claimType: 'lost' | 'damaged';
     notes?: string;
   }) {
-    const contract = await this.db.query<{
+    const delivery = await this.db.query<{
+      status: string;
       lost_liability_party: string;
       damaged_liability_party: string;
     }>(
-      `SELECT c.lost_liability_party, c.damaged_liability_party
+      `SELECT d.status, c.lost_liability_party, c.damaged_liability_party
        FROM app.shipment_deliveries d
        JOIN app.courier_contracts c ON c.id = d.courier_contract_id
        WHERE d.id = $1`,
       [input.deliveryId],
     );
-    if (!contract.rows[0]) throw new Error('delivery_not_found');
+    if (!delivery.rows[0]) throw new Error('delivery_not_found');
+    const openExisting = await this.db.query<{ id: string }>(
+      `SELECT id FROM app.delivery_claims
+       WHERE shipment_delivery_id = $1
+         AND status IN ('open', 'platform_coordinating')
+       LIMIT 1`,
+      [input.deliveryId],
+    );
+    if (openExisting.rows[0]) throw new Error('claim_already_open');
+    if (delivery.rows[0].status !== 'delivered') {
+      throw new Error('delivery_not_delivered');
+    }
     const liability =
       input.claimType === 'lost'
-        ? contract.rows[0].lost_liability_party
-        : contract.rows[0].damaged_liability_party;
+        ? delivery.rows[0].lost_liability_party
+        : delivery.rows[0].damaged_liability_party;
     const claim = await this.db.query<{ id: string }>(
       `INSERT INTO app.delivery_claims
         (shipment_delivery_id, claim_type, status, liability_party, notes)
@@ -274,5 +286,89 @@ export class DeliveryService {
       [input.deliveryId],
     );
     return { claimId: claim.rows[0]!.id, liabilityParty: liability };
+  }
+
+  async listClaims(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      shipment_delivery_id: string;
+      child_order_id: string;
+      claim_type: string;
+      status: string;
+      liability_party: string | null;
+      notes: string | null;
+      delivery_status: string;
+      tracking_number: string | null;
+      created_at: string;
+      resolved_at: string | null;
+    }>(
+      `SELECT c.id, c.shipment_delivery_id, d.child_order_id, c.claim_type, c.status,
+              c.liability_party, c.notes, d.status AS delivery_status, d.tracking_number,
+              c.created_at::text, c.resolved_at::text
+       FROM app.delivery_claims c
+       JOIN app.shipment_deliveries d ON d.id = c.shipment_delivery_id
+       ORDER BY c.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      claimId: r.id,
+      deliveryId: r.shipment_delivery_id,
+      childOrderId: r.child_order_id,
+      claimType: r.claim_type,
+      status: r.status,
+      liabilityParty: r.liability_party,
+      notes: r.notes,
+      deliveryStatus: r.delivery_status,
+      trackingNumber: r.tracking_number,
+      createdAt: r.created_at,
+      resolvedAt: r.resolved_at,
+    }));
+  }
+
+  async resolveClaim(input: {
+    claimId: string;
+    status: 'resolved' | 'rejected';
+    notes?: string;
+  }) {
+    const claim = await this.db.query<{
+      id: string;
+      status: string;
+      shipment_delivery_id: string;
+      notes: string | null;
+    }>(
+      `SELECT id, status, shipment_delivery_id, notes
+       FROM app.delivery_claims WHERE id = $1`,
+      [input.claimId],
+    );
+    if (!claim.rows[0]) throw new Error('claim_not_found');
+    if (
+      claim.rows[0].status !== 'open' &&
+      claim.rows[0].status !== 'platform_coordinating'
+    ) {
+      throw new Error('claim_not_open');
+    }
+    const notes =
+      input.notes?.trim() ||
+      claim.rows[0].notes ||
+      null;
+    await this.db.query(
+      `UPDATE app.delivery_claims
+       SET status = $2, notes = $3, resolved_at = timezone('utc', now())
+       WHERE id = $1`,
+      [input.claimId, input.status, notes],
+    );
+    await this.db.query(
+      `UPDATE app.shipment_deliveries
+       SET status = 'delivered'
+       WHERE id = $1 AND status = 'claim_open'`,
+      [claim.rows[0].shipment_delivery_id],
+    );
+    return {
+      claimId: input.claimId,
+      status: input.status,
+      deliveryId: claim.rows[0].shipment_delivery_id,
+    };
   }
 }

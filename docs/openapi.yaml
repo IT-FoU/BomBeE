@@ -409,6 +409,77 @@ paths:
           description: Line disputed; batch partially_disputed
         '409':
           description: Dispute window exceeded
+  /v1/support/tickets:
+    get:
+      summary: List support tickets (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Tickets array
+  /v1/ops/support/tickets/mock-create:
+    post:
+      summary: Local/mock open a support ticket
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject:
+                  type: string
+                body:
+                  type: string
+                urgency:
+                  type: string
+                  enum: [general, urgent]
+      responses:
+        '201':
+          description: Ticket opened
+        '403':
+          description: Mock ops disabled
+  /v1/ops/support/tickets/{ticketId}/reply:
+    post:
+      summary: Local/mock staff reply
+      parameters:
+        - in: path
+          name: ticketId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+      responses:
+        '200':
+          description: Status awaiting_customer
+        '404':
+          description: Ticket not found
+  /v1/ops/support/tickets/{ticketId}/resolve:
+    post:
+      summary: Local/mock preliminary resolve
+      parameters:
+        - in: path
+          name: ticketId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status resolved_pending_confirm
+        '404':
+          description: Ticket not found
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

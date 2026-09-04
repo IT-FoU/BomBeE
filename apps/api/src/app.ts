@@ -478,6 +478,120 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/support/tickets') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const tickets = await services.support.listTickets(limit);
+      sendJson(res, 200, { ok: true, tickets });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/support/tickets/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        subject?: string;
+        body?: string;
+        urgency?: 'general' | 'urgent';
+        channel?: 'in_app' | 'whatsapp' | 'phone';
+      }>(req);
+      const subject = body.subject?.trim() || 'Local mock support ticket';
+      const message = body.body?.trim() || 'Need help with a local QA order.';
+      try {
+        const customerIdentityId = await services.identity.ensureCustomer(
+          '+8562097008800',
+          'Local Support Customer',
+        );
+        const created = await services.support.openTicket({
+          customerIdentityId,
+          channel: body.channel ?? 'in_app',
+          subject,
+          body: message,
+          urgency: body.urgency ?? 'general',
+        });
+        const tickets = await services.support.listTickets(50);
+        sendJson(res, 201, { ok: true, ...created, tickets });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'support_create_failed';
+        sendJson(res, 400, { error: msg });
+      }
+      return;
+    }
+
+    const supportReplyMatch = url.pathname.match(
+      /^\/v1\/ops\/support\/tickets\/([^/]+)\/reply$/,
+    );
+    if (req.method === 'POST' && supportReplyMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const ticketId = decodeURIComponent(supportReplyMatch[1]!);
+      const body = await readJsonBody<{ body?: string }>(req);
+      const message = body.body?.trim();
+      if (!message) {
+        sendJson(res, 400, { error: 'body_required' });
+        return;
+      }
+      const existing = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.support_tickets WHERE id = $1`,
+        [ticketId],
+      );
+      if (!existing.rows[0]) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+      try {
+        const staffIdentityId = await resolveOpsActor(services);
+        await services.support.staffReply({
+          ticketId,
+          staffIdentityId,
+          body: message,
+        });
+        const tickets = await services.support.listTickets(50);
+        sendJson(res, 200, { ok: true, ticketId, status: 'awaiting_customer', tickets });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'support_reply_failed';
+        sendJson(res, 400, { error: msg });
+      }
+      return;
+    }
+
+    const supportResolveMatch = url.pathname.match(
+      /^\/v1\/ops\/support\/tickets\/([^/]+)\/resolve$/,
+    );
+    if (req.method === 'POST' && supportResolveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const ticketId = decodeURIComponent(supportResolveMatch[1]!);
+      const existing = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.support_tickets WHERE id = $1`,
+        [ticketId],
+      );
+      if (!existing.rows[0]) {
+        sendJson(res, 404, { error: 'ticket_not_found' });
+        return;
+      }
+      try {
+        await services.support.markPreliminaryResolved(ticketId);
+        const tickets = await services.support.listTickets(50);
+        sendJson(res, 200, {
+          ok: true,
+          ticketId,
+          status: 'resolved_pending_confirm',
+          tickets,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'support_resolve_failed';
+        sendJson(res, 400, { error: msg });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/settlements') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

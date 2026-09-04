@@ -42,6 +42,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B22 | Backoffice catalog + inventory views | **Done** — Catalog list + Stock detail via existing `/v1/catalog/products` + `/v1/inventory/stock` |
 | P2-B23 | Settlements list + mock create | **Done** — `GET /v1/settlements`, `POST /v1/ops/settlements/mock-create`, seed payouts, Settlements section |
 | P2-B24 | Settlement submit / approve / dispute | **Done** — ops submit/approve/dispute + lines GET; Settlements buttons; maker-checker |
+| P2-B25 | Support tickets list + mock ops | **Done** — `GET /v1/support/tickets`, mock-create/reply/resolve; Support section |
 
 ## C — Hard rules that stay
 

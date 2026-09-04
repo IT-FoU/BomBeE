@@ -28,6 +28,10 @@ import {
   submitSettlementBatch,
   approveSettlementBatch,
   disputeSettlementBatch,
+  listSupportTickets,
+  mockCreateSupportTicket,
+  replySupportTicket,
+  resolveSupportTicket,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -35,6 +39,7 @@ import {
   type OpsOrderRow,
   type OpsStockView,
   type SettlementBatchRow,
+  type SupportTicketRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -85,6 +90,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [stockDetail, setStockDetail] = useState<OpsStockView | null>(null);
   const [settlementBatches, setSettlementBatches] = useState<SettlementBatchRow[]>([]);
   const [settlementNote, setSettlementNote] = useState('');
+  const [supportTickets, setSupportTickets] = useState<SupportTicketRow[]>([]);
+  const [supportNote, setSupportNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -96,13 +103,14 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [invites, stores, cod, orders, products, batches] = await Promise.all([
+        const [invites, stores, cod, orders, products, batches, tickets] = await Promise.all([
           listInvites(),
           listStores(),
           listCodShipments(),
           listOrders(30),
           listCatalogProducts(50),
           listSettlementBatches(50),
+          listSupportTickets(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -110,6 +118,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setOpsOrders(orders);
         setCatalogProducts(products);
         setSettlementBatches(batches);
+        setSupportTickets(tickets);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -826,6 +835,144 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh settlements
             </button>
           </section>
+          <section aria-labelledby="support-heading" id="support">
+            <h2 id="support-heading">
+              <span lang="en">Support</span>
+              {' / '}
+              <span lang="lo">ສະໜັບສະໜູນ</span>
+            </h2>
+            <p className="lede">
+              Local support tickets — mock create, staff reply, and preliminary resolve.
+            </p>
+            {supportNote ? (
+              <p className="lede" role="status">
+                {supportNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Support tickets">
+              {supportTickets.length === 0 ? <li>No support tickets yet</li> : null}
+              {supportTickets.map((ticket) => (
+                <li key={ticket.ticketId}>
+                  {ticket.status} · {ticket.urgency} · {ticket.subject} · {ticket.messageCount}{' '}
+                  msgs
+                  {ticket.status === 'open' || ticket.status === 'reopened' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setSupportNote('');
+                          void (async () => {
+                            try {
+                              const result = await replySupportTicket(
+                                ticket.ticketId,
+                                'Local ops: looking into this.',
+                              );
+                              if (result.tickets) setSupportTickets(result.tickets);
+                              setSupportNote(
+                                `Replied ${ticket.ticketId.slice(0, 8)}… → awaiting_customer`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'support_reply_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Reply
+                      </button>
+                    </>
+                  ) : null}
+                  {ticket.status !== 'closed' &&
+                  ticket.status !== 'resolved_pending_confirm' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setSupportNote('');
+                          void (async () => {
+                            try {
+                              const result = await resolveSupportTicket(ticket.ticketId);
+                              if (result.tickets) setSupportTickets(result.tickets);
+                              setSupportNote(
+                                `Resolved ${ticket.ticketId.slice(0, 8)}… → pending confirm`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'support_resolve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Resolve
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setSupportNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateSupportTicket({
+                      subject: 'BO mock ticket',
+                      body: 'Opened from backoffice Support section.',
+                      urgency: 'general',
+                    });
+                    setSupportTickets(result.tickets);
+                    setSupportNote(`Opened ${result.ticketId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'support_create_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create ticket
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setSupportTickets(await listSupportTickets(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'support_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh tickets
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -841,6 +988,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'catalog',
                   'inventory',
                   'settlements',
+                  'support',
                 ].includes(item.id),
             )
             .map((item) => (

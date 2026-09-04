@@ -342,3 +342,73 @@ export async function disputeSettlementBatch(
     reason: input.reason,
   });
 }
+
+export type SupportTicketRow = {
+  ticketId: string;
+  subject: string;
+  status: string;
+  urgency: string;
+  channel: string;
+  customerIdentityId: string;
+  messageCount: number;
+  firstResponseDueAt: string;
+  resolutionDueAt: string;
+  createdAt: string;
+};
+
+export async function listSupportTickets(limit = 50): Promise<SupportTicketRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/support/tickets?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`support_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { tickets: SupportTicketRow[] };
+  return body.tickets;
+}
+
+export async function mockCreateSupportTicket(input: {
+  subject?: string;
+  body?: string;
+  urgency?: 'general' | 'urgent';
+} = {}): Promise<{ ticketId: string; tickets: SupportTicketRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/support/tickets/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `support_create_failed_${res.status}`);
+  }
+  return (await res.json()) as { ticketId: string; tickets: SupportTicketRow[] };
+}
+
+export async function replySupportTicket(
+  ticketId: string,
+  body: string,
+): Promise<{ tickets?: SupportTicketRow[]; status?: string }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/support/tickets/${ticketId}/reply`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ body }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `support_reply_failed_${res.status}`);
+  }
+  return (await res.json()) as { tickets?: SupportTicketRow[]; status?: string };
+}
+
+export async function resolveSupportTicket(
+  ticketId: string,
+): Promise<{ tickets?: SupportTicketRow[]; status?: string }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/support/tickets/${ticketId}/resolve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `support_resolve_failed_${res.status}`);
+  }
+  return (await res.json()) as { tickets?: SupportTicketRow[]; status?: string };
+}

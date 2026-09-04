@@ -905,6 +905,70 @@ paths:
           description: Drill evidence
         '409':
           description: Backup not ready
+  /v1/search/catalog:
+    get:
+      summary: Catalog match by OCR text q and/or barcode
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: barcode
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Matches array
+        '400':
+          description: Missing q and barcode
+  /v1/search/image:
+    post:
+      summary: Upload search image metadata and return catalog matches
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                byteSize:
+                  type: integer
+                consentSearchOnly:
+                  type: boolean
+                ocrText:
+                  type: string
+                barcodeValue:
+                  type: string
+      responses:
+        '201':
+          description: Upload recorded + matches
+        '400':
+          description: Consent / type / size invalid
+  /v1/search/uploads:
+    get:
+      summary: List recent search image uploads (local ops)
+      responses:
+        '200':
+          description: Uploads array
+  /v1/ops/search/purge-expired:
+    post:
+      summary: Local/mock purge expired search uploads
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                now:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Purge counts
+        '403':
+          description: Mock ops disabled
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

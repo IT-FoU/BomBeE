@@ -66,6 +66,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/backups/mock-run` | Local/mock encrypted backup job (`job_type`, optional `fail`) |
 | POST | `/v1/ops/backups/:id/verify` | Local/mock checksum verify |
 | POST | `/v1/ops/backups/:id/restore-drill` | Local/mock restore drill evidence |
+| GET | `/v1/search/catalog` | Catalog match by `q` and/or `barcode` |
+| POST | `/v1/search/image` | Local image-search upload metadata + match (consent search-only; 24h TTL) |
+| GET | `/v1/search/uploads` | List recent search image uploads (local ops) |
+| POST | `/v1/ops/search/purge-expired` | Local/mock purge expired search uploads |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

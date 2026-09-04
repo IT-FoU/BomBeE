@@ -66,29 +66,102 @@ export class ImageSearchService {
 
   async searchCatalog(input: { ocrText?: string; barcodeValue?: string }) {
     if (input.barcodeValue) {
-      const byBarcode = await this.db.query<{ id: string; sku: string }>(
-        `SELECT id, sku FROM app.product_variants
-         WHERE barcode = $1 AND status = 'active'`,
+      const byBarcode = await this.db.query<{
+        id: string;
+        sku: string;
+        barcode: string | null;
+        title_en: string;
+        title_lo: string;
+      }>(
+        `SELECT pv.id, pv.sku, pv.barcode,
+                coalesce(pt_en.title, '') AS title_en,
+                coalesce(pt_lo.title, '') AS title_lo
+         FROM app.product_variants pv
+         JOIN app.products p ON p.id = pv.product_id
+         LEFT JOIN app.product_translations pt_en
+           ON pt_en.product_id = p.id AND pt_en.locale = 'en'
+         LEFT JOIN app.product_translations pt_lo
+           ON pt_lo.product_id = p.id AND pt_lo.locale = 'lo'
+         WHERE pv.barcode = $1 AND pv.status = 'active'`,
         [input.barcodeValue],
       );
-      if (byBarcode.rows.length) return byBarcode.rows;
+      if (byBarcode.rows.length) {
+        return byBarcode.rows.map((r) => ({
+          variantId: r.id,
+          sku: r.sku,
+          barcode: r.barcode,
+          titleEn: r.title_en,
+          titleLo: r.title_lo,
+        }));
+      }
     }
     if (input.ocrText && input.ocrText.trim()) {
       const q = `%${input.ocrText.trim().toLowerCase()}%`;
-      return (
-        await this.db.query<{ id: string; sku: string }>(
-          `SELECT pv.id, pv.sku
-           FROM app.product_variants pv
-           JOIN app.products p ON p.id = pv.product_id
-           LEFT JOIN app.product_translations t ON t.product_id = p.id
-           WHERE pv.status = 'active'
-             AND (lower(pv.sku) LIKE $1 OR lower(coalesce(t.title,'')) LIKE $1)
-           LIMIT 20`,
-          [q],
-        )
-      ).rows;
+      const rows = await this.db.query<{
+        id: string;
+        sku: string;
+        barcode: string | null;
+        title_en: string;
+        title_lo: string;
+      }>(
+        `SELECT pv.id, pv.sku, pv.barcode,
+                coalesce(pt_en.title, '') AS title_en,
+                coalesce(pt_lo.title, '') AS title_lo
+         FROM app.product_variants pv
+         JOIN app.products p ON p.id = pv.product_id
+         LEFT JOIN app.product_translations pt_en
+           ON pt_en.product_id = p.id AND pt_en.locale = 'en'
+         LEFT JOIN app.product_translations pt_lo
+           ON pt_lo.product_id = p.id AND pt_lo.locale = 'lo'
+         WHERE pv.status = 'active'
+           AND (
+             lower(pv.sku) LIKE $1
+             OR lower(coalesce(pt_en.title,'')) LIKE $1
+             OR lower(coalesce(pt_lo.title,'')) LIKE $1
+           )
+         LIMIT 20`,
+        [q],
+      );
+      return rows.rows.map((r) => ({
+        variantId: r.id,
+        sku: r.sku,
+        barcode: r.barcode,
+        titleEn: r.title_en,
+        titleLo: r.title_lo,
+      }));
     }
     return [];
+  }
+
+  async listUploads(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      content_type: string;
+      byte_size: number;
+      ocr_text: string | null;
+      barcode_value: string | null;
+      expires_at: string;
+      deleted_at: string | null;
+      created_at: string;
+    }>(
+      `SELECT id, content_type, byte_size, ocr_text, barcode_value,
+              expires_at::text, deleted_at::text, created_at::text
+       FROM app.search_image_uploads
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      uploadId: r.id,
+      contentType: r.content_type,
+      byteSize: r.byte_size,
+      ocrText: r.ocr_text,
+      barcodeValue: r.barcode_value,
+      expiresAt: r.expires_at,
+      deletedAt: r.deleted_at,
+      createdAt: r.created_at,
+    }));
   }
 
   async purgeExpired(now = new Date()) {

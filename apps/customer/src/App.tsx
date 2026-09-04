@@ -15,6 +15,7 @@ import {
   mockAdvanceFulfillment,
   mockDeliverFulfillment,
 } from './lib/checkoutApi';
+import { searchByImageMeta, type SearchMatch } from './lib/searchApi';
 import {
   confirmChildrenMock,
   createCodPayment,
@@ -86,6 +87,11 @@ export function App() {
   const [checkoutError, setCheckoutError] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromoNote, setAppliedPromoNote] = useState('');
+  const [imageBarcode, setImageBarcode] = useState('8850123456789');
+  const [imageOcr, setImageOcr] = useState('Water');
+  const [imageMatches, setImageMatches] = useState<SearchMatch[]>([]);
+  const [imageSearchNote, setImageSearchNote] = useState('');
+  const [imageSearchBusy, setImageSearchBusy] = useState(false);
   const [qrPayment, setQrPayment] = useState<QrPayment | null>(null);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [payBusy, setPayBusy] = useState(false);
@@ -632,7 +638,95 @@ export function App() {
                   ? 'ໃຊ້ເພື່ອຄົ້ນຫາເທົ່ານັ້ນ · ລຶບໃນ 24 ຊົ່ວໂມງ · ບໍ່ໃຊ້ train/analytics'
                   : 'Search only · deleted in 24h · no train/analytics'}
               </p>
-              <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" />
+              <label className="field">
+                Barcode (local seed)
+                <input
+                  value={imageBarcode}
+                  onChange={(e) => setImageBarcode(e.target.value)}
+                  placeholder="8850123456789"
+                />
+              </label>
+              <label className="field">
+                OCR text (mock)
+                <input
+                  value={imageOcr}
+                  onChange={(e) => setImageOcr(e.target.value)}
+                  placeholder="Water"
+                />
+              </label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setImageSearchBusy(true);
+                  setImageSearchNote('');
+                  void (async () => {
+                    try {
+                      const result = await searchByImageMeta({
+                        sessionToken: sessionStorage.getItem('bombee_session') || undefined,
+                        contentType: file.type || 'image/jpeg',
+                        byteSize: file.size || 1024,
+                        barcodeValue: imageBarcode.trim() || undefined,
+                        ocrText: imageOcr.trim() || undefined,
+                      });
+                      setImageMatches(result.matches);
+                      setImageSearchNote(
+                        `Upload ${result.uploadId.slice(0, 8)}… · ${result.matches.length} match(es)`,
+                      );
+                    } catch (err) {
+                      setImageSearchNote(err instanceof Error ? err.message : 'image_search_failed');
+                    } finally {
+                      setImageSearchBusy(false);
+                    }
+                  })();
+                }}
+              />
+              <button
+                type="button"
+                className="cta"
+                disabled={imageSearchBusy || !online}
+                onClick={() => {
+                  setImageSearchBusy(true);
+                  setImageSearchNote('');
+                  void (async () => {
+                    try {
+                      const result = await searchByImageMeta({
+                        sessionToken: sessionStorage.getItem('bombee_session') || undefined,
+                        contentType: 'image/jpeg',
+                        byteSize: 2048,
+                        barcodeValue: imageBarcode.trim() || undefined,
+                        ocrText: imageOcr.trim() || undefined,
+                      });
+                      setImageMatches(result.matches);
+                      setImageSearchNote(
+                        `Upload ${result.uploadId.slice(0, 8)}… · ${result.matches.length} match(es)`,
+                      );
+                    } catch (err) {
+                      setImageSearchNote(
+                        err instanceof Error ? err.message : 'image_search_failed',
+                      );
+                    } finally {
+                      setImageSearchBusy(false);
+                    }
+                  })();
+                }}
+              >
+                {imageSearchBusy ? 'Searching…' : 'Search with mock image meta'}
+              </button>
+              {imageSearchNote ? <p className="muted">{imageSearchNote}</p> : null}
+              {imageMatches.length > 0 ? (
+                <ul className="list" aria-label="Image search matches">
+                  {imageMatches.map((m) => (
+                    <li key={m.variantId}>
+                      {m.sku} · {locale === 'lo' ? m.titleLo || m.titleEn : m.titleEn || m.titleLo}
+                      {m.barcode ? ` · ${m.barcode}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           </section>
         )}

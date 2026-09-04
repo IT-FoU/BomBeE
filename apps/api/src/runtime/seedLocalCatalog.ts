@@ -143,6 +143,7 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
     brandId: string;
     storeProductId: string;
     sku: string;
+    barcode?: string;
     titleLo: string;
     titleEn: string;
     costLak: number;
@@ -165,6 +166,7 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
       productId,
       storeId: input.storeId,
       sku: input.sku,
+      barcode: input.barcode,
       hasShelfLife: false,
     });
     await catalog.setStatus('products', productId, 'active');
@@ -216,6 +218,7 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
     brandId: brandWater,
     storeProductId: 'drinking-water',
     sku: 'WATER-12',
+    barcode: '8850123456789',
     titleLo: 'ນ້ຳດື່ມ ແພັກ 12',
     titleEn: 'Drinking Water 12-pack',
     costLak: 30000,

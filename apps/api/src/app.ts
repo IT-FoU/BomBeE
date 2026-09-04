@@ -2337,6 +2337,102 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/search/catalog') {
+      const q = url.searchParams.get('q')?.trim() || undefined;
+      const barcode = url.searchParams.get('barcode')?.trim() || undefined;
+      if (!q && !barcode) {
+        sendJson(res, 400, { error: 'q_or_barcode_required' });
+        return;
+      }
+      const matches = await services.imageSearch.searchCatalog({
+        ocrText: q,
+        barcodeValue: barcode,
+      });
+      sendJson(res, 200, { ok: true, matches });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/search/image') {
+      const body = await readJsonBody<{
+        contentType?: string;
+        content_type?: string;
+        byteSize?: number;
+        byte_size?: number;
+        consentSearchOnly?: boolean;
+        consent_search_only?: boolean;
+        consentTrainAnalytics?: boolean;
+        ocrText?: string;
+        ocr_text?: string;
+        barcodeValue?: string;
+        barcode_value?: string;
+      }>(req);
+      const session = await requireCustomerSession(req, services);
+      try {
+        const contentType = body.contentType ?? body.content_type ?? 'image/jpeg';
+        const byteSize = body.byteSize ?? body.byte_size ?? 1024;
+        const consentSearchOnly = body.consentSearchOnly ?? body.consent_search_only ?? true;
+        const upload = await services.imageSearch.upload({
+          customerIdentityId: session?.identityId,
+          contentType,
+          byteSize,
+          consentSearchOnly,
+          consentTrainAnalytics: body.consentTrainAnalytics === true,
+          ocrText: body.ocrText ?? body.ocr_text,
+          barcodeValue: body.barcodeValue ?? body.barcode_value,
+        });
+        const matches = await services.imageSearch.searchCatalog({
+          ocrText: body.ocrText ?? body.ocr_text,
+          barcodeValue: body.barcodeValue ?? body.barcode_value,
+        });
+        sendJson(res, 201, { ok: true, upload, matches });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'image_search_failed';
+        const status =
+          message === 'invalid_content_type' ||
+          message === 'file_too_large' ||
+          message === 'search_consent_required' ||
+          message === 'train_analytics_consent_forbidden'
+            ? 400
+            : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/search/uploads') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const uploads = await services.imageSearch.listUploads(limit);
+      sendJson(res, 200, { ok: true, uploads });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/search/purge-expired') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{ now?: string }>(req);
+      let now = new Date();
+      if (body.now) {
+        const parsed = Date.parse(body.now);
+        if (!Number.isFinite(parsed)) {
+          sendJson(res, 400, { error: 'invalid_now' });
+          return;
+        }
+        now = new Date(parsed);
+      }
+      try {
+        const purged = await services.imageSearch.purgeExpired(now);
+        const uploads = await services.imageSearch.listUploads(50);
+        sendJson(res, 200, { ok: true, ...purged, uploads });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'search_purge_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/') {
       sendJson(res, 200, {
         name: BRAND_NAME,

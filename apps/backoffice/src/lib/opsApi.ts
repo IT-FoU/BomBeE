@@ -613,6 +613,17 @@ export type OpsCatalogProduct = {
   variants: Array<{ id: string; sku: string; label: string; priceLak: number }>;
 };
 
+export type OpsCatalogStatusProduct = {
+  id: string;
+  storeId: string;
+  storeName: string;
+  status: string;
+  slug: string;
+  titleLo: string;
+  titleEn: string;
+  variants: Array<{ id: string; sku: string; status: string }>;
+};
+
 export async function listCatalogProducts(limit = 50): Promise<OpsCatalogProduct[]> {
   const res = await fetch(`${apiBaseUrl()}/v1/catalog/products?limit=${limit}`);
   if (!res.ok) {
@@ -620,6 +631,57 @@ export async function listCatalogProducts(limit = 50): Promise<OpsCatalogProduct
   }
   const body = (await res.json()) as { products: OpsCatalogProduct[] };
   return body.products;
+}
+
+export async function listOpsCatalogProducts(
+  limit = 50,
+  status = 'all',
+): Promise<OpsCatalogStatusProduct[]> {
+  const qs = new URLSearchParams({ limit: String(limit), status });
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/catalog/products?${qs}`);
+  if (!res.ok) {
+    throw new Error(`catalog_ops_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { products: OpsCatalogStatusProduct[] };
+  return body.products;
+}
+
+export async function setCatalogProductStatus(
+  productId: string,
+  status: 'draft' | 'pending_approval' | 'active' | 'paused' | 'archived',
+): Promise<{ products?: OpsCatalogStatusProduct[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/catalog/products/${encodeURIComponent(productId)}/status`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_product_status_failed_${res.status}`);
+  }
+  return (await res.json()) as { products?: OpsCatalogStatusProduct[]; status?: string };
+}
+
+export async function setCatalogVariantStatus(
+  variantId: string,
+  status: 'draft' | 'pending_approval' | 'active' | 'paused' | 'archived',
+): Promise<{ products?: OpsCatalogStatusProduct[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/catalog/variants/${encodeURIComponent(variantId)}/status`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_variant_status_failed_${res.status}`);
+  }
+  return (await res.json()) as { products?: OpsCatalogStatusProduct[]; status?: string };
 }
 
 export type CatalogImportBatchRow = {

@@ -21,6 +21,9 @@ import {
   previewStockImport,
   commitStockImport,
   listCatalogProducts,
+  listOpsCatalogProducts,
+  setCatalogProductStatus,
+  setCatalogVariantStatus,
   listCatalogImportBatches,
   previewCatalogImport,
   commitCatalogImport,
@@ -144,6 +147,7 @@ import {
   type DocumentExpiryAlertRow,
   type StoreOnboarding,
   type OpsCatalogProduct,
+  type OpsCatalogStatusProduct,
   type CatalogImportBatchRow,
   type CatalogMediaRow,
   type OpsOrderRow,
@@ -246,6 +250,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [splitShipments, setSplitShipments] = useState<SplitShipmentRequestRow[]>([]);
   const [ordersNote, setOrdersNote] = useState('');
   const [catalogProducts, setCatalogProducts] = useState<OpsCatalogProduct[]>([]);
+  const [opsCatalogProducts, setOpsCatalogProducts] = useState<OpsCatalogStatusProduct[]>([]);
   const [importBatches, setImportBatches] = useState<CatalogImportBatchRow[]>([]);
   const [catalogMedia, setCatalogMedia] = useState<CatalogMediaRow[]>([]);
   const [catalogNote, setCatalogNote] = useState('');
@@ -331,6 +336,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           orders,
           splitRows,
           products,
+          opsCatalogRows,
           importBatchRows,
           mediaRows,
           inventoryAdjRows,
@@ -375,6 +381,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listOrders(30),
           listSplitShipments(50),
           listCatalogProducts(50),
+          listOpsCatalogProducts(50),
           listCatalogImportBatches(50),
           listCatalogMedia(50),
           listInventoryAdjustments(50),
@@ -419,6 +426,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setOpsOrders(orders);
         setSplitShipments(splitRows);
         setCatalogProducts(products);
+        setOpsCatalogProducts(opsCatalogRows);
         setImportBatches(importBatchRows);
         setCatalogMedia(mediaRows);
         setInventoryAdjustments(inventoryAdjRows);
@@ -1298,9 +1306,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ສິນຄ້າ</span>
             </h2>
             <p className="lede">
-              Active products from local catalog API (with available qty). Preview/commit CSV-style
-              import batches (prohibited categories rejected). Private media upload + signed URL for
-              ops review.
+              Active storefront products plus ops status (activate/pause/archive). Preview/commit
+              imports create drafts — activate product and variant to publish.
             </p>
             {catalogNote ? (
               <p className="lede" role="status">
@@ -1317,6 +1324,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 void (async () => {
                   try {
                     setCatalogProducts(await listCatalogProducts(50));
+                    setOpsCatalogProducts(await listOpsCatalogProducts(50));
                     setImportBatches(await listCatalogImportBatches(50));
                     setCatalogMedia(await listCatalogMedia(50));
                   } catch (err) {
@@ -1381,6 +1389,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                               const result = await commitCatalogImport(row.batchId);
                               if (result.batches) setImportBatches(result.batches);
                               setCatalogProducts(await listCatalogProducts(50));
+                              setOpsCatalogProducts(await listOpsCatalogProducts(50));
                               setCatalogNote(
                                 `Committed ${row.batchId.slice(0, 8)}… (${result.status})`,
                               );
@@ -1397,6 +1406,88 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                         }}
                       >
                         Commit
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="Ops catalog status">
+              {opsCatalogProducts.length === 0 ? <li>No ops catalog rows yet</li> : null}
+              {opsCatalogProducts.map((p) => (
+                <li key={`ops-${p.id}`}>
+                  {p.status} · {p.titleEn} · {p.storeName}
+                  {p.variants[0] ? ` · variant ${p.variants[0].status}` : ''}
+                  {p.status !== 'active' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setCatalogNote('');
+                          void (async () => {
+                            try {
+                              const productResult = await setCatalogProductStatus(p.id, 'active');
+                              if (p.variants[0]) {
+                                await setCatalogVariantStatus(p.variants[0].id, 'active');
+                              }
+                              if (productResult.products) {
+                                setOpsCatalogProducts(productResult.products);
+                              } else {
+                                setOpsCatalogProducts(await listOpsCatalogProducts(50));
+                              }
+                              setCatalogProducts(await listCatalogProducts(50));
+                              setCatalogNote(`Activated ${p.titleEn}`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'catalog_activate_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Activate
+                      </button>
+                    </>
+                  ) : null}
+                  {p.status === 'active' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setCatalogNote('');
+                          void (async () => {
+                            try {
+                              const result = await setCatalogProductStatus(p.id, 'paused');
+                              if (p.variants[0]) {
+                                await setCatalogVariantStatus(p.variants[0].id, 'paused');
+                              }
+                              if (result.products) setOpsCatalogProducts(result.products);
+                              else setOpsCatalogProducts(await listOpsCatalogProducts(50));
+                              setCatalogProducts(await listCatalogProducts(50));
+                              setCatalogNote(`Paused ${p.titleEn}`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'catalog_pause_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Pause
                       </button>
                     </>
                   ) : null}

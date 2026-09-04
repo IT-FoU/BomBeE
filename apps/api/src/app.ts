@@ -877,6 +877,96 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/ops/catalog/products') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 100) : 50;
+      const statusRaw = url.searchParams.get('status')?.trim() || 'all';
+      const allowed = [
+        'all',
+        'draft',
+        'pending_approval',
+        'active',
+        'paused',
+        'archived',
+      ] as const;
+      if (!(allowed as readonly string[]).includes(statusRaw)) {
+        sendJson(res, 400, { error: 'invalid_status_filter' });
+        return;
+      }
+      const products = await services.catalog.listOpsProducts(
+        limit,
+        statusRaw as (typeof allowed)[number],
+      );
+      sendJson(res, 200, { ok: true, products });
+      return;
+    }
+
+    const catalogProductStatusMatch = url.pathname.match(
+      /^\/v1\/ops\/catalog\/products\/([^/]+)\/status$/,
+    );
+    if (req.method === 'POST' && catalogProductStatusMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const productId = decodeURIComponent(catalogProductStatusMatch[1]!);
+      const body = await readJsonBody<{ status?: string }>(req);
+      const status = body.status?.trim();
+      const allowed = ['draft', 'pending_approval', 'active', 'paused', 'archived'] as const;
+      if (!status || !(allowed as readonly string[]).includes(status)) {
+        sendJson(res, 400, { error: 'invalid_status' });
+        return;
+      }
+      try {
+        const updated = await services.catalog.setStatus(
+          'products',
+          productId,
+          status as (typeof allowed)[number],
+        );
+        const products = await services.catalog.listOpsProducts(50);
+        sendJson(res, 200, { ok: true, ...updated, table: 'products', products });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'catalog_status_failed';
+        sendJson(res, message === 'product_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    const catalogVariantStatusMatch = url.pathname.match(
+      /^\/v1\/ops\/catalog\/variants\/([^/]+)\/status$/,
+    );
+    if (req.method === 'POST' && catalogVariantStatusMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const variantId = decodeURIComponent(catalogVariantStatusMatch[1]!);
+      const body = await readJsonBody<{ status?: string }>(req);
+      const status = body.status?.trim();
+      const allowed = ['draft', 'pending_approval', 'active', 'paused', 'archived'] as const;
+      if (!status || !(allowed as readonly string[]).includes(status)) {
+        sendJson(res, 400, { error: 'invalid_status' });
+        return;
+      }
+      try {
+        const updated = await services.catalog.setStatus(
+          'product_variants',
+          variantId,
+          status as (typeof allowed)[number],
+        );
+        const products = await services.catalog.listOpsProducts(50);
+        sendJson(res, 200, { ok: true, ...updated, table: 'product_variants', products });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'catalog_status_failed';
+        sendJson(res, message === 'variant_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/catalog/import/batches') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

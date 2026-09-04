@@ -418,6 +418,63 @@ paths:
       responses:
         '200':
           description: Product browse DTOs (includes availableQty from local stock seed)
+  /v1/ops/catalog/products:
+    get:
+      summary: Ops list catalog products with status (mock ops)
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [all, draft, pending_approval, active, paused, archived]
+            default: all
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Product + variant status rows
+        '403':
+          description: Mock ops disabled
+  /v1/ops/catalog/products/{id}/status:
+    post:
+      summary: Set product lifecycle status (mock ops)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated product status
+        '400':
+          description: Invalid status
+        '404':
+          description: Product not found
+        '403':
+          description: Mock ops disabled
+  /v1/ops/catalog/variants/{id}/status:
+    post:
+      summary: Set variant lifecycle status (mock ops)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated variant status
+        '400':
+          description: Invalid status
+        '404':
+          description: Variant not found
+        '403':
+          description: Mock ops disabled
   /v1/catalog/import/batches:
     get:
       summary: List catalog import batches

@@ -163,6 +163,13 @@ export class CatalogService {
     id: string,
     status: 'draft' | 'pending_approval' | 'active' | 'paused' | 'archived',
   ) {
+    const existing = await this.db.query<{ id: string }>(
+      `SELECT id FROM app.${table} WHERE id = $1`,
+      [id],
+    );
+    if (!existing.rows[0]) {
+      throw new Error(table === 'products' ? 'product_not_found' : 'variant_not_found');
+    }
     const archivedAt = status === 'archived' ? new Date().toISOString() : null;
     await this.db.query(
       `UPDATE app.${table}
@@ -170,6 +177,7 @@ export class CatalogService {
        WHERE id = $1`,
       [id, status, archivedAt],
     );
+    return { id, status, archivedAt };
   }
 
   async listCategories(): Promise<
@@ -315,6 +323,66 @@ export class CatalogService {
           ? Number(variants.rows[0].compare_at_price_lak)
           : null,
         variants: mapped,
+      });
+    }
+    return out;
+  }
+
+  async listOpsProducts(
+    limit = 50,
+    statusFilter: 'all' | 'draft' | 'pending_approval' | 'active' | 'paused' | 'archived' = 'all',
+  ) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const products = await this.db.query<{
+      id: string;
+      store_id: string;
+      store_name: string;
+      status: string;
+      store_product_id: string;
+      title_lo: string | null;
+      title_en: string | null;
+    }>(
+      `SELECT p.id, p.store_id, s.name AS store_name, p.status, p.store_product_id,
+              tlo.title AS title_lo, ten.title AS title_en
+       FROM app.products p
+       JOIN app.stores s ON s.id = p.store_id
+       LEFT JOIN app.product_translations tlo ON tlo.product_id = p.id AND tlo.locale = 'lo'
+       LEFT JOIN app.product_translations ten ON ten.product_id = p.id AND ten.locale = 'en'
+       WHERE ($2::text = 'all' OR p.status = $2::text)
+       ORDER BY p.created_at DESC
+       LIMIT $1`,
+      [capped, statusFilter],
+    );
+    const out: Array<{
+      id: string;
+      storeId: string;
+      storeName: string;
+      status: string;
+      slug: string;
+      titleLo: string;
+      titleEn: string;
+      variants: Array<{ id: string; sku: string; status: string }>;
+    }> = [];
+    for (const p of products.rows) {
+      const variants = await this.db.query<{ id: string; sku: string; status: string }>(
+        `SELECT id, sku, status FROM app.product_variants
+         WHERE product_id = $1
+         ORDER BY sku`,
+        [p.id],
+      );
+      out.push({
+        id: p.id,
+        storeId: p.store_id,
+        storeName: p.store_name,
+        status: p.status,
+        slug: p.store_product_id,
+        titleLo: p.title_lo ?? p.store_product_id,
+        titleEn: p.title_en ?? p.store_product_id,
+        variants: variants.rows.map((v) => ({
+          id: v.id,
+          sku: v.sku,
+          status: v.status,
+        })),
       });
     }
     return out;

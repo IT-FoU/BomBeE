@@ -324,12 +324,43 @@ export class PaymentService {
     const row = req.rows[0];
     if (!row) return { ok: false as const, reason: 'not_found' };
     if (row.status === 'paid') return { ok: false as const, reason: 'already_paid' };
+    if (row.status === 'expired' || row.status === 'cancelled') {
+      return { ok: true as const, status: row.status as 'expired' | 'cancelled', idempotentReplay: true as const };
+    }
     if (Date.parse(row.expires_at) > now.getTime()) return { ok: false as const, reason: 'not_due' };
     await this.db.query(
       `UPDATE finance.payment_requests SET status = 'expired' WHERE id = $1`,
       [paymentRequestId],
     );
     return { ok: true as const, status: 'expired' as const };
+  }
+
+  /** Expire open/partially_paid QR requests whose expires_at has passed. */
+  async expireDueOpenRequests(now = new Date()) {
+    const due = await this.db.query<{ id: string }>(
+      `SELECT id FROM finance.payment_requests
+       WHERE status IN ('open', 'partially_paid')
+         AND expires_at <= $1
+       ORDER BY expires_at`,
+      [now.toISOString()],
+    );
+    const results: Array<{
+      paymentRequestId: string;
+      ok: boolean;
+      status?: string;
+      reason?: string;
+    }> = [];
+    for (const row of due.rows) {
+      const expired = await this.expirePaymentRequest(row.id, now);
+      results.push({
+        paymentRequestId: row.id,
+        ok: expired.ok,
+        ...(expired.ok
+          ? { status: expired.status }
+          : { reason: expired.reason }),
+      });
+    }
+    return results;
   }
 
   async ensureCodProfile(customerIdentityId: string) {

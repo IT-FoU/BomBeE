@@ -6,6 +6,7 @@ import { BRAND_NAME, CURRENCY_CODE, DISPLAY_TIMEZONE } from '@bombee/shared';
 import { readJsonBody } from './http/readJsonBody.js';
 import { applyCors } from './http/cors.js';
 import { mockAdvanceFulfillment, mockDeliverFulfillment } from './modules/fulfillment/mockAdvance.js';
+import { mockExpireDue } from './modules/payments/mockExpireDue.js';
 import { getHealth } from './modules/system/health.js';
 import type { ApiServices } from './runtime/createServices.js';
 import { evaluateInviteAccess, type InviteRole } from './modules/staging/inviteService.js';
@@ -731,6 +732,32 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         sendJson(res, 200, { ok: true, children, order: views });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'fulfillment_deliver_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/payments/mock-expire-due') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const body = await readJsonBody<{ now?: string }>(req);
+      const now = body.now ? new Date(body.now) : new Date();
+      if (Number.isNaN(now.getTime())) {
+        sendJson(res, 400, { error: 'invalid_now' });
+        return;
+      }
+      try {
+        const result = await mockExpireDue(services, now);
+        sendJson(res, 200, { ok: true, now: now.toISOString(), ...result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'expire_due_failed';
         sendJson(res, 400, { error: message });
       }
       return;

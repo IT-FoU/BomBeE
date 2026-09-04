@@ -32,6 +32,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B12 | Reserve stock at QR create | **Done** — QR create reserves lines; rolls back + cancels QR on insufficient stock |
 | P2-B13 | Packing / fulfillment mock-advance | **Done** — `POST .../fulfillment/mock-advance`; seed `LOCAL-MOCK` courier; customer tracking wires to live status |
 | P2-B14 | Consume stock on ship + mock POD/deliver | **Done** — `ReservationService.consume` at handoff; `POST .../fulfillment/mock-deliver` |
+| P2-B15 | Expire due QR payments + reservations | **Done** — `POST /v1/payments/mock-expire-due` releases stock for expired open QR |
 
 ## C — Hard rules that stay
 

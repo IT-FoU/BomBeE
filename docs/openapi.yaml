@@ -345,6 +345,25 @@ paths:
           description: Marked paid
         '403':
           description: Mock ops disabled
+  /v1/payments/mock-expire-due:
+    post:
+      summary: Local/mock expire open QR past deadline and release reservations
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                now:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Expired payments + reservation releases
+        '403':
+          description: Mock ops disabled
   /v1/orders/{parentId}/fulfillment/mock-advance:
     post:
       summary: Local/mock advance paid children through packing to in_transit (consumes reservations at handoff)

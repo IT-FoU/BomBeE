@@ -71,6 +71,9 @@ import {
   listRecalls,
   mockStartRecall,
   contactRecallAffected,
+  listStoreQuality,
+  mockQualityEvent,
+  reactivateStore,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -97,6 +100,8 @@ import {
   type ReviewRow,
   type TikTokLinkRow,
   type RecallRow,
+  type QualityEventRow,
+  type SuspensionRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -122,6 +127,7 @@ const navItems = [
   { id: 'privacy', label: { lo: 'ຄວາມເປັນສ່ວນຕົວ', en: 'Privacy' } },
   { id: 'content', label: { lo: 'ເນື້ອຫາ', en: 'Content' } },
   { id: 'recalls', label: { lo: 'ເອີ້ນຄືນ', en: 'Recalls' } },
+  { id: 'quality', label: { lo: 'ຄຸນນະພາບ', en: 'Quality' } },
 ] as const;
 
 const SAMPLE_AMOUNT = LAK(1_250_000);
@@ -184,6 +190,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [contentNote, setContentNote] = useState('');
   const [recallRows, setRecallRows] = useState<RecallRow[]>([]);
   const [recallNote, setRecallNote] = useState('');
+  const [qualityEvents, setQualityEvents] = useState<QualityEventRow[]>([]);
+  const [suspensions, setSuspensions] = useState<SuspensionRow[]>([]);
+  const [qualityNote, setQualityNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -218,6 +227,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           reviewRows,
           tiktokRows,
           recallList,
+          qualityBundle,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -241,6 +251,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listReviews(50),
           listTikTokLinks(50),
           listRecalls(50),
+          listStoreQuality(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -267,6 +278,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setProductReviews(reviewRows);
         setTiktokLinks(tiktokRows);
         setRecallRows(recallList);
+        setQualityEvents(qualityBundle.events);
+        setSuspensions(qualityBundle.suspensions);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -2497,6 +2510,123 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh recalls
             </button>
           </section>
+          <section aria-labelledby="quality-heading" id="quality">
+            <h2 id="quality-heading">
+              <span lang="en">Quality</span>
+              {' / '}
+              <span lang="lo">ຄຸນນະພາບ</span>
+            </h2>
+            <p className="lede">
+              Store quality events and suspensions — mock threshold events and reactivate with
+              evidence.
+            </p>
+            {qualityNote ? (
+              <p className="lede" role="status">
+                {qualityNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Suspensions">
+              {suspensions.length === 0 ? <li>No suspensions</li> : null}
+              {suspensions.map((row) => (
+                <li key={row.suspensionId}>
+                  {row.active ? 'active' : 'cleared'} · {row.reasonCode} · store{' '}
+                  {row.storeId.slice(0, 8)}…
+                  {row.active ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setQualityNote('');
+                          void (async () => {
+                            try {
+                              const result = await reactivateStore(
+                                row.storeId,
+                                'hired packer and retrained staff',
+                              );
+                              if (result.events) setQualityEvents(result.events);
+                              if (result.suspensions) setSuspensions(result.suspensions);
+                              setQualityNote(`Reactivated ${row.storeId.slice(0, 8)}…`);
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'reactivate_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Reactivate
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="Quality events">
+              {qualityEvents.length === 0 ? <li>No quality events</li> : null}
+              {qualityEvents.slice(0, 12).map((row) => (
+                <li key={row.eventId}>
+                  {row.eventType} · store {row.storeId.slice(0, 8)}…
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setQualityNote('');
+                void (async () => {
+                  try {
+                    const result = await mockQualityEvent({
+                      eventType: 'slow_response_or_pack',
+                      count: 5,
+                    });
+                    setQualityEvents(result.events);
+                    setSuspensions(result.suspensions);
+                    setQualityNote(
+                      result.result?.suspended
+                        ? `Suspended ${result.storeId.slice(0, 8)}… (${result.result.reason})`
+                        : `Recorded events for ${result.storeId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'quality_event_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock threshold (×5)
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    const result = await listStoreQuality(50);
+                    setQualityEvents(result.events);
+                    setSuspensions(result.suspensions);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'quality_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh quality
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -2523,6 +2653,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'privacy',
                   'content',
                   'recalls',
+                  'quality',
                 ].includes(item.id),
             )
             .map((item) => (

@@ -163,6 +163,43 @@ paths:
           description: Invalid payload
         '409':
           description: Code taken
+  /v1/stores/quality:
+    get:
+      summary: List quality events and suspensions
+      parameters:
+        - in: query
+          name: storeId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Events and suspensions
+  /v1/ops/stores/quality/mock-event:
+    post:
+      summary: Local/mock record quality event(s)
+      responses:
+        '201':
+          description: Event(s) recorded
+        '403':
+          description: Mock ops disabled
+  /v1/ops/stores/{storeId}/reactivate:
+    post:
+      summary: Reactivate suspended store with evidence
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Store active
+        '403':
+          description: Mock ops disabled
   /v1/catalog/categories:
     get:
       summary: List non-prohibited categories

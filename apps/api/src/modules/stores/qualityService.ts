@@ -133,4 +133,63 @@ export class QualityService {
     );
     return { ok: true as const };
   }
+
+  async listEvents(limit = 50, storeId?: string) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      event_type: string;
+      occurred_at: string;
+      meta: unknown;
+    }>(
+      storeId
+        ? `SELECT id, store_id, event_type, occurred_at::text, meta
+           FROM private.store_quality_events
+           WHERE store_id = $1
+           ORDER BY occurred_at DESC
+           LIMIT $2`
+        : `SELECT id, store_id, event_type, occurred_at::text, meta
+           FROM private.store_quality_events
+           ORDER BY occurred_at DESC
+           LIMIT $1`,
+      storeId ? [storeId, capped] : [capped],
+    );
+    return rows.rows.map((r) => ({
+      eventId: r.id,
+      storeId: r.store_id,
+      eventType: r.event_type,
+      occurredAt: r.occurred_at,
+      meta: r.meta,
+    }));
+  }
+
+  async listSuspensions(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      reason_code: string;
+      reason_detail: string | null;
+      active: boolean;
+      suspended_at: string;
+      reactivated_at: string | null;
+    }>(
+      `SELECT id, store_id, reason_code, reason_detail, active,
+              suspended_at::text, reactivated_at::text
+       FROM private.store_suspensions
+       ORDER BY suspended_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      suspensionId: r.id,
+      storeId: r.store_id,
+      reasonCode: r.reason_code,
+      reasonDetail: r.reason_detail,
+      active: r.active,
+      suspendedAt: r.suspended_at,
+      reactivatedAt: r.reactivated_at,
+    }));
+  }
 }

@@ -1265,3 +1265,81 @@ export async function contactRecallAffected(
     complete?: boolean;
   };
 }
+
+export type QualityEventRow = {
+  eventId: string;
+  storeId: string;
+  eventType: string;
+  occurredAt: string;
+};
+
+export type SuspensionRow = {
+  suspensionId: string;
+  storeId: string;
+  reasonCode: string;
+  reasonDetail: string | null;
+  active: boolean;
+  suspendedAt: string;
+  reactivatedAt: string | null;
+};
+
+export async function listStoreQuality(limit = 50): Promise<{
+  events: QualityEventRow[];
+  suspensions: SuspensionRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/stores/quality?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`quality_list_failed_${res.status}`);
+  }
+  return (await res.json()) as { events: QualityEventRow[]; suspensions: SuspensionRow[] };
+}
+
+export async function mockQualityEvent(input: {
+  storeId?: string;
+  eventType?: string;
+  count?: number;
+} = {}): Promise<{
+  storeId: string;
+  result?: { suspended?: boolean; reason?: string };
+  events: QualityEventRow[];
+  suspensions: SuspensionRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/stores/quality/mock-event`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `quality_event_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    storeId: string;
+    result?: { suspended?: boolean; reason?: string };
+    events: QualityEventRow[];
+    suspensions: SuspensionRow[];
+  };
+}
+
+export async function reactivateStore(
+  storeId: string,
+  evidence?: string,
+): Promise<{ events?: QualityEventRow[]; suspensions?: SuspensionRow[]; status?: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/stores/${encodeURIComponent(storeId)}/reactivate`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ evidence }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_reactivate_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    events?: QualityEventRow[];
+    suspensions?: SuspensionRow[];
+    status?: string;
+  };
+}

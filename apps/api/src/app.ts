@@ -831,6 +831,125 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/stores/quality') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const storeId = url.searchParams.get('storeId')?.trim() || undefined;
+      const [events, suspensions] = await Promise.all([
+        services.quality.listEvents(limit, storeId),
+        services.quality.listSuspensions(limit),
+      ]);
+      sendJson(res, 200, { ok: true, events, suspensions });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/stores/quality/mock-event') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        eventType?: string;
+        event_type?: string;
+        count?: number;
+      }>(req);
+      let storeId = body.storeId ?? body.store_id;
+      if (!storeId) {
+        const store = await services.db.query<{ id: string }>(
+          `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+        );
+        storeId = store.rows[0]?.id;
+      }
+      if (!storeId) {
+        sendJson(res, 409, { error: 'no_active_store' });
+        return;
+      }
+      const eventTypeRaw = body.eventType ?? body.event_type ?? 'slow_response_or_pack';
+      const allowed = [
+        'slow_response_or_pack',
+        'stock_mismatch',
+        'wrong_damaged_mismatch',
+        'fraud_or_security',
+      ] as const;
+      if (!(allowed as readonly string[]).includes(eventTypeRaw)) {
+        sendJson(res, 400, { error: 'invalid_event_type' });
+        return;
+      }
+      const count =
+        typeof body.count === 'number' && body.count > 0 && body.count <= 20
+          ? Math.floor(body.count)
+          : 1;
+      try {
+        let last: Awaited<ReturnType<typeof services.quality.recordEvent>> | null = null;
+        for (let i = 0; i < count; i += 1) {
+          last = await services.quality.recordEvent({
+            storeId,
+            eventType: eventTypeRaw as (typeof allowed)[number],
+          });
+        }
+        const [events, suspensions] = await Promise.all([
+          services.quality.listEvents(50, storeId),
+          services.quality.listSuspensions(50),
+        ]);
+        sendJson(res, 201, {
+          ok: true,
+          storeId,
+          eventType: eventTypeRaw,
+          count,
+          result: last,
+          events,
+          suspensions,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'quality_event_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const storeReactivateMatch = url.pathname.match(
+      /^\/v1\/ops\/stores\/([^/]+)\/reactivate$/,
+    );
+    if (req.method === 'POST' && storeReactivateMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const storeId = decodeURIComponent(storeReactivateMatch[1]!);
+      const body = await readJsonBody<{
+        evidence?: string;
+        correctiveActionEvidence?: string;
+      }>(req);
+      const evidence =
+        body.correctiveActionEvidence?.trim() ||
+        body.evidence?.trim() ||
+        'local mock corrective action evidence';
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const result = await services.quality.reactivate({
+          storeId,
+          actorIdentityId,
+          actorRoles: ['owner'],
+          correctiveActionEvidence: evidence,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, { error: result.reason });
+          return;
+        }
+        const [events, suspensions] = await Promise.all([
+          services.quality.listEvents(50, storeId),
+          services.quality.listSuspensions(50),
+        ]);
+        sendJson(res, 200, { ok: true, storeId, status: 'active', events, suspensions });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'store_reactivate_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/refunds') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

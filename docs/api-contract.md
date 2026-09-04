@@ -17,6 +17,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/invites` | Create beta invite |
 | GET | `/v1/stores` | List stores |
 | POST | `/v1/stores` | Create store draft (`onboarding`) |
+| GET | `/v1/stores/quality` | Quality events + suspensions (optional `storeId`) |
+| POST | `/v1/ops/stores/quality/mock-event` | Local/mock record quality event(s); may suspend |
+| POST | `/v1/ops/stores/:id/reactivate` | Local/mock reactivate suspended store with evidence |
 | GET | `/v1/catalog/categories` | Non-prohibited categories |
 | GET | `/v1/catalog/products` | Active products + approved prices + `availableQty` (local seed) |
 | GET | `/v1/inventory/stock?variantId=` | Lot balances + available qty for a variant |

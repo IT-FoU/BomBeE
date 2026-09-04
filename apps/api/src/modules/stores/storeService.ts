@@ -62,6 +62,24 @@ export class StoreService {
     return storeId;
   }
 
+  async listStores(limit = 50): Promise<
+    Array<{ id: string; code: string; name: string; status: StoreStatus }>
+  > {
+    const row = await this.db.query<{
+      id: string;
+      code: string;
+      name: string;
+      status: StoreStatus;
+    }>(
+      `SELECT id, code, name, status::text AS status
+       FROM app.stores
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [limit],
+    );
+    return row.rows;
+  }
+
   async addContact(input: {
     storeId: string;
     contactType: 'owner' | 'ops' | 'finance' | 'support';

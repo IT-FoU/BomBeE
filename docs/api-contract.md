@@ -13,6 +13,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/auth/otp/verify` | Verify OTP + create session |
 | GET | `/v1/auth/me` | Bearer session → identity summary |
 | POST | `/v1/auth/logout` | Revoke session (`sessionToken` body or Bearer) |
+| GET | `/v1/invites` | List beta invites (local ops) |
+| POST | `/v1/invites` | Create beta invite |
+| GET | `/v1/stores` | List stores |
+| POST | `/v1/stores` | Create store draft (`onboarding`) |
 
 ## Domain services (in-process; tested via Vitest + PGlite)
 

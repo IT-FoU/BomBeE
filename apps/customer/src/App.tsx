@@ -736,20 +736,17 @@ export function App() {
                   setOtpBusy(true);
                   try {
                     assertOnlineForMutation(readNetworkStatus().online, 'otp_verify');
-                    const verified = await verifyCustomerOtp(otpPhone.trim(), otpCode.trim());
+                    const verified = await verifyCustomerOtp(
+                      otpPhone.trim(),
+                      otpCode.trim(),
+                      otpInvite.trim() || undefined,
+                    );
                     sessionStorage.setItem('bombee_session', verified.sessionToken);
                     setLoggedIn(true);
                     setSessionLabel(verified.identityId);
                     go('account');
                   } catch (err) {
-                    // Offline / API-down fallback for fixture demos only in local shell
-                    if (otpCode.trim().length >= 4) {
-                      setLoggedIn(true);
-                      go('account');
-                      setOtpHint('Demo fallback login (API unavailable)');
-                    } else {
-                      setOtpError(err instanceof Error ? err.message : 'verify_failed');
-                    }
+                    setOtpError(err instanceof Error ? err.message : 'verify_failed');
                   } finally {
                     setOtpBusy(false);
                   }

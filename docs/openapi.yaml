@@ -64,11 +64,16 @@ paths:
                 purpose:
                   type: string
                   enum: [customer_login, staff_login]
+                inviteCode:
+                  type: string
+                  description: Required when INVITE_ONLY_ENABLED; redeems invite on success
       responses:
         '200':
           description: Session issued
         '401':
           description: Invalid/expired OTP
+        '403':
+          description: Invite required/invalid
   /v1/auth/me:
     get:
       summary: Current session profile
@@ -97,6 +102,67 @@ paths:
           description: Session revoked
         '400':
           description: Missing token
+  /v1/invites:
+    get:
+      summary: List beta invites (local ops)
+      responses:
+        '200':
+          description: Invite rows
+    post:
+      summary: Create beta invite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inviteCode]
+              properties:
+                inviteCode:
+                  type: string
+                intendedRole:
+                  type: string
+                  enum: [customer, store_owner, ops, admin]
+                maxUses:
+                  type: integer
+                note:
+                  type: string
+                phoneE164:
+                  type: string
+      responses:
+        '201':
+          description: Invite created
+        '400':
+          description: Invalid payload
+        '409':
+          description: Code taken
+  /v1/stores:
+    get:
+      summary: List stores (local ops)
+      responses:
+        '200':
+          description: Store rows
+    post:
+      summary: Create store draft (onboarding)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                code:
+                  type: string
+      responses:
+        '201':
+          description: Store created
+        '400':
+          description: Invalid payload
+        '409':
+          description: Code taken
 components:
   securitySchemes:
     bearerAuth:

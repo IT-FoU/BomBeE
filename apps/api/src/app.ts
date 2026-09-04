@@ -7,11 +7,9 @@ import { readJsonBody } from './http/readJsonBody.js';
 import { applyCors } from './http/cors.js';
 import { getHealth } from './modules/system/health.js';
 import type { ApiServices } from './runtime/createServices.js';
-import { InviteService, evaluateInviteAccess } from './modules/staging/inviteService.js';
+import { evaluateInviteAccess, type InviteRole } from './modules/staging/inviteService.js';
 
 export function createAppRouter(env: BombeeEnv, services: ApiServices) {
-  const invites = new InviteService(services.db);
-
   return async function appRouter(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const preflight = applyCors(env, req, res);
     if (preflight.handledPreflight) return;
@@ -62,7 +60,7 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
           sendJson(res, 403, { error: 'invite_required' });
           return;
         }
-        const invite = await invites.findByCode(inviteCode);
+        const invite = await services.invites.findByCode(inviteCode);
         const access = evaluateInviteAccess({
           inviteOnlyEnabled: true,
           invite,
@@ -96,9 +94,12 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
     }
 
     if (req.method === 'POST' && url.pathname === '/v1/auth/otp/verify') {
-      const body = await readJsonBody<{ phoneE164?: string; code?: string; purpose?: string }>(
-        req,
-      );
+      const body = await readJsonBody<{
+        phoneE164?: string;
+        code?: string;
+        purpose?: string;
+        inviteCode?: string;
+      }>(req);
       const phoneE164 = body.phoneE164?.trim();
       const code = body.code?.trim();
       if (!phoneE164 || !code) {
@@ -124,6 +125,25 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         sendJson(res, 401, { error: 'identity_missing' });
         return;
       }
+
+      const inviteCode = body.inviteCode?.trim();
+      if (env.INVITE_ONLY_ENABLED || inviteCode) {
+        if (!inviteCode) {
+          sendJson(res, 403, { error: 'invite_required' });
+          return;
+        }
+        const redeemed = await services.invites.redeem({
+          inviteCode,
+          inviteOnlyEnabled: env.INVITE_ONLY_ENABLED || Boolean(inviteCode),
+          identityId,
+          phoneE164,
+        });
+        if (!redeemed.allowed) {
+          sendJson(res, 403, { error: redeemed.reason });
+          return;
+        }
+      }
+
       const sessionId = await services.identity.createSession({
         authIdentityId: identityId,
         audience: purpose === 'staff_login' ? 'backoffice' : 'customer',
@@ -167,6 +187,77 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       }
       await services.identity.revokeSession(token, 'logout');
       sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/invites') {
+      const rows = await services.invites.listInvites();
+      sendJson(res, 200, { ok: true, invites: rows });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/invites') {
+      const body = await readJsonBody<{
+        inviteCode?: string;
+        intendedRole?: InviteRole;
+        maxUses?: number;
+        note?: string;
+        phoneE164?: string;
+      }>(req);
+      const inviteCode = body.inviteCode?.trim().toUpperCase();
+      if (!inviteCode || !/^[A-Z0-9-]{4,32}$/.test(inviteCode)) {
+        sendJson(res, 400, { error: 'invalid_invite_code' });
+        return;
+      }
+      const role = body.intendedRole ?? 'customer';
+      if (!['customer', 'store_owner', 'ops', 'admin'].includes(role)) {
+        sendJson(res, 400, { error: 'invalid_role' });
+        return;
+      }
+      try {
+        const invite = await services.invites.createInvite({
+          inviteCode,
+          intendedRole: role,
+          maxUses: body.maxUses && body.maxUses > 0 ? Math.min(body.maxUses, 100) : 1,
+          note: body.note?.trim() || null,
+          phoneE164: body.phoneE164?.trim() || null,
+        });
+        sendJson(res, 201, { ok: true, invite });
+      } catch {
+        sendJson(res, 409, { error: 'invite_code_taken' });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/stores') {
+      const rows = await services.stores.listStores();
+      sendJson(res, 200, { ok: true, stores: rows });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/stores') {
+      const body = await readJsonBody<{ name?: string; code?: string }>(req);
+      const name = body.name?.trim();
+      if (!name || name.length < 2) {
+        sendJson(res, 400, { error: 'invalid_store_name' });
+        return;
+      }
+      const code =
+        body.code?.trim().toUpperCase() ||
+        `${name
+          .toUpperCase()
+          .replace(/[^A-Z0-9]+/g, '')
+          .slice(0, 8) || 'STORE'}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
+      if (!/^[A-Z0-9_-]{2,32}$/.test(code)) {
+        sendJson(res, 400, { error: 'invalid_store_code' });
+        return;
+      }
+      try {
+        const storeId = await services.stores.createStore({ code, name });
+        sendJson(res, 201, { ok: true, store: { id: storeId, code, name, status: 'onboarding' } });
+      } catch {
+        sendJson(res, 409, { error: 'store_code_taken' });
+      }
       return;
     }
 

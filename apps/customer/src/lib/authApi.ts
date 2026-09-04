@@ -50,11 +50,17 @@ export async function requestCustomerOtp(
 export async function verifyCustomerOtp(
   phoneE164: string,
   code: string,
+  inviteCode?: string,
 ): Promise<OtpVerifyResult> {
   const res = await fetch(`${apiBaseUrl()}/v1/auth/otp/verify`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ phoneE164, purpose: 'customer_login', code }),
+    body: JSON.stringify({
+      phoneE164,
+      purpose: 'customer_login',
+      code,
+      ...(inviteCode ? { inviteCode } : {}),
+    }),
   });
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: string };

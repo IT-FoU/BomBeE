@@ -109,6 +109,27 @@ export class InviteService {
     return found ? mapInvite(found) : null;
   }
 
+  async listInvites(limit = 50): Promise<BetaInvite[]> {
+    const row = await this.db.query<{
+      id: string;
+      invite_code: string;
+      phone_e164: string | null;
+      email: string | null;
+      intended_role: InviteRole;
+      max_uses: number;
+      use_count: number;
+      expires_at: string | null;
+      revoked_at: string | null;
+    }>(
+      `SELECT id, invite_code, phone_e164, email, intended_role, max_uses, use_count, expires_at, revoked_at
+       FROM app.beta_invites
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [limit],
+    );
+    return row.rows.map(mapInvite);
+  }
+
   async redeem(input: {
     inviteCode: string;
     inviteOnlyEnabled: boolean;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   APP_ROLES,
@@ -9,6 +9,15 @@ import {
   t,
   type UiLocale,
 } from '@bombee/shared';
+
+import {
+  createInvite,
+  createStoreDraft,
+  listInvites,
+  listStores,
+  type IssuedInvite,
+  type IssuedStore,
+} from './lib/opsApi';
 
 const navItems = [
   { id: 'dashboard', label: { lo: 'ແຜງຄວບຄຸມ', en: 'Dashboard' } },
@@ -47,15 +56,28 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
     maxUses: 1,
     note: '',
   });
-  const [issuedInvites, setIssuedInvites] = useState<InviteDraft[]>([]);
+  const [issuedInvites, setIssuedInvites] = useState<IssuedInvite[]>([]);
   const [formError, setFormError] = useState('');
+  const [formBusy, setFormBusy] = useState(false);
   const [storeDraftName, setStoreDraftName] = useState('');
-  const [storeDrafts, setStoreDrafts] = useState<string[]>([]);
+  const [storeDrafts, setStoreDrafts] = useState<IssuedStore[]>([]);
 
   const invitePreview = useMemo(
     () => inviteDraft.code.trim().toUpperCase() || 'QA-BETA-…',
     [inviteDraft.code],
   );
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [invites, stores] = await Promise.all([listInvites(), listStores()]);
+        setIssuedInvites(invites);
+        setStoreDrafts(stores);
+      } catch {
+        /* API may be down during static shell QA */
+      }
+    })();
+  }, []);
 
   return (
     <div className="shell">
@@ -94,8 +116,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         <main className="main" id="main-content" tabIndex={-1}>
           <h1>{t('operationsShell', locale)}</h1>
           <p className="lede">
-            Phase 2 backoffice: interactive invite + store draft forms (local mock; no Production
-            data).
+            Phase 2 backoffice: invite + store drafts persist to local API (PGlite mock; no
+            Production data).
           </p>
           <section aria-labelledby="format-heading" id="formats">
             <h2 id="format-heading">Locale formatting</h2>
@@ -157,7 +179,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               {' / '}
               <span lang="lo">ເຊີນເຂົ້າ</span>
             </h2>
-            <p className="lede">Issue invite-only codes for Private Beta (local draft list).</p>
+            <p className="lede">Issue invite-only codes for Private Beta (local API).</p>
             <form
               className="ops-form"
               onSubmit={(event) => {
@@ -167,13 +189,24 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   setFormError('Invite code must be 4–32 chars (A–Z, 0–9, -)');
                   return;
                 }
-                if (issuedInvites.some((row) => row.code === code)) {
-                  setFormError('Code already drafted');
-                  return;
-                }
+                setFormBusy(true);
                 setFormError('');
-                setIssuedInvites((rows) => [...rows, { ...inviteDraft, code }]);
-                setInviteDraft({ code: '', role: 'customer', maxUses: 1, note: '' });
+                void (async () => {
+                  try {
+                    const invite = await createInvite({
+                      inviteCode: code,
+                      intendedRole: inviteDraft.role,
+                      maxUses: inviteDraft.maxUses,
+                      note: inviteDraft.note.trim() || undefined,
+                    });
+                    setIssuedInvites((rows) => [invite, ...rows.filter((r) => r.id !== invite.id)]);
+                    setInviteDraft({ code: '', role: 'customer', maxUses: 1, note: '' });
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'invite_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
               }}
             >
               <label>
@@ -233,15 +266,15 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   {formError}
                 </p>
               ) : null}
-              <button type="submit" className="cta">
-                Add invite draft
+              <button type="submit" className="cta" disabled={formBusy}>
+                Issue invite
               </button>
             </form>
             <ul className="roles" aria-label="Drafted invites">
-              {issuedInvites.length === 0 ? <li>No drafts yet</li> : null}
+              {issuedInvites.length === 0 ? <li>No invites yet</li> : null}
               {issuedInvites.map((row) => (
-                <li key={row.code}>
-                  {row.code} · {row.role} · max {row.maxUses}
+                <li key={row.id}>
+                  {row.inviteCode} · {row.intendedRole} · used {row.useCount}/{row.maxUses}
                   {row.note ? ` · ${row.note}` : ''}
                 </li>
               ))}
@@ -253,15 +286,26 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               {' / '}
               <span lang="lo">ຮ້ານ</span>
             </h2>
-            <p className="lede">Create a local store draft name (not persisted to Production).</p>
+            <p className="lede">Create a local store draft (PGlite; not Production).</p>
             <form
               className="ops-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 const name = storeDraftName.trim();
                 if (name.length < 2) return;
-                setStoreDrafts((rows) => [...rows, name]);
-                setStoreDraftName('');
+                setFormBusy(true);
+                setFormError('');
+                void (async () => {
+                  try {
+                    const store = await createStoreDraft({ name });
+                    setStoreDrafts((rows) => [store, ...rows.filter((r) => r.id !== store.id)]);
+                    setStoreDraftName('');
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'store_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
               }}
             >
               <label>
@@ -273,14 +317,16 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   aria-label="Store draft name"
                 />
               </label>
-              <button type="submit" className="cta">
-                Add store draft
+              <button type="submit" className="cta" disabled={formBusy}>
+                Create store draft
               </button>
             </form>
             <ul className="roles" aria-label="Store drafts">
               {storeDrafts.length === 0 ? <li>No store drafts yet</li> : null}
-              {storeDrafts.map((name) => (
-                <li key={name}>{name}</li>
+              {storeDrafts.map((store) => (
+                <li key={store.id}>
+                  {store.name} · {store.code} · {store.status}
+                </li>
               ))}
             </ul>
           </section>

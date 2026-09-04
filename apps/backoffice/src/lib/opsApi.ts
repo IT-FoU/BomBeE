@@ -452,6 +452,72 @@ export async function commitCatalogImport(
   return (await res.json()) as { batches?: CatalogImportBatchRow[]; status?: string };
 }
 
+export type CatalogMediaRow = {
+  mediaId: string;
+  productId: string | null;
+  variantId: string | null;
+  mediaType: string;
+  storageKey: string;
+  mimeType: string;
+  byteSize: number;
+  durationSeconds: number | null;
+  widthPx: number | null;
+  heightPx: number | null;
+  thumbnailKey: string | null;
+  validationStatus: string;
+  createdAt: string;
+};
+
+export async function listCatalogMedia(
+  limit = 50,
+  filters: { productId?: string; variantId?: string } = {},
+): Promise<CatalogMediaRow[]> {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (filters.productId) qs.set('productId', filters.productId);
+  if (filters.variantId) qs.set('variantId', filters.variantId);
+  const res = await fetch(`${apiBaseUrl()}/v1/catalog/media?${qs}`);
+  if (!res.ok) {
+    throw new Error(`catalog_media_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { media: CatalogMediaRow[] };
+  return body.media;
+}
+
+export async function mockUploadCatalogMedia(input: {
+  productId?: string;
+  variantId?: string;
+  mediaType?: 'image' | 'video';
+} = {}): Promise<{ mediaId: string; media: CatalogMediaRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/catalog/media/mock-upload`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_media_upload_failed_${res.status}`);
+  }
+  return (await res.json()) as { mediaId: string; media: CatalogMediaRow[] };
+}
+
+export async function issueCatalogMediaSignedUrl(
+  mediaId: string,
+): Promise<{ token: string; expiresAt: string }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/catalog/media/${encodeURIComponent(mediaId)}/signed-url`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_media_signed_failed_${res.status}`);
+  }
+  return (await res.json()) as { token: string; expiresAt: string };
+}
+
 export type OpsStockView = {
   variantId: string;
   availableQty: number;

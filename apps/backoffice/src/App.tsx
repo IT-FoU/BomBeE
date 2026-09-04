@@ -21,6 +21,9 @@ import {
   listCatalogImportBatches,
   previewCatalogImport,
   commitCatalogImport,
+  listCatalogMedia,
+  mockUploadCatalogMedia,
+  issueCatalogMediaSignedUrl,
   listCodShipments,
   listInvites,
   listOrders,
@@ -114,6 +117,7 @@ import {
   type StoreOnboarding,
   type OpsCatalogProduct,
   type CatalogImportBatchRow,
+  type CatalogMediaRow,
   type OpsOrderRow,
   type OpsStockView,
   type InventoryAdjustmentRow,
@@ -205,6 +209,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [opsOrders, setOpsOrders] = useState<OpsOrderRow[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<OpsCatalogProduct[]>([]);
   const [importBatches, setImportBatches] = useState<CatalogImportBatchRow[]>([]);
+  const [catalogMedia, setCatalogMedia] = useState<CatalogMediaRow[]>([]);
   const [catalogNote, setCatalogNote] = useState('');
   const [stockDetail, setStockDetail] = useState<OpsStockView | null>(null);
   const [inventoryAdjustments, setInventoryAdjustments] = useState<InventoryAdjustmentRow[]>([]);
@@ -277,6 +282,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           orders,
           products,
           importBatchRows,
+          mediaRows,
           inventoryAdjRows,
           batches,
           tickets,
@@ -312,6 +318,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listOrders(30),
           listCatalogProducts(50),
           listCatalogImportBatches(50),
+          listCatalogMedia(50),
           listInventoryAdjustments(50),
           listSettlementBatches(50),
           listSupportTickets(50),
@@ -347,6 +354,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setOpsOrders(orders);
         setCatalogProducts(products);
         setImportBatches(importBatchRows);
+        setCatalogMedia(mediaRows);
         setInventoryAdjustments(inventoryAdjRows);
         setSettlementBatches(batches);
         setSupportTickets(tickets);
@@ -1119,7 +1127,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </h2>
             <p className="lede">
               Active products from local catalog API (with available qty). Preview/commit CSV-style
-              import batches (prohibited categories rejected).
+              import batches (prohibited categories rejected). Private media upload + signed URL for
+              ops review.
             </p>
             {catalogNote ? (
               <p className="lede" role="status">
@@ -1137,6 +1146,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   try {
                     setCatalogProducts(await listCatalogProducts(50));
                     setImportBatches(await listCatalogImportBatches(50));
+                    setCatalogMedia(await listCatalogMedia(50));
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : 'catalog_failed');
                   } finally {
@@ -1251,7 +1261,68 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                         Stock
                       </button>
                     </>
-                  ) : null}
+                  ) : null}{' '}
+                  <button
+                    type="button"
+                    className="cta"
+                    disabled={formBusy}
+                    onClick={() => {
+                      setFormBusy(true);
+                      setFormError('');
+                      setCatalogNote('');
+                      void (async () => {
+                        try {
+                          const result = await mockUploadCatalogMedia({ productId: p.id });
+                          setCatalogMedia(result.media);
+                          setCatalogNote(`Uploaded media ${result.mediaId.slice(0, 8)}…`);
+                        } catch (err) {
+                          setFormError(
+                            err instanceof Error ? err.message : 'catalog_media_upload_failed',
+                          );
+                        } finally {
+                          setFormBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    Upload media
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <ul className="roles" aria-label="Catalog media">
+              {catalogMedia.length === 0 ? <li>No catalog media yet</li> : null}
+              {catalogMedia.map((row) => (
+                <li key={row.mediaId}>
+                  {row.validationStatus} · {row.mediaType} · {row.mimeType} ·{' '}
+                  {row.mediaId.slice(0, 8)}…
+                  {row.productId ? ` · product ${row.productId.slice(0, 8)}…` : ''}{' '}
+                  <button
+                    type="button"
+                    className="cta"
+                    disabled={formBusy}
+                    onClick={() => {
+                      setFormBusy(true);
+                      setFormError('');
+                      setCatalogNote('');
+                      void (async () => {
+                        try {
+                          const access = await issueCatalogMediaSignedUrl(row.mediaId);
+                          setCatalogNote(
+                            `Media signed ${access.token.slice(0, 8)}… exp ${access.expiresAt}`,
+                          );
+                        } catch (err) {
+                          setFormError(
+                            err instanceof Error ? err.message : 'catalog_media_signed_failed',
+                          );
+                        } finally {
+                          setFormBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    Signed URL
+                  </button>
                 </li>
               ))}
             </ul>

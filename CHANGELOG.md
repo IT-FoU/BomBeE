@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 local — catalog media list/upload/signed-url HTTP (MediaService wired)
+- Phase 2 local — inventory receive + one-shot maker-checker adjust HTTP
+- Phase 2 local — store onboarding docs, signed access, activate HTTP
+- Phase 2 local — payment mismatch resolve + adjustment approve HTTP
+
 - Phase 2 — API CORS for local apps + invite gate on OTP
 - Phase 2 — local invite SQL seed generator (`pnpm seed:sql`)
 - Phase 2 start — OTP HTTP API (mock SMS), OpenAPI auth, customer bundle budget CI

@@ -407,6 +407,52 @@ paths:
           description: Committed
         '409':
           description: Invalid rows
+  /v1/catalog/media:
+    get:
+      summary: List product media
+      parameters:
+        - in: query
+          name: productId
+          schema:
+            type: string
+        - in: query
+          name: variantId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Media array
+  /v1/ops/catalog/media/mock-upload:
+    post:
+      summary: Local mock upload product media
+      responses:
+        '201':
+          description: Media uploaded (validation passed)
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No product available
+  /v1/ops/catalog/media/{mediaId}/signed-url:
+    post:
+      summary: Issue short-lived signed access token for media
+      parameters:
+        - in: path
+          name: mediaId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token + expiry
+        '404':
+          description: Media not found
+        '409':
+          description: Media not available
   /v1/inventory/stock:
     get:
       summary: Stock balances for a variant

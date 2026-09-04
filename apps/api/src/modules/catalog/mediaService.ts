@@ -78,4 +78,52 @@ export class MediaService {
     );
     return { token, expiresAt, storageKey: row.storage_key };
   }
+
+  async listMedia(input: {
+    productId?: string;
+    variantId?: string;
+    limit?: number;
+  } = {}) {
+    const capped = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      product_id: string | null;
+      variant_id: string | null;
+      media_type: string;
+      storage_key: string;
+      mime_type: string;
+      byte_size: number;
+      duration_seconds: number | null;
+      width_px: number | null;
+      height_px: number | null;
+      thumbnail_key: string | null;
+      validation_status: string;
+      created_at: string;
+    }>(
+      `SELECT id, product_id, variant_id, media_type, storage_key, mime_type, byte_size,
+              duration_seconds, width_px, height_px, thumbnail_key, validation_status,
+              created_at::text
+       FROM private.product_media
+       WHERE ($1::uuid IS NULL OR product_id = $1)
+         AND ($2::uuid IS NULL OR variant_id = $2)
+       ORDER BY created_at DESC
+       LIMIT $3`,
+      [input.productId ?? null, input.variantId ?? null, capped],
+    );
+    return rows.rows.map((r) => ({
+      mediaId: r.id,
+      productId: r.product_id,
+      variantId: r.variant_id,
+      mediaType: r.media_type,
+      storageKey: r.storage_key,
+      mimeType: r.mime_type,
+      byteSize: Number(r.byte_size),
+      durationSeconds: r.duration_seconds === null ? null : Number(r.duration_seconds),
+      widthPx: r.width_px === null ? null : Number(r.width_px),
+      heightPx: r.height_px === null ? null : Number(r.height_px),
+      thumbnailKey: r.thumbnail_key,
+      validationStatus: r.validation_status,
+      createdAt: r.created_at,
+    }));
+  }
 }

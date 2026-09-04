@@ -37,6 +37,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/catalog/import/batches` | List catalog import batches (local ops) |
 | POST | `/v1/ops/catalog/import/preview` | Local/mock preview import (idempotent; default sample row) |
 | POST | `/v1/ops/catalog/import/:batchId/commit` | Commit valid preview batch (rejects invalid rows) |
+| GET | `/v1/catalog/media` | List product media (optional `productId` / `variantId`) |
+| POST | `/v1/ops/catalog/media/mock-upload` | Local/mock upload image/video media |
+| POST | `/v1/ops/catalog/media/:mediaId/signed-url` | Issue short-lived signed access token |
 | GET | `/v1/inventory/stock?variantId=` | Lot balances + available qty for a variant |
 | GET | `/v1/inventory/adjustments` | List inventory adjustment requests (local ops) |
 | POST | `/v1/ops/inventory/receive` | Local/mock receive units onto a balance |

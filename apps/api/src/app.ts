@@ -754,6 +754,159 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/catalog/media') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const productId = url.searchParams.get('productId')?.trim() || undefined;
+      const variantId = url.searchParams.get('variantId')?.trim() || undefined;
+      const media = await services.media.listMedia({ productId, variantId, limit });
+      sendJson(res, 200, { ok: true, media });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/catalog/media/mock-upload') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        productId?: string;
+        product_id?: string;
+        variantId?: string;
+        variant_id?: string;
+        mediaType?: 'image' | 'video';
+        media_type?: 'image' | 'video';
+        mimeType?: string;
+        mime_type?: string;
+        byteSize?: number;
+        byte_size?: number;
+        durationSeconds?: number;
+        duration_seconds?: number;
+        widthPx?: number;
+        width_px?: number;
+        heightPx?: number;
+        height_px?: number;
+      }>(req);
+      try {
+        let productId = (body.productId ?? body.product_id)?.trim() || undefined;
+        const variantId = (body.variantId ?? body.variant_id)?.trim() || undefined;
+        if (!productId && !variantId) {
+          const product = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.products WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          productId = product.rows[0]?.id;
+        }
+        if (!productId && !variantId) {
+          sendJson(res, 409, { error: 'no_product' });
+          return;
+        }
+        const mediaType = body.mediaType ?? body.media_type ?? 'image';
+        const mimeType =
+          body.mimeType ??
+          body.mime_type ??
+          (mediaType === 'video' ? 'video/mp4' : 'image/jpeg');
+        const byteSize =
+          typeof body.byteSize === 'number'
+            ? Math.floor(body.byteSize)
+            : typeof body.byte_size === 'number'
+              ? Math.floor(body.byte_size)
+              : mediaType === 'video'
+                ? 1_000_000
+                : 120_000;
+        const durationSeconds =
+          typeof body.durationSeconds === 'number'
+            ? body.durationSeconds
+            : typeof body.duration_seconds === 'number'
+              ? body.duration_seconds
+              : mediaType === 'video'
+                ? 30
+                : undefined;
+        const widthPx =
+          typeof body.widthPx === 'number'
+            ? body.widthPx
+            : typeof body.width_px === 'number'
+              ? body.width_px
+              : mediaType === 'image'
+                ? 800
+                : undefined;
+        const heightPx =
+          typeof body.heightPx === 'number'
+            ? body.heightPx
+            : typeof body.height_px === 'number'
+              ? body.height_px
+              : mediaType === 'image'
+                ? 800
+                : undefined;
+        const uploaded = await services.media.upload({
+          productId,
+          variantId,
+          mediaType,
+          mimeType,
+          byteSize,
+          durationSeconds,
+          widthPx,
+          heightPx,
+        });
+        const media = await services.media.listMedia({ limit: 50 });
+        sendJson(res, 201, {
+          ok: true,
+          mediaId: uploaded.id,
+          storageKey: uploaded.storageKey,
+          thumbnailKey: uploaded.thumbnailKey,
+          productId: productId ?? null,
+          variantId: variantId ?? null,
+          mediaType,
+          validationStatus: 'passed',
+          media,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'media_upload_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const mediaSignedMatch = url.pathname.match(
+      /^\/v1\/ops\/catalog\/media\/([^/]+)\/signed-url$/,
+    );
+    if (req.method === 'POST' && mediaSignedMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const mediaId = decodeURIComponent(mediaSignedMatch[1]!);
+      const body = await readJsonBody<{
+        ttlMs?: number;
+        ttl_ms?: number;
+      }>(req);
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const access = await services.media.issueSignedUrl({
+          mediaId,
+          actorIdentityId,
+          ttlMs:
+            typeof body.ttlMs === 'number'
+              ? body.ttlMs
+              : typeof body.ttl_ms === 'number'
+                ? body.ttl_ms
+                : undefined,
+        });
+        sendJson(res, 200, {
+          ok: true,
+          mediaId,
+          token: access.token,
+          expiresAt: access.expiresAt,
+          storageKey: access.storageKey,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'media_signed_url_failed';
+        const status =
+          message === 'media_not_found' ? 404 : message === 'media_not_available' ? 409 : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/inventory/stock') {
       const variantId = url.searchParams.get('variantId')?.trim();
       if (!variantId) {

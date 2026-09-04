@@ -9,6 +9,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/health` | `status`, `env`, `egoPosEnabled`, `inviteOnlyEnabled`, `integrationsMode`, `productionHold` |
 | GET | `/` | Brand + env flags |
 | GET | `/v1/auth/capabilities` | SMS provider mode, idle/lock policy, invite/integrations/hold flags |
+| POST | `/v1/auth/otp/request` | Request OTP (mock SMS local; may return `devCode` only when APP_ENV=local) |
+| POST | `/v1/auth/otp/verify` | Verify OTP + create session |
 
 ## Domain services (in-process; tested via Vitest + PGlite)
 
@@ -25,4 +27,4 @@ reports/notifications/search/EGO placeholder/backup, staging invites.
 - `productionHold: true` while Phase 1 Production Hold is active
 
 ## Evolution
-When HTTP routes expand beyond health/capabilities, publish `openapi.yaml` alongside this file.
+OpenAPI: [`docs/openapi.yaml`](./openapi.yaml)

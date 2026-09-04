@@ -4,9 +4,11 @@ import { loadEnv } from '@bombee/config';
 import { BRAND_NAME } from '@bombee/shared';
 
 import { createAppRouter } from './app.js';
+import { createLocalApiServices } from './runtime/createServices.js';
 
 const env = loadEnv();
-const router = createAppRouter(env);
+const services = await createLocalApiServices(env);
+const router = createAppRouter(env, services);
 
 const server = createServer((req, res) => {
   void router(req, res);

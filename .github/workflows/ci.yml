@@ -54,6 +54,9 @@ jobs:
           PUBLIC_BACKOFFICE_URL: http://localhost:5174
           EGO_POS_ENABLED: 'false'
 
+      - name: Customer bundle budget (ADR 0004)
+        run: node scripts/check-customer-bundle-budget.mjs
+
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4

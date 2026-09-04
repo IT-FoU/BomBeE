@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: BomBee Market API
+  version: 0.12.0
+  description: Phase 2 partial OpenAPI — auth + health. Expand as HTTP surface grows.
+servers:
+  - url: http://localhost:8787
+    description: Local mock (PGlite + mock SMS)
+paths:
+  /health:
+    get:
+      summary: Health
+      responses:
+        '200':
+          description: OK
+  /v1/auth/capabilities:
+    get:
+      summary: Auth capability flags
+      responses:
+        '200':
+          description: Capability document
+  /v1/auth/otp/request:
+    post:
+      summary: Request SMS OTP (mock SMS in local)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phoneE164]
+              properties:
+                phoneE164:
+                  type: string
+                  example: '+8562012345678'
+                purpose:
+                  type: string
+                  enum: [customer_login, staff_login]
+      responses:
+        '200':
+          description: Accepted (anti-enumeration). Local mock may include devCode.
+        '400':
+          description: Invalid phone
+  /v1/auth/otp/verify:
+    post:
+      summary: Verify OTP and create session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phoneE164, code]
+              properties:
+                phoneE164:
+                  type: string
+                code:
+                  type: string
+                purpose:
+                  type: string
+                  enum: [customer_login, staff_login]
+      responses:
+        '200':
+          description: Session issued
+        '401':
+          description: Invalid/expired OTP

@@ -403,6 +403,16 @@ main {
   font-size: 0.92rem;
 }
 
+.muted {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.error {
+  color: #ff8f8f;
+  font-size: 0.92rem;
+}
+
 .check {
   display: block;
   margin: 0.35rem 0;

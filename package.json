@@ -25,6 +25,7 @@
     "db:migrate:list": "bash scripts/apply-migrations.sh list",
     "staging:deploy:dry-run": "bash scripts/staging-deploy.sh dry-run",
     "staging:smoke": "bash scripts/staging-smoke.sh",
+    "check:bundle": "node scripts/check-customer-bundle-budget.mjs",
     "production:deploy:dry-run": "OWNER_PRODUCTION_DEPLOY_APPROVED=true bash scripts/production-deploy.sh dry-run",
     "production:smoke": "bash scripts/production-smoke.sh",
     "format": "prettier --write .",

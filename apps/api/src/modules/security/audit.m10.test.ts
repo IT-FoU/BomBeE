@@ -17,6 +17,7 @@ import { OrderService } from '../orders/orderService.js';
 import { BackupService } from '../backup/backupService.js';
 import { ReportService } from '../reports/reportService.js';
 import { createAppRouter } from '../../app.js';
+import { createLocalApiServices } from '../../runtime/createServices.js';
 
 describe('Milestone 10 security audit', () => {
   let db: PGlite;
@@ -258,40 +259,45 @@ describe('Milestone 10 security audit', () => {
       }),
     ).toThrow(/EGO POS must remain disabled/);
 
-    const router = createAppRouter(prod);
-    const chunks: Buffer[] = [];
-    const res = {
-      statusCode: 0,
-      writeHead(status: number) {
-        this.statusCode = status;
-      },
-      setHeader() {},
-      end(body?: string | Buffer) {
-        if (body) chunks.push(Buffer.isBuffer(body) ? body : Buffer.from(body));
-      },
-    } as unknown as import('node:http').ServerResponse;
-    await router(
-      {
-        method: 'GET',
-        url: '/v1/auth/capabilities',
-        headers: { host: 'localhost' },
-      } as import('node:http').IncomingMessage,
-      res,
-    );
-    const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
-      smsProvider: string;
-      egoPosEnabled: boolean;
-      inviteOnlyEnabled: boolean;
-      integrationsMode: string;
-      productionHold: boolean;
-      productionDeployAuthorized: boolean;
-    };
-    // Phase 1: Production APP_ENV still uses sandbox until Owner opens live credentials
-    expect(body.smsProvider).toBe('sandbox');
-    expect(body.integrationsMode).toBe('sandbox');
-    expect(body.egoPosEnabled).toBe(false);
-    expect(body.inviteOnlyEnabled).toBe(true);
-    expect(body.productionDeployAuthorized).toBe(true);
-    expect(body.productionHold).toBe(false);
+    const services = await createLocalApiServices(prod);
+    try {
+      const router = createAppRouter(prod, services);
+      const chunks: Buffer[] = [];
+      const res = {
+        statusCode: 0,
+        writeHead(status: number) {
+          this.statusCode = status;
+        },
+        setHeader() {},
+        end(body?: string | Buffer) {
+          if (body) chunks.push(Buffer.isBuffer(body) ? body : Buffer.from(body));
+        },
+      } as unknown as import('node:http').ServerResponse;
+      await router(
+        {
+          method: 'GET',
+          url: '/v1/auth/capabilities',
+          headers: { host: 'localhost' },
+        } as import('node:http').IncomingMessage,
+        res,
+      );
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
+        smsProvider: string;
+        egoPosEnabled: boolean;
+        inviteOnlyEnabled: boolean;
+        integrationsMode: string;
+        productionHold: boolean;
+        productionDeployAuthorized: boolean;
+      };
+      // Phase 1: Production APP_ENV still uses sandbox until Owner opens live credentials
+      expect(body.smsProvider).toBe('sandbox');
+      expect(body.integrationsMode).toBe('sandbox');
+      expect(body.egoPosEnabled).toBe(false);
+      expect(body.inviteOnlyEnabled).toBe(true);
+      expect(body.productionDeployAuthorized).toBe(true);
+      expect(body.productionHold).toBe(false);
+    } finally {
+      await services.db.close();
+    }
   });
 });

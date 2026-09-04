@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 start — OTP HTTP API (mock SMS), OpenAPI auth, customer bundle budget CI
+
 - Local Postgres docker compose + migration apply script; Phase 2 backlog; branch-protection Owner runbook
 
 - Phase 1 milestone close — Owner deferred Production live (mock / skip secrets)

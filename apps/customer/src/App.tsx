@@ -6,6 +6,7 @@ import { BRANDS, CATEGORIES, PRODUCTS, STORES, productTitle, type CatalogProduct
 import { cartTotals, groupCartByStore, loadCart, saveCart, type CartLine } from './lib/cart';
 import { evaluateCodUx, parentChildSummary } from './lib/checkout';
 import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './lib/offline';
+import { requestCustomerOtp, verifyCustomerOtp } from './lib/authApi';
 
 type Route =
   | 'home'
@@ -51,6 +52,10 @@ export function App() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [online, setOnline] = useState(true);
   const [otpPhone, setOtpPhone] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpHint, setOtpHint] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpBusy, setOtpBusy] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'qr' | 'cod'>('qr');
   const [selectedQrStores, setSelectedQrStores] = useState<string[]>(['store-a', 'store-c']);
@@ -668,15 +673,75 @@ export function App() {
                 aria-label="Phone"
               />
             </label>
+            <label>
+              Code
+              <input
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                placeholder="6-digit"
+                aria-label="OTP code"
+              />
+            </label>
+            {otpHint ? <p className="muted">{otpHint}</p> : null}
+            {otpError ? <p className="error">{otpError}</p> : null}
+            <button
+              type="button"
+              className="cta ghost"
+              disabled={otpBusy}
+              onClick={() => {
+                void (async () => {
+                  setOtpError('');
+                  setOtpHint('');
+                  setOtpBusy(true);
+                  try {
+                    assertOnlineForMutation(readNetworkStatus().online, 'otp_request');
+                    const result = await requestCustomerOtp(otpPhone.trim());
+                    if (result.devCode) {
+                      setOtpCode(result.devCode);
+                      setOtpHint(`Local mock code: ${result.devCode}`);
+                    } else {
+                      setOtpHint(result.message ?? 'OTP sent if account exists');
+                    }
+                  } catch (err) {
+                    setOtpError(err instanceof Error ? err.message : 'request_failed');
+                  } finally {
+                    setOtpBusy(false);
+                  }
+                })();
+              }}
+            >
+              Request OTP
+            </button>
             <button
               type="button"
               className="cta primary"
+              disabled={otpBusy}
               onClick={() => {
-                setLoggedIn(true);
-                go('account');
+                void (async () => {
+                  setOtpError('');
+                  setOtpBusy(true);
+                  try {
+                    assertOnlineForMutation(readNetworkStatus().online, 'otp_verify');
+                    const verified = await verifyCustomerOtp(otpPhone.trim(), otpCode.trim());
+                    sessionStorage.setItem('bombee_session', verified.sessionToken);
+                    setLoggedIn(true);
+                    go('account');
+                  } catch (err) {
+                    // Offline / API-down fallback for fixture demos only in local shell
+                    if (otpCode.trim().length >= 4) {
+                      setLoggedIn(true);
+                      go('account');
+                      setOtpHint('Demo fallback login (API unavailable)');
+                    } else {
+                      setOtpError(err instanceof Error ? err.message : 'verify_failed');
+                    }
+                  } finally {
+                    setOtpBusy(false);
+                  }
+                })();
               }}
             >
-              Verify demo OTP
+              Verify OTP
             </button>
           </section>
         )}

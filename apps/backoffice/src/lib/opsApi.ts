@@ -236,3 +236,52 @@ export async function fetchVariantStock(variantId: string): Promise<OpsStockView
     })),
   };
 }
+
+export type SettlementBatchRow = {
+  batchId: string;
+  storeId: string;
+  storeName: string;
+  status: string;
+  cadence: string;
+  grossLak: number;
+  netLak: number;
+  heldLak: number;
+  lineCount: number;
+  periodStart: string;
+  periodEnd: string;
+  createdAt: string;
+};
+
+export async function listSettlementBatches(limit = 50): Promise<SettlementBatchRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/settlements?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`settlements_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { batches: SettlementBatchRow[] };
+  return body.batches;
+}
+
+export async function mockCreateSettlementBatch(storeId?: string): Promise<{
+  batchId: string;
+  grossLak: number;
+  netLak: number;
+  lineCount: number;
+  batches: SettlementBatchRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/settlements/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(storeId ? { store_id: storeId } : {}),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `settlement_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    batchId: string;
+    grossLak: number;
+    netLak: number;
+    lineCount: number;
+    batches: SettlementBatchRow[];
+  };
+}

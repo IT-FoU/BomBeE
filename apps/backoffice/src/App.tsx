@@ -18,7 +18,9 @@ import {
   listCodShipments,
   listInvites,
   listOrders,
+  listSettlementBatches,
   listStores,
+  mockCreateSettlementBatch,
   mockRemitCodShipment,
   opsConfirmChildren,
   opsMockAdvance,
@@ -29,6 +31,7 @@ import {
   type OpsCatalogProduct,
   type OpsOrderRow,
   type OpsStockView,
+  type SettlementBatchRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -77,6 +80,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [opsOrders, setOpsOrders] = useState<OpsOrderRow[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<OpsCatalogProduct[]>([]);
   const [stockDetail, setStockDetail] = useState<OpsStockView | null>(null);
+  const [settlementBatches, setSettlementBatches] = useState<SettlementBatchRow[]>([]);
+  const [settlementNote, setSettlementNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -88,18 +93,20 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [invites, stores, cod, orders, products] = await Promise.all([
+        const [invites, stores, cod, orders, products, batches] = await Promise.all([
           listInvites(),
           listStores(),
           listCodShipments(),
           listOrders(30),
           listCatalogProducts(50),
+          listSettlementBatches(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
         setCodShipments(cod);
         setOpsOrders(orders);
         setCatalogProducts(products);
+        setSettlementBatches(batches);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -645,6 +652,78 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh COD list
             </button>
           </section>
+          <section aria-labelledby="settlements-heading" id="settlements">
+            <h2 id="settlements-heading">
+              <span lang="en">Settlements</span>
+              {' / '}
+              <span lang="lo">ຈ່າຍຮ້ານ</span>
+            </h2>
+            <p className="lede">
+              Local draft settlement batches for delivered + paid children (active payout required).
+            </p>
+            {settlementNote ? (
+              <p className="lede" role="status">
+                {settlementNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Settlement batches">
+              {settlementBatches.length === 0 ? <li>No settlement batches yet</li> : null}
+              {settlementBatches.map((batch) => (
+                <li key={batch.batchId}>
+                  {batch.status} · {batch.storeName} · {batch.lineCount} lines · net{' '}
+                  {formatLak(LAK(batch.netLak))}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setSettlementNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateSettlementBatch();
+                    setSettlementBatches(result.batches);
+                    setSettlementNote(
+                      `Created draft ${result.batchId.slice(0, 8)}… · ${result.lineCount} lines · net ${formatLak(LAK(result.netLak))}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'settlement_create_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create batch
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setSettlementBatches(await listSettlementBatches(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'settlements_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh settlements
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -659,6 +738,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'fulfillment',
                   'catalog',
                   'inventory',
+                  'settlements',
                 ].includes(item.id),
             )
             .map((item) => (

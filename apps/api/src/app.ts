@@ -478,6 +478,74 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/settlements') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const batches = await services.settlements.listBatches(limit);
+      sendJson(res, 200, { ok: true, batches });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/settlements/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{ store_id?: string; storeId?: string }>(req);
+      const requestedStoreId = body.store_id ?? body.storeId;
+      let storeId = requestedStoreId;
+      if (!storeId) {
+        const stores = await services.db.query<{ id: string }>(
+          `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at`,
+        );
+        for (const store of stores.rows) {
+          const eligible = await services.settlements.listEligibleChildOrders(store.id);
+          if (eligible.length > 0) {
+            storeId = store.id;
+            break;
+          }
+        }
+      }
+      if (!storeId) {
+        sendJson(res, 409, { error: 'no_eligible_orders' });
+        return;
+      }
+      const storeRow = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.stores WHERE id = $1`,
+        [storeId],
+      );
+      if (!storeRow.rows[0]) {
+        sendJson(res, 404, { error: 'store_not_found' });
+        return;
+      }
+      const eligible = await services.settlements.listEligibleChildOrders(storeId);
+      if (eligible.length === 0) {
+        sendJson(res, 409, { error: 'no_eligible_orders' });
+        return;
+      }
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const periodEnd = new Date();
+        const periodStart = new Date(periodEnd.getTime() - 7 * 24 * 60 * 60_000);
+        const created = await services.settlements.createBatch({
+          storeId,
+          makerIdentityId: actorIdentityId,
+          periodStart,
+          periodEnd,
+        });
+        const batches = await services.settlements.listBatches(50);
+        sendJson(res, 201, { ok: true, ...created, batches });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'settlement_create_failed';
+        const status =
+          message === 'active_payout_account_required' || message === 'payout_account_on_hold'
+            ? 409
+            : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     const opsConfirmMatch = url.pathname.match(/^\/v1\/ops\/orders\/([^/]+)\/confirm-children$/);
     if (req.method === 'POST' && opsConfirmMatch) {
       if (!mockOpsAllowed(env)) {

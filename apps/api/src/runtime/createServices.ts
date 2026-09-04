@@ -5,6 +5,7 @@ import type { BombeeEnv } from '@bombee/config';
 import { createTestDatabase } from '../db/migrate.js';
 import { CatalogService } from '../modules/catalog/catalogService.js';
 import { DeliveryService } from '../modules/fulfillment/deliveryService.js';
+import { SettlementService } from '../modules/fulfillment/settlementService.js';
 import { IdentityService } from '../modules/identity/service.js';
 import { MockSmsProvider } from '../modules/identity/otp.js';
 import { InventoryService } from '../modules/inventory/inventoryService.js';
@@ -27,6 +28,7 @@ export type ApiServices = {
   inventory: InventoryService;
   reservations: ReservationService;
   delivery: DeliveryService;
+  settlements: SettlementService;
 };
 
 /** Local/mock runtime: in-memory PGlite + mock SMS (no hosted DB required). */
@@ -42,6 +44,7 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
   const inventory = new InventoryService(db);
   const reservations = new ReservationService(db, inventory);
   const delivery = new DeliveryService(db);
+  const settlements = new SettlementService(db);
   await seedLocalCatalog(db);
   return {
     db,
@@ -55,5 +58,6 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     inventory,
     reservations,
     delivery,
+    settlements,
   };
 }

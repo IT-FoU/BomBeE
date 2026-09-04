@@ -34,7 +34,10 @@ export class SettlementService {
               ) AS return_hold
        FROM app.child_orders co
        LEFT JOIN finance.order_contract_snapshots ocs ON ocs.child_order_id = co.id
-       WHERE co.store_id = $1`,
+       WHERE co.store_id = $1
+         AND NOT EXISTS (
+           SELECT 1 FROM finance.settlement_lines sl WHERE sl.child_order_id = co.id
+         )`,
       [storeId],
     );
     return rows.rows
@@ -51,6 +54,48 @@ export class SettlementService {
         cadence: r.cadence ?? 'weekly',
         paymentRequestId: r.payment_request_id,
       }));
+  }
+
+  async listBatches(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      store_name: string;
+      status: string;
+      cadence: string;
+      gross_lak: number;
+      net_lak: number;
+      held_lak: number;
+      line_count: number;
+      period_start: string;
+      period_end: string;
+      created_at: string;
+    }>(
+      `SELECT b.id, b.store_id, s.name AS store_name, b.status, b.cadence,
+              b.gross_lak, b.net_lak, b.held_lak,
+              (SELECT count(*)::int FROM finance.settlement_lines l WHERE l.batch_id = b.id) AS line_count,
+              b.period_start::text, b.period_end::text, b.created_at::text
+       FROM finance.settlement_batches b
+       JOIN app.stores s ON s.id = b.store_id
+       ORDER BY b.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      batchId: r.id,
+      storeId: r.store_id,
+      storeName: r.store_name,
+      status: r.status,
+      cadence: r.cadence,
+      grossLak: Number(r.gross_lak),
+      netLak: Number(r.net_lak),
+      heldLak: Number(r.held_lak),
+      lineCount: Number(r.line_count),
+      periodStart: r.period_start,
+      periodEnd: r.period_end,
+      createdAt: r.created_at,
+    }));
   }
 
   async createBatch(input: {

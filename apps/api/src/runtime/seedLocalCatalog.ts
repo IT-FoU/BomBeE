@@ -20,6 +20,26 @@ async function ensureMockCourier(db: PGlite): Promise<void> {
   });
 }
 
+async function ensureMockPayouts(db: PGlite): Promise<void> {
+  const stores = await db.query<{ id: string; name: string }>(
+    `SELECT id, name FROM app.stores WHERE status = 'active'`,
+  );
+  for (const store of stores.rows) {
+    const existing = await db.query<{ id: string }>(
+      `SELECT id FROM finance.payout_account_versions
+       WHERE store_id = $1 AND status = 'active' LIMIT 1`,
+      [store.id],
+    );
+    if (existing.rows[0]) continue;
+    await db.query(
+      `INSERT INTO finance.payout_account_versions
+        (store_id, version_no, bank_name, account_number_last4, account_holder, status, activated_at)
+       VALUES ($1, 1, 'BCEL', '0099', $2, 'active', timezone('utc', now()))`,
+      [store.id, store.name],
+    );
+  }
+}
+
 /** Seed a tiny active catalog + stock for local API browse (mock only). */
 export async function seedLocalCatalog(db: PGlite): Promise<void> {
   await ensureMockCourier(db);
@@ -27,7 +47,10 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
   const existing = await db.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM app.products WHERE status = 'active'`,
   );
-  if ((existing.rows[0]?.n ?? 0) > 0) return;
+  if ((existing.rows[0]?.n ?? 0) > 0) {
+    await ensureMockPayouts(db);
+    return;
+  }
 
   const identity = new IdentityService(db, new MockSmsProvider());
   const stores = new StoreService(db);
@@ -189,4 +212,6 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
     sellingPriceLak: 42000,
     receiveQty: 18,
   });
+
+  await ensureMockPayouts(db);
 }

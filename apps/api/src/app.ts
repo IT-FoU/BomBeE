@@ -2472,6 +2472,129 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/ops/identity/mock-lock') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        identityId?: string;
+        identity_id?: string;
+        subject?: string;
+      }>(req);
+      try {
+        const staff = await services.identity.listStaffDirectory(100);
+        const identityId = (body.identityId ?? body.identity_id)?.trim();
+        const subject = body.subject?.trim();
+        const target =
+          (identityId ? staff.find((s) => s.identityId === identityId) : undefined) ??
+          (subject ? staff.find((s) => s.subject === subject) : undefined) ??
+          staff.find((s) => s.subject === 'staff:local-catalog-maker' && s.status !== 'locked') ??
+          staff.find((s) => !s.roles.includes('owner') && s.status !== 'locked');
+        if (!target) {
+          sendJson(res, 404, { error: 'staff_not_found' });
+          return;
+        }
+        if (target.roles.includes('owner')) {
+          sendJson(res, 400, { error: 'owner_lock_forbidden' });
+          return;
+        }
+        if (target.status === 'locked') {
+          const [roles, directory] = await Promise.all([
+            Promise.resolve(listRoleCatalog()),
+            services.identity.listStaffDirectory(50),
+          ]);
+          sendJson(res, 200, {
+            ok: true,
+            identityId: target.identityId,
+            subject: target.subject,
+            status: 'locked',
+            alreadyLocked: true,
+            roles,
+            staff: directory,
+          });
+          return;
+        }
+        let count = 0;
+        while (count < services.identity.maxFailedLogins) {
+          count = await services.identity.recordFailedLogin(target.identityId);
+        }
+        const [roles, directory] = await Promise.all([
+          Promise.resolve(listRoleCatalog()),
+          services.identity.listStaffDirectory(50),
+        ]);
+        const locked = directory.find((s) => s.identityId === target.identityId);
+        sendJson(res, 200, {
+          ok: true,
+          identityId: target.identityId,
+          subject: target.subject,
+          status: locked?.status ?? 'locked',
+          failedLoginCount: count,
+          roles,
+          staff: directory,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'identity_lock_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const staffUnlockMatch = url.pathname.match(/^\/v1\/ops\/staff\/([^/]+)\/unlock$/);
+    if (req.method === 'POST' && staffUnlockMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const identityId = decodeURIComponent(staffUnlockMatch[1]!);
+      const body = await readJsonBody<{ reason?: string }>(req);
+      try {
+        const staff = await services.identity.listStaffDirectory(100);
+        const target = staff.find((s) => s.identityId === identityId);
+        if (!target) {
+          sendJson(res, 404, { error: 'staff_not_found' });
+          return;
+        }
+        const actorIdentityId = await resolveOpsActor(services);
+        const actorRow = staff.find((s) => s.identityId === actorIdentityId);
+        const actorRoles =
+          actorRow?.roles.length ? actorRow.roles : (['owner'] as string[]);
+        const decision = await services.identity.unlockIdentity({
+          targetIdentityId: identityId,
+          actorIdentityId,
+          actorRoles,
+          targetRoles: target.roles,
+          reason: body.reason?.trim() || 'local_mock_unlock',
+        });
+        if (!decision.ok) {
+          const status =
+            decision.reason === 'self_unlock_forbidden'
+              ? 403
+              : decision.reason === 'owner_required_for_admin'
+                ? 403
+                : 400;
+          sendJson(res, status, { error: decision.reason });
+          return;
+        }
+        const [roles, directory] = await Promise.all([
+          Promise.resolve(listRoleCatalog()),
+          services.identity.listStaffDirectory(50),
+        ]);
+        sendJson(res, 200, {
+          ok: true,
+          identityId,
+          subject: target.subject,
+          status: 'active',
+          roles,
+          staff: directory,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'staff_unlock_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/reports/dashboard') {
       const storeId = url.searchParams.get('store_id')?.trim() || undefined;
       try {

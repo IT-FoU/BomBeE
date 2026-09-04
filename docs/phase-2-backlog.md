@@ -74,6 +74,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B54 | Inventory stock import preview/commit HTTP | **Done** — import batches list, preview + commit; Inventory BO |
 | P2-B55 | Order split shipment request/approve HTTP | **Done** — split list/mock-request/approve (Owner≠maker); Orders BO |
 | P2-B56 | Settlement hold-line + negative carryforward HTTP | **Done** — hold-line, carryforwards list/mock; Settlements BO |
+| P2-B57 | Staff identity mock-lock + unlock HTTP | **Done** — mock-lock (non-owner) + unlock; Staff BO |
 
 ## C — Hard rules that stay
 

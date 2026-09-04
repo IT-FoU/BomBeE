@@ -83,4 +83,53 @@ describe('staff HTTP', () => {
       staff.some((s) => s.subject === 'staff:local-catalog-owner' && s.roles.includes('owner')),
     ).toBe(true);
   });
+
+  it('locks a non-owner staff identity and unlocks via ops', async () => {
+    const lock = mockRes();
+    await router(mockReq('POST', '/v1/ops/identity/mock-lock', {}), lock.res);
+    expect(lock.res.statusCode).toBe(200);
+    expect(lock.body().status).toBe('locked');
+    const lockedId = lock.body().identityId as string;
+    expect(lockedId).toBeTruthy();
+    expect(
+      (lock.body().staff as Array<{ identityId: string; status: string }>).some(
+        (s) => s.identityId === lockedId && s.status === 'locked',
+      ),
+    ).toBe(true);
+
+    const ownerLock = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/identity/mock-lock', {
+        subject: 'staff:local-catalog-owner',
+      }),
+      ownerLock.res,
+    );
+    expect(ownerLock.res.statusCode).toBe(400);
+    expect(ownerLock.body().error).toBe('owner_lock_forbidden');
+
+    const unlock = mockRes();
+    await router(
+      mockReq('POST', `/v1/ops/staff/${lockedId}/unlock`, { reason: 'qa unlock' }),
+      unlock.res,
+    );
+    expect(unlock.res.statusCode).toBe(200);
+    expect(unlock.body().status).toBe('active');
+    expect(
+      (unlock.body().staff as Array<{ identityId: string; status: string }>).some(
+        (s) => s.identityId === lockedId && s.status === 'active',
+      ),
+    ).toBe(true);
+
+    const self = mockRes();
+    const owner = (
+      unlock.body().staff as Array<{ identityId: string; subject: string }>
+    ).find((s) => s.subject === 'staff:local-catalog-owner');
+    expect(owner?.identityId).toBeTruthy();
+    await router(
+      mockReq('POST', `/v1/ops/staff/${owner!.identityId}/unlock`, {}),
+      self.res,
+    );
+    expect([400, 403]).toContain(self.res.statusCode);
+    expect(['self_unlock_forbidden', 'insufficient_role']).toContain(self.body().error);
+  });
 });

@@ -1424,7 +1424,7 @@ paths:
           description: Mock ops disabled
   /v1/staff:
     get:
-      summary: Role catalog defaults + staff directory (read-only local ops)
+      summary: Role catalog defaults + staff directory (local ops)
       parameters:
         - in: query
           name: limit
@@ -1434,6 +1434,55 @@ paths:
       responses:
         '200':
           description: Roles array + staff directory
+  /v1/ops/identity/mock-lock:
+    post:
+      summary: Local/mock lock a non-owner staff identity (failed-login threshold)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identity_id:
+                  type: string
+                subject:
+                  type: string
+                  description: Defaults to staff:local-catalog-maker
+      responses:
+        '200':
+          description: Identity locked; staff directory returned
+        '400':
+          description: Owner lock forbidden
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Staff not found
+  /v1/ops/staff/{identityId}/unlock:
+    post:
+      summary: Unlock a locked staff identity (Owner actor; no self/owner unlock)
+      parameters:
+        - in: path
+          name: identityId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Identity active; staff directory returned
+        '400':
+          description: Insufficient role
+        '403':
+          description: Self-unlock forbidden or mock ops disabled
+        '404':
+          description: Staff not found
   /v1/reports/dashboard:
     get:
       summary: Live dashboard KPIs (local ops)

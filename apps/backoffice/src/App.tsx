@@ -96,6 +96,8 @@ import {
   listIntegrations,
   mockEnsureEgoProfiles,
   listStaffDirectory,
+  mockLockStaff,
+  unlockStaff,
   fetchDashboardKpis,
   fetchPaymentsReconcile,
   listBackups,
@@ -263,6 +265,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [integrationsNote, setIntegrationsNote] = useState('');
   const [staffRoles, setStaffRoles] = useState<StaffRoleCatalogRow[]>([]);
   const [staffDirectory, setStaffDirectory] = useState<StaffDirectoryRow[]>([]);
+  const [staffNote, setStaffNote] = useState('');
   const [dashboardKpis, setDashboardKpis] = useState<DashboardKpis | null>(null);
   const [paymentsReconcile, setPaymentsReconcile] = useState<PaymentsReconcile | null>(null);
   const [dashboardNote, setDashboardNote] = useState('');
@@ -674,8 +677,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ພະນັກງານ</span>
             </h2>
             <p className="lede">
-              Read-only role catalog defaults and local staff directory (seeded assignments).
+              Role catalog, local staff directory, mock lock (non-owner), and unlock (Owner actor).
             </p>
+            {staffNote ? <p className="lede">{staffNote}</p> : null}
             <ul className="roles" aria-label="Standard staff roles">
               {(staffRoles.length ? staffRoles : APP_ROLES.map((role) => ({ role, permissions: [] }))).map(
                 (row) => (
@@ -695,9 +699,70 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   {person.displayName} · {person.subject} ·{' '}
                   {person.roles.length ? person.roles.join(', ') : 'no roles'} ·{' '}
                   {person.status}
+                  {person.status === 'locked' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setStaffNote('');
+                          void (async () => {
+                            try {
+                              const result = await unlockStaff(person.identityId, {
+                                reason: 'BO mock unlock',
+                              });
+                              if (result.roles) setStaffRoles(result.roles);
+                              if (result.staff) setStaffDirectory(result.staff);
+                              setStaffNote(
+                                `Unlocked ${person.displayName} · ${person.subject}`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'staff_unlock_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Unlock
+                      </button>
+                    </>
+                  ) : null}
                 </li>
               ))}
             </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setStaffNote('');
+                void (async () => {
+                  try {
+                    const result = await mockLockStaff({});
+                    if (result.roles) setStaffRoles(result.roles);
+                    if (result.staff) setStaffDirectory(result.staff);
+                    setStaffNote(
+                      `Locked ${result.subject ?? result.identityId.slice(0, 8)}… · ${result.status}`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'staff_lock_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock lock (catalog maker)
+            </button>{' '}
             <button
               type="button"
               className="cta"

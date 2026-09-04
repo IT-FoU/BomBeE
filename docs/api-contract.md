@@ -9,8 +9,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/health` | `status`, `env`, `egoPosEnabled`, `inviteOnlyEnabled`, `integrationsMode`, `productionHold` |
 | GET | `/` | Brand + env flags |
 | GET | `/v1/auth/capabilities` | SMS provider mode, idle/lock policy, invite/integrations/hold flags |
-| POST | `/v1/auth/otp/request` | Request OTP (mock SMS local; may return `devCode` only when APP_ENV=local) |
+| POST | `/v1/auth/otp/request` | Request OTP (mock SMS local; may return `devCode` only when APP_ENV=local). When invite-only, requires valid `inviteCode`. |
 | POST | `/v1/auth/otp/verify` | Verify OTP + create session |
+| GET | `/v1/auth/me` | Bearer session → identity summary |
+| POST | `/v1/auth/logout` | Revoke session (`sessionToken` body or Bearer) |
 
 ## Domain services (in-process; tested via Vitest + PGlite)
 

@@ -638,6 +638,40 @@ paths:
           description: Status paid
         '409':
           description: Not approved or payment request missing
+  /v1/audit/events:
+    get:
+      summary: List recent audit events (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Events array
+  /v1/ops/audit/mock-event:
+    post:
+      summary: Local/mock append audit event
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                target_type:
+                  type: string
+                target_id:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Event appended
+        '403':
+          description: Mock ops disabled
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

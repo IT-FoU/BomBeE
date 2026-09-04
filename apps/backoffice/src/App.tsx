@@ -42,6 +42,8 @@ import {
   mockCreateRefund,
   approveRefund,
   mockPayRefund,
+  listAuditEvents,
+  mockAuditEvent,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -53,6 +55,7 @@ import {
   type ReturnRequestRow,
   type PromotionRow,
   type RefundApprovalRow,
+  type AuditEventRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -112,6 +115,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [promoNote, setPromoNote] = useState('');
   const [refunds, setRefunds] = useState<RefundApprovalRow[]>([]);
   const [refundNote, setRefundNote] = useState('');
+  const [auditEvents, setAuditEvents] = useState<AuditEventRow[]>([]);
+  const [auditNote, setAuditNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -134,6 +139,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           returns,
           promos,
           refundRows,
+          auditRows,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -145,6 +151,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listReturns(50),
           listPromotions(50),
           listRefunds(50),
+          listAuditEvents(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -156,6 +163,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setReturnRequests(returns);
         setPromotions(promos);
         setRefunds(refundRows);
+        setAuditEvents(auditRows);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -1346,6 +1354,76 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh refunds
             </button>
           </section>
+          <section aria-labelledby="audit-heading" id="audit">
+            <h2 id="audit-heading">
+              <span lang="en">Audit</span>
+              {' / '}
+              <span lang="lo">ອອດິດ</span>
+            </h2>
+            <p className="lede">
+              Append-only audit events from local ops (settlements, refunds, returns, …).
+            </p>
+            {auditNote ? (
+              <p className="lede" role="status">
+                {auditNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Audit events">
+              {auditEvents.length === 0 ? <li>No audit events yet</li> : null}
+              {auditEvents.map((event) => (
+                <li key={event.eventId}>
+                  {event.action} · {event.targetType}
+                  {event.targetId ? ` · ${event.targetId.slice(0, 8)}…` : ''}
+                  {event.reason ? ` · ${event.reason}` : ''}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setAuditNote('');
+                void (async () => {
+                  try {
+                    const result = await mockAuditEvent({
+                      action: 'ops.bo_mock_event',
+                      reason: 'Opened from Audit section',
+                    });
+                    setAuditEvents(result.events);
+                    setAuditNote(`Logged ${result.eventId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'audit_mock_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock audit event
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setAuditEvents(await listAuditEvents(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'audit_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh audit
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -1365,6 +1443,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'returns',
                   'promotions',
                   'approvals',
+                  'audit',
                 ].includes(item.id),
             )
             .map((item) => (

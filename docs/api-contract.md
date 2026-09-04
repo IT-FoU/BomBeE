@@ -47,6 +47,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/refunds/mock-create` | Local/mock refund request+approval for paid delivered child |
 | POST | `/v1/ops/refunds/:approvalId/approve` | Local/mock approve (distinct finance actor) |
 | POST | `/v1/ops/refunds/:approvalId/mock-pay` | Local/mock ledger pay |
+| GET | `/v1/audit/events` | List recent audit events (local ops) |
+| POST | `/v1/ops/audit/mock-event` | Local/mock append audit event |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
 | POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |

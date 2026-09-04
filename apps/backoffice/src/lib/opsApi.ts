@@ -607,3 +607,40 @@ export async function mockPayRefund(
     withinSla?: boolean;
   };
 }
+
+export type AuditEventRow = {
+  eventId: string;
+  actorIdentityId: string | null;
+  actorType: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  reason: string | null;
+  correlationId: string;
+  createdAt: string;
+};
+
+export async function listAuditEvents(limit = 50): Promise<AuditEventRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/audit/events?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`audit_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { events: AuditEventRow[] };
+  return body.events;
+}
+
+export async function mockAuditEvent(input: {
+  action?: string;
+  reason?: string;
+} = {}): Promise<{ eventId: string; events: AuditEventRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/audit/mock-event`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `audit_mock_failed_${res.status}`);
+  }
+  return (await res.json()) as { eventId: string; events: AuditEventRow[] };
+}

@@ -510,6 +510,45 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/audit/events') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const events = await services.audit.listRecent(limit);
+      sendJson(res, 200, { ok: true, events });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/audit/mock-event') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        action?: string;
+        target_type?: string;
+        target_id?: string;
+        reason?: string;
+      }>(req);
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const eventId = await services.audit.append({
+          actorIdentityId,
+          actorType: 'staff',
+          action: body.action?.trim() || 'ops.mock_event',
+          targetType: body.target_type?.trim() || 'local_qa',
+          targetId: body.target_id?.trim() || crypto.randomUUID(),
+          reason: body.reason?.trim() || 'local_mock_audit',
+          correlationId: crypto.randomUUID(),
+        });
+        const events = await services.audit.listRecent(50);
+        sendJson(res, 201, { ok: true, eventId, events });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'audit_append_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/refunds/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

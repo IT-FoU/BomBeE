@@ -3,6 +3,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import type { BombeeEnv } from '@bombee/config';
 
 import { createTestDatabase } from '../db/migrate.js';
+import { AuditService } from '../modules/audit/service.js';
 import { CatalogService } from '../modules/catalog/catalogService.js';
 import { DeliveryService } from '../modules/fulfillment/deliveryService.js';
 import { ReturnService } from '../modules/fulfillment/returnService.js';
@@ -35,6 +36,7 @@ export type ApiServices = {
   support: SupportService;
   returns: ReturnService;
   promotions: PromotionService;
+  audit: AuditService;
 };
 
 /** Local/mock runtime: in-memory PGlite + mock SMS (no hosted DB required). */
@@ -54,6 +56,7 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
   const support = new SupportService(db);
   const returns = new ReturnService(db);
   const promotions = new PromotionService(db);
+  const audit = new AuditService(db);
   await seedLocalCatalog(db);
   return {
     db,
@@ -71,5 +74,6 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     support,
     returns,
     promotions,
+    audit,
   };
 }

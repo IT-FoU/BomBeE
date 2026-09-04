@@ -76,4 +76,37 @@ export class AuditService {
       return { blocked: true };
     }
   }
+
+  async listRecent(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      actor_identity_id: string | null;
+      actor_type: string;
+      action: string;
+      target_type: string;
+      target_id: string | null;
+      reason: string | null;
+      correlation_id: string;
+      created_at: string;
+    }>(
+      `SELECT id, actor_identity_id, actor_type, action, target_type, target_id,
+              reason, correlation_id::text, created_at::text
+       FROM security.audit_events
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      eventId: r.id,
+      actorIdentityId: r.actor_identity_id,
+      actorType: r.actor_type,
+      action: r.action,
+      targetType: r.target_type,
+      targetId: r.target_id,
+      reason: r.reason,
+      correlationId: r.correlation_id,
+      createdAt: r.created_at,
+    }));
+  }
 }

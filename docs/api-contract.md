@@ -24,6 +24,7 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/carts/:id/items` | Upsert cart line |
 | POST | `/v1/carts/:id/checkout` | Create parent/child orders (no payment) |
 | GET | `/v1/orders/:parentId` | Order views for owning customer |
+| POST | `/v1/orders/:parentId/cancel` | Cancel before courier handoff (releases stock; cancels open QR) |
 | POST | `/v1/orders/:parentId/confirm-children` | Local/mock supplier confirm |
 | POST | `/v1/orders/:parentId/payments/qr` | Create QR + reserve stock for order lines |
 | POST | `/v1/orders/:parentId/payments/cod` | Create COD shipments + reserve stock (confirmed children) |

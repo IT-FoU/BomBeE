@@ -8,7 +8,13 @@ import { evaluateCodUx, parentChildSummary } from './lib/checkout';
 import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './lib/offline';
 import { requestCustomerOtp, verifyCustomerOtp, fetchSessionMe, logoutSession } from './lib/authApi';
 import { loadCatalogProducts } from './lib/catalogApi';
-import { checkoutLocalCart, fetchOrderView, mockAdvanceFulfillment, mockDeliverFulfillment } from './lib/checkoutApi';
+import {
+  cancelOrderBeforeHandoff,
+  checkoutLocalCart,
+  fetchOrderView,
+  mockAdvanceFulfillment,
+  mockDeliverFulfillment,
+} from './lib/checkoutApi';
 import {
   confirmChildrenMock,
   createCodPayment,
@@ -327,6 +333,26 @@ export function App() {
         setTrackError(err instanceof Error ? err.message : 'deliver_failed');
       } finally {
         setTrackBusy(false);
+      }
+    })();
+  }
+
+  function cancelBeforeHandoff() {
+    assertOnlineForMutation(online, 'cancel');
+    const token = sessionStorage.getItem('bombee_session');
+    if (!token || !apiOrderId) {
+      setOrderStatus('cancelled_before_handoff');
+      return;
+    }
+    setCheckoutError('');
+    void (async () => {
+      try {
+        const result = await cancelOrderBeforeHandoff(token, apiOrderId, 'order');
+        setTrackingChildren(result.order.byStore);
+        setOrderStatus(String(result.order.combined.status));
+        setPaymentStatus('cancelled');
+      } catch (err) {
+        setCheckoutError(err instanceof Error ? err.message : 'cancel_failed');
       }
     })();
   }
@@ -865,7 +891,7 @@ export function App() {
               <button
                 type="button"
                 className="cta ghost"
-                onClick={() => setOrderStatus('cancelled_before_handoff')}
+                onClick={() => cancelBeforeHandoff()}
               >
                 Cancel before handoff
               </button>

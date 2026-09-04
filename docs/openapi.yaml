@@ -281,6 +281,22 @@ paths:
           description: Not owner
         '404':
           description: Missing
+  /v1/orders/{parentId}/cancel:
+    post:
+      summary: Cancel order (or store child) before courier handoff
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cancelled children + released reservations
+        '409':
+          description: After handoff — use refusal/return workflow
   /v1/orders/{parentId}/confirm-children:
     post:
       summary: Local/mock supplier confirm for child orders

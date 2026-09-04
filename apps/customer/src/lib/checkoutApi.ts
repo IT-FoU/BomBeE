@@ -157,3 +157,33 @@ export async function mockDeliverFulfillment(
   }
   return (await res.json()) as FulfillmentDeliverResult;
 }
+
+export async function cancelOrderBeforeHandoff(
+  sessionToken: string,
+  parentId: string,
+  scope: 'order' | 'store' = 'order',
+  childOrderId?: string,
+): Promise<{
+  ok: true;
+  cancelledChildIds: string[];
+  releasedReservationIds: string[];
+  cancelledPaymentRequestIds: string[];
+  order: { combined: OrderView['combined']; byStore: OrderView['byStore'] };
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/orders/${parentId}/cancel`, {
+    method: 'POST',
+    headers: authHeaders(sessionToken),
+    body: JSON.stringify({ scope, childOrderId }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `cancel_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    ok: true;
+    cancelledChildIds: string[];
+    releasedReservationIds: string[];
+    cancelledPaymentRequestIds: string[];
+    order: { combined: OrderView['combined']; byStore: OrderView['byStore'] };
+  };
+}

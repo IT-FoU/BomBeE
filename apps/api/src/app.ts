@@ -6,6 +6,7 @@ import { BRAND_NAME, CURRENCY_CODE, DISPLAY_TIMEZONE } from '@bombee/shared';
 import { readJsonBody } from './http/readJsonBody.js';
 import { applyCors } from './http/cors.js';
 import { mockAdvanceFulfillment, mockDeliverFulfillment } from './modules/fulfillment/mockAdvance.js';
+import { cancelOrderBeforeHandoff } from './modules/orders/cancelBeforeHandoff.js';
 import { mockExpireDue } from './modules/payments/mockExpireDue.js';
 import { getHealth } from './modules/system/health.js';
 import type { ApiServices } from './runtime/createServices.js';
@@ -440,6 +441,47 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         confirmed.push(child.id);
       }
       sendJson(res, 200, { ok: true, confirmedChildIds: confirmed });
+      return;
+    }
+
+    const cancelMatch = url.pathname.match(/^\/v1\/orders\/([^/]+)\/cancel$/);
+    if (req.method === 'POST' && cancelMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const parentId = decodeURIComponent(cancelMatch[1]!);
+      if (!(await parentOwnedBy(services, parentId, session.identityId))) {
+        sendJson(res, 403, { error: 'order_forbidden' });
+        return;
+      }
+      const body = await readJsonBody<{ scope?: 'order' | 'store'; childOrderId?: string }>(req);
+      const scope = body.scope === 'store' ? 'store' : 'order';
+      if (scope === 'store' && !body.childOrderId) {
+        sendJson(res, 400, { error: 'child_order_id_required' });
+        return;
+      }
+      try {
+        const result = await cancelOrderBeforeHandoff(
+          services,
+          parentId,
+          session.identityId,
+          scope,
+          body.childOrderId,
+        );
+        const views = await services.orders.getOrderViews(parentId);
+        sendJson(res, 200, { ok: true, ...result, order: views });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'cancel_failed';
+        sendJson(
+          res,
+          message === 'use_refusal_or_return_workflow' || message === 'parent_not_found'
+            ? 409
+            : 400,
+          { error: message },
+        );
+      }
       return;
     }
 

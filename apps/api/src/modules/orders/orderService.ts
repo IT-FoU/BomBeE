@@ -420,13 +420,16 @@ export class OrderService {
           `UPDATE app.order_items SET status = 'cancelled' WHERE child_order_id = $1`,
           [child.id],
         );
-        await this.transitionChild({
+        const transitioned = await this.transitionChild({
           childOrderId: child.id,
           toStatus: 'cancelled',
           actorIdentityId: input.actorIdentityId,
           reason: 'order_cancelled',
-          correlationId: `${input.correlationId}-${child.id}`,
+          correlationId: crypto.randomUUID(),
         });
+        if (!transitioned.ok) {
+          return { ok: false as const, reason: transitioned.reason };
+        }
       }
     }
 

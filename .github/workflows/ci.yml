@@ -68,7 +68,7 @@ jobs:
   dependency-scan:
     name: Dependency / security scan
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,7 +88,25 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: pnpm audit (fail on high+)
-        run: pnpm audit --audit-level=high
+        run: |
+          pnpm config set fetch-retries 5
+          pnpm config set fetch-retry-maxtimeout 120000
+          pnpm config set fetch-timeout 120000
+          attempt=1
+          max_attempts=5
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "pnpm audit attempt ${attempt}/${max_attempts}"
+            if pnpm audit --audit-level=high; then
+              exit 0
+            fi
+            status=$?
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "pnpm audit failed after ${max_attempts} attempts (exit ${status})"
+              exit "$status"
+            fi
+            sleep $((attempt * 20))
+            attempt=$((attempt + 1))
+          done
 
   secret-scan:
     name: Secret scan

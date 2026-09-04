@@ -1344,7 +1344,9 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
     if (req.method === 'GET' && url.pathname === '/v1/support/tickets') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
-      const tickets = await services.support.listTickets(limit);
+      const escalatedParam = url.searchParams.get('escalated');
+      const escalatedOnly = escalatedParam === '1' || escalatedParam === 'true';
+      const tickets = await services.support.listTickets(limit, escalatedOnly);
       sendJson(res, 200, { ok: true, tickets });
       return;
     }
@@ -3725,6 +3727,65 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'support_create_failed';
         sendJson(res, 400, { error: msg });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/support/tickets/mock-evaluate-sla') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        ticketId?: string;
+        ticket_id?: string;
+        now?: string;
+      }>(req);
+      try {
+        let ticketId = (body.ticketId ?? body.ticket_id)?.trim();
+        const now = body.now ? new Date(body.now) : new Date();
+        if (Number.isNaN(now.getTime())) {
+          sendJson(res, 400, { error: 'invalid_now' });
+          return;
+        }
+        if (!ticketId) {
+          const existing = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.support_tickets
+             WHERE escalated_at IS NULL
+               AND status NOT IN ('closed')
+             ORDER BY created_at DESC
+             LIMIT 1`,
+          );
+          ticketId = existing.rows[0]?.id;
+        }
+        if (!ticketId) {
+          const customerIdentityId = await services.identity.ensureCustomer(
+            '+8562097008800',
+            'Local Support Customer',
+          );
+          const createdAt = new Date(now.getTime() - 48 * 60 * 60_000);
+          const created = await services.support.openTicket({
+            customerIdentityId,
+            channel: 'in_app',
+            subject: 'Local SLA evaluate ticket',
+            body: 'Opened for mock SLA evaluate.',
+            urgency: 'general',
+            now: createdAt,
+          });
+          ticketId = created.ticketId;
+        }
+        const evaluated = await services.support.evaluateSla(ticketId, now);
+        const tickets = await services.support.listTickets(50);
+        sendJson(res, 200, {
+          ok: true,
+          ticketId,
+          ...evaluated,
+          now: now.toISOString(),
+          tickets,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'support_sla_evaluate_failed';
+        sendJson(res, message === 'ticket_not_found' ? 404 : 400, { error: message });
       }
       return;
     }

@@ -976,11 +976,17 @@ export type SupportTicketRow = {
   messageCount: number;
   firstResponseDueAt: string;
   resolutionDueAt: string;
+  escalatedAt?: string | null;
   createdAt: string;
 };
 
-export async function listSupportTickets(limit = 50): Promise<SupportTicketRow[]> {
-  const res = await fetch(`${apiBaseUrl()}/v1/support/tickets?limit=${limit}`);
+export async function listSupportTickets(
+  limit = 50,
+  escalatedOnly = false,
+): Promise<SupportTicketRow[]> {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (escalatedOnly) qs.set('escalated', 'true');
+  const res = await fetch(`${apiBaseUrl()}/v1/support/tickets?${qs.toString()}`);
   if (!res.ok) {
     throw new Error(`support_list_failed_${res.status}`);
   }
@@ -1003,6 +1009,35 @@ export async function mockCreateSupportTicket(input: {
     throw new Error(err.error ?? `support_create_failed_${res.status}`);
   }
   return (await res.json()) as { ticketId: string; tickets: SupportTicketRow[] };
+}
+
+export async function mockEvaluateSupportSla(input: {
+  ticketId?: string;
+  now?: string;
+} = {}): Promise<{
+  ticketId: string;
+  breaches: string[];
+  escalated: boolean;
+  tickets?: SupportTicketRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/support/tickets/mock-evaluate-sla`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      ticket_id: input.ticketId,
+      now: input.now,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `support_sla_evaluate_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    ticketId: string;
+    breaches: string[];
+    escalated: boolean;
+    tickets?: SupportTicketRow[];
+  };
 }
 
 export async function replySupportTicket(

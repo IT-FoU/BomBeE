@@ -77,6 +77,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B57 | Staff identity mock-lock + unlock HTTP | **Done** — mock-lock (non-owner) + unlock; Staff BO |
 | P2-B58 | Delivery lost/damaged claims list + mock-open + resolve | **Done** — claims list/open/resolve; Fulfillment BO |
 | P2-B59 | Packing SLA late list + mock-evaluate | **Done** — packing-deadlines list/mock-evaluate; Fulfillment BO |
+| P2-B60 | Support ticket SLA escalated list + mock-evaluate | **Done** — escalated filter + mock-evaluate-sla; Support BO |
 
 ## C — Hard rules that stay
 

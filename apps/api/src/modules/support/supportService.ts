@@ -195,7 +195,7 @@ export class SupportService {
     );
   }
 
-  async listTickets(limit = 50) {
+  async listTickets(limit = 50, escalatedOnly = false) {
     const capped = Math.min(Math.max(limit, 1), 100);
     const rows = await this.db.query<{
       id: string;
@@ -207,15 +207,18 @@ export class SupportService {
       message_count: number;
       first_response_due_at: string;
       resolution_due_at: string;
+      escalated_at: string | null;
       created_at: string;
     }>(
       `SELECT t.id, t.subject, t.status, t.urgency, t.channel, t.customer_identity_id,
               (SELECT count(*)::int FROM app.support_messages m WHERE m.ticket_id = t.id) AS message_count,
-              t.first_response_due_at::text, t.resolution_due_at::text, t.created_at::text
+              t.first_response_due_at::text, t.resolution_due_at::text,
+              t.escalated_at::text, t.created_at::text
        FROM app.support_tickets t
+       WHERE ($2::boolean = false OR t.escalated_at IS NOT NULL)
        ORDER BY t.created_at DESC
        LIMIT $1`,
-      [capped],
+      [capped, escalatedOnly],
     );
     return rows.rows.map((r) => ({
       ticketId: r.id,
@@ -227,6 +230,7 @@ export class SupportService {
       messageCount: Number(r.message_count),
       firstResponseDueAt: r.first_response_due_at,
       resolutionDueAt: r.resolution_due_at,
+      escalatedAt: r.escalated_at,
       createdAt: r.created_at,
     }));
   }

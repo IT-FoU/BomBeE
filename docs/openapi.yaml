@@ -868,6 +868,11 @@ paths:
           schema:
             type: integer
             default: 50
+        - in: query
+          name: escalated
+          schema:
+            type: boolean
+          description: When true, only escalated tickets
       responses:
         '200':
           description: Tickets array
@@ -929,6 +934,27 @@ paths:
           description: Ticket opened
         '403':
           description: Mock ops disabled
+  /v1/ops/support/tickets/mock-evaluate-sla:
+    post:
+      summary: Local/mock evaluate support SLA breaches and escalate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  type: string
+                now:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Breaches evaluated; ticket may be escalated
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Ticket not found
   /v1/ops/support/tickets/{ticketId}/reply:
     post:
       summary: Local/mock staff reply

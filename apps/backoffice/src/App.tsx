@@ -57,6 +57,7 @@ import {
   mockCreateSupportTicket,
   replySupportTicket,
   resolveSupportTicket,
+  mockEvaluateSupportSla,
   listReturns,
   mockCreateReturn,
   approveReturn,
@@ -2370,7 +2371,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ສະໜັບສະໜູນ</span>
             </h2>
             <p className="lede">
-              Local support tickets — mock create, staff reply, and preliminary resolve.
+              Local support tickets — mock create, staff reply, preliminary resolve, and SLA
+              evaluate/escalate.
             </p>
             {supportNote ? (
               <p className="lede" role="status">
@@ -2383,6 +2385,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 <li key={ticket.ticketId}>
                   {ticket.status} · {ticket.urgency} · {ticket.subject} · {ticket.messageCount}{' '}
                   msgs
+                  {ticket.escalatedAt ? ' · ESCALATED' : ''}
                   {ticket.status === 'open' || ticket.status === 'reopened' ? (
                     <>
                       {' '}
@@ -2480,6 +2483,35 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Mock create ticket
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setSupportNote('');
+                void (async () => {
+                  try {
+                    const result = await mockEvaluateSupportSla({
+                      now: new Date(Date.now() + 48 * 60 * 60_000).toISOString(),
+                    });
+                    if (result.tickets) setSupportTickets(result.tickets);
+                    setSupportNote(
+                      `SLA ${result.ticketId.slice(0, 8)}… · escalated=${String(result.escalated)} · ${result.breaches.join(',') || 'none'}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'support_sla_evaluate_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock evaluate SLA
             </button>{' '}
             <button
               type="button"

@@ -66,7 +66,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/settlements/:batchId/approve` | Local/mock approve (distinct finance actor; maker-checker) |
 | POST | `/v1/ops/settlements/:batchId/dispute` | Local/mock dispute a line (`child_order_id` optional → first line) |
 | POST | `/v1/ops/settlements/:batchId/hold-line` | Local/mock hold a line (`child_order_id` optional → first unheld); recomputes held/net |
-| GET | `/v1/support/tickets` | List support tickets (local ops) |
+| GET | `/v1/support/tickets` | List support tickets (local ops; `escalated=true` optional) |
+| POST | `/v1/ops/support/tickets/mock-evaluate-sla` | Local/mock evaluate SLA breaches + escalate |
 | GET | `/v1/me/support/tickets` | List own support tickets (Bearer) |
 | POST | `/v1/me/support/tickets` | Open support ticket (Bearer) |
 | POST | `/v1/me/support/tickets/:id/confirm-close` | Customer confirm-close after resolve |

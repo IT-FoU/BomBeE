@@ -150,3 +150,34 @@ export async function listOrders(limit = 50): Promise<OpsOrderRow[]> {
   const body = (await res.json()) as { orders: OpsOrderRow[] };
   return body.orders;
 }
+
+async function opsOrderAction(
+  path: string,
+): Promise<{ orders?: OpsOrderRow[]; children?: unknown[]; confirmedChildIds?: string[] }> {
+  const res = await fetch(`${apiBaseUrl()}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `ops_action_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    orders?: OpsOrderRow[];
+    children?: unknown[];
+    confirmedChildIds?: string[];
+  };
+}
+
+export async function opsConfirmChildren(parentId: string) {
+  return opsOrderAction(`/v1/ops/orders/${parentId}/confirm-children`);
+}
+
+export async function opsMockAdvance(parentId: string) {
+  return opsOrderAction(`/v1/ops/orders/${parentId}/fulfillment/mock-advance`);
+}
+
+export async function opsMockDeliver(parentId: string) {
+  return opsOrderAction(`/v1/ops/orders/${parentId}/fulfillment/mock-deliver`);
+}

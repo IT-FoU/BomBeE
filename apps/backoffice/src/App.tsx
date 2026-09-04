@@ -18,6 +18,9 @@ import {
   listOrders,
   listStores,
   mockRemitCodShipment,
+  opsConfirmChildren,
+  opsMockAdvance,
+  opsMockDeliver,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -381,9 +384,85 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   {order.children.length} child
                   {order.children.length === 1 ? '' : 'ren'} (
                   {order.children.map((c) => c.status).join(', ')})
+                  <div className="ops-form">
+                    <button
+                      type="button"
+                      className="cta"
+                      disabled={formBusy}
+                      onClick={() => {
+                        setFormBusy(true);
+                        setFormError('');
+                        void (async () => {
+                          try {
+                            const result = await opsConfirmChildren(order.parentId);
+                            if (result.orders) setOpsOrders(result.orders);
+                          } catch (err) {
+                            setFormError(err instanceof Error ? err.message : 'confirm_failed');
+                          } finally {
+                            setFormBusy(false);
+                          }
+                        })();
+                      }}
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      type="button"
+                      className="cta"
+                      disabled={formBusy}
+                      onClick={() => {
+                        setFormBusy(true);
+                        setFormError('');
+                        void (async () => {
+                          try {
+                            const result = await opsMockAdvance(order.parentId);
+                            if (result.orders) setOpsOrders(result.orders);
+                          } catch (err) {
+                            setFormError(err instanceof Error ? err.message : 'advance_failed');
+                          } finally {
+                            setFormBusy(false);
+                          }
+                        })();
+                      }}
+                    >
+                      Advance
+                    </button>
+                    <button
+                      type="button"
+                      className="cta"
+                      disabled={formBusy}
+                      onClick={() => {
+                        setFormBusy(true);
+                        setFormError('');
+                        void (async () => {
+                          try {
+                            const result = await opsMockDeliver(order.parentId);
+                            if (result.orders) setOpsOrders(result.orders);
+                          } catch (err) {
+                            setFormError(err instanceof Error ? err.message : 'deliver_failed');
+                          } finally {
+                            setFormBusy(false);
+                          }
+                        })();
+                      }}
+                    >
+                      Deliver
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
+          </section>
+          <section aria-labelledby="fulfillment-heading" id="fulfillment">
+            <h2 id="fulfillment-heading">
+              <span lang="en">Fulfillment</span>
+              {' / '}
+              <span lang="lo">ຈັດສົ່ງ</span>
+            </h2>
+            <p className="lede">
+              Use Confirm / Advance / Deliver on each order in the Orders section (local mock ops;
+              no customer session required).
+            </p>
           </section>
           <section aria-labelledby="payments-heading" id="payments">
             <h2 id="payments-heading">
@@ -480,6 +559,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'stores',
                   'payments',
                   'orders',
+                  'fulfillment',
                 ].includes(item.id),
             )
             .map((item) => (

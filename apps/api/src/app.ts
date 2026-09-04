@@ -478,6 +478,107 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const opsConfirmMatch = url.pathname.match(/^\/v1\/ops\/orders\/([^/]+)\/confirm-children$/);
+    if (req.method === 'POST' && opsConfirmMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const parentId = decodeURIComponent(opsConfirmMatch[1]!);
+      const parent = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.parent_orders WHERE id = $1`,
+        [parentId],
+      );
+      if (!parent.rows[0]) {
+        sendJson(res, 404, { error: 'order_not_found' });
+        return;
+      }
+      const actorIdentityId = await resolveOpsActor(services);
+      const body = await readJsonBody<{ childOrderIds?: string[] }>(req);
+      const children = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.child_orders WHERE parent_order_id = $1`,
+        [parentId],
+      );
+      const wanted = new Set(body.childOrderIds ?? children.rows.map((c) => c.id));
+      const confirmed: string[] = [];
+      for (const child of children.rows) {
+        if (!wanted.has(child.id)) continue;
+        const result = await services.orders.transitionChild({
+          childOrderId: child.id,
+          toStatus: 'confirmed',
+          actorIdentityId,
+          reason: 'local_ops_supplier_confirm',
+          correlationId: crypto.randomUUID(),
+        });
+        if (!result.ok) {
+          sendJson(res, 409, { error: result.reason, childOrderId: child.id });
+          return;
+        }
+        confirmed.push(child.id);
+      }
+      const orders = await services.orders.listRecentOrders(50);
+      sendJson(res, 200, { ok: true, confirmedChildIds: confirmed, orders });
+      return;
+    }
+
+    const opsAdvanceMatch = url.pathname.match(
+      /^\/v1\/ops\/orders\/([^/]+)\/fulfillment\/mock-advance$/,
+    );
+    if (req.method === 'POST' && opsAdvanceMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const parentId = decodeURIComponent(opsAdvanceMatch[1]!);
+      const parent = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.parent_orders WHERE id = $1`,
+        [parentId],
+      );
+      if (!parent.rows[0]) {
+        sendJson(res, 404, { error: 'order_not_found' });
+        return;
+      }
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const children = await mockAdvanceFulfillment(services, parentId, actorIdentityId);
+        const orders = await services.orders.listRecentOrders(50);
+        sendJson(res, 200, { ok: true, children, orders });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'fulfillment_advance_failed';
+        sendJson(res, message === 'mock_courier_missing' ? 500 : 400, { error: message });
+      }
+      return;
+    }
+
+    const opsDeliverMatch = url.pathname.match(
+      /^\/v1\/ops\/orders\/([^/]+)\/fulfillment\/mock-deliver$/,
+    );
+    if (req.method === 'POST' && opsDeliverMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const parentId = decodeURIComponent(opsDeliverMatch[1]!);
+      const parent = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.parent_orders WHERE id = $1`,
+        [parentId],
+      );
+      if (!parent.rows[0]) {
+        sendJson(res, 404, { error: 'order_not_found' });
+        return;
+      }
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const children = await mockDeliverFulfillment(services, parentId, actorIdentityId);
+        const orders = await services.orders.listRecentOrders(50);
+        sendJson(res, 200, { ok: true, children, orders });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'fulfillment_deliver_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     const orderMatch = url.pathname.match(/^\/v1\/orders\/([^/]+)$/);
     if (req.method === 'GET' && orderMatch) {
       const session = await requireCustomerSession(req, services);
@@ -1142,4 +1243,20 @@ async function parentOwnedBy(services: ApiServices, parentId: string, identityId
 
 function mockOpsAllowed(env: BombeeEnv): boolean {
   return env.INTEGRATIONS_MODE === 'mock' || env.APP_ENV === 'local';
+}
+
+async function resolveOpsActor(services: ApiServices): Promise<string> {
+  const existing = await services.db.query<{ id: string }>(
+    `SELECT id FROM security.auth_identities
+     WHERE subject IN ('staff:local-catalog-owner', 'staff:local-ops')
+     ORDER BY subject
+     LIMIT 1`,
+  );
+  if (existing.rows[0]) return existing.rows[0].id;
+  const created = await services.identity.ensureStaff(
+    'staff:local-ops',
+    'Local Ops',
+    '+8562087000099',
+  );
+  return created.identityId;
 }

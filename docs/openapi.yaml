@@ -275,6 +275,44 @@ paths:
       responses:
         '200':
           description: Orders array
+  /v1/ops/orders/{parentId}/confirm-children:
+    post:
+      summary: Local ops supplier confirm (no customer session)
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Confirmed child ids + refreshed orders list
+        '403':
+          description: Mock ops disabled
+  /v1/ops/orders/{parentId}/fulfillment/mock-advance:
+    post:
+      summary: Local ops advance to in_transit
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Advance steps + orders list
+  /v1/ops/orders/{parentId}/fulfillment/mock-deliver:
+    post:
+      summary: Local ops POD deliver
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deliver steps + orders list
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

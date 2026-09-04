@@ -878,3 +878,31 @@ export async function mockEnsureEgoProfiles(): Promise<{
     stores: IntegrationStoreRow[];
   };
 }
+
+export type StaffRoleCatalogRow = {
+  role: string;
+  permissions: string[];
+};
+
+export type StaffDirectoryRow = {
+  staffProfileId: string;
+  identityId: string;
+  subject: string;
+  displayName: string;
+  phoneE164: string | null;
+  status: string;
+  roles: string[];
+};
+
+export async function listStaffDirectory(
+  limit = 50,
+): Promise<{ roles: StaffRoleCatalogRow[]; staff: StaffDirectoryRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/staff?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`staff_list_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    roles: StaffRoleCatalogRow[];
+    staff: StaffDirectoryRow[];
+  };
+}

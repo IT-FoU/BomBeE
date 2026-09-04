@@ -54,6 +54,7 @@ import {
   markNotificationRead,
   listIntegrations,
   mockEnsureEgoProfiles,
+  listStaffDirectory,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -70,6 +71,8 @@ import {
   type NotificationInboxRow,
   type NotificationOutboxRow,
   type IntegrationsStatus,
+  type StaffDirectoryRow,
+  type StaffRoleCatalogRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -138,6 +141,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [notificationNote, setNotificationNote] = useState('');
   const [integrations, setIntegrations] = useState<IntegrationsStatus | null>(null);
   const [integrationsNote, setIntegrationsNote] = useState('');
+  const [staffRoles, setStaffRoles] = useState<StaffRoleCatalogRow[]>([]);
+  const [staffDirectory, setStaffDirectory] = useState<StaffDirectoryRow[]>([]);
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -164,6 +169,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           exportRows,
           notificationBundle,
           integrationsStatus,
+          staffBundle,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -179,6 +185,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listExports(50),
           listNotifications(50),
           listIntegrations(),
+          listStaffDirectory(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -195,6 +202,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setNotificationInbox(notificationBundle.inbox);
         setNotificationOutbox(notificationBundle.outbox);
         setIntegrations(integrationsStatus);
+        setStaffRoles(staffBundle.roles);
+        setStaffDirectory(staffBundle.staff);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -369,12 +378,57 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </button>
           </section>
           <section aria-labelledby="roles-heading" id="staff">
-            <h2 id="roles-heading">Standard roles</h2>
+            <h2 id="roles-heading">
+              <span lang="en">Staff & roles</span>
+              {' / '}
+              <span lang="lo">ພະນັກງານ</span>
+            </h2>
+            <p className="lede">
+              Read-only role catalog defaults and local staff directory (seeded assignments).
+            </p>
             <ul className="roles" aria-label="Standard staff roles">
-              {APP_ROLES.map((role) => (
-                <li key={role}>{role}</li>
+              {(staffRoles.length ? staffRoles : APP_ROLES.map((role) => ({ role, permissions: [] }))).map(
+                (row) => (
+                  <li key={row.role}>
+                    {row.role}
+                    {row.permissions.length
+                      ? ` · ${row.permissions.length} permissions`
+                      : ''}
+                  </li>
+                ),
+              )}
+            </ul>
+            <ul className="roles" aria-label="Staff directory">
+              {staffDirectory.length === 0 ? <li>No staff profiles yet</li> : null}
+              {staffDirectory.map((person) => (
+                <li key={person.staffProfileId}>
+                  {person.displayName} · {person.subject} ·{' '}
+                  {person.roles.length ? person.roles.join(', ') : 'no roles'} ·{' '}
+                  {person.status}
+                </li>
               ))}
             </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    const result = await listStaffDirectory(50);
+                    setStaffRoles(result.roles);
+                    setStaffDirectory(result.staff);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'staff_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh staff
+            </button>
           </section>
           <section aria-labelledby="invites-heading" id="invites">
             <h2 id="invites-heading">

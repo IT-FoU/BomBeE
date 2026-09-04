@@ -808,6 +808,18 @@ paths:
           description: Profiles ensured (disabled)
         '403':
           description: Mock ops disabled
+  /v1/staff:
+    get:
+      summary: Role catalog defaults + staff directory (read-only local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Roles array + staff directory
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

@@ -40,9 +40,26 @@ async function ensureMockPayouts(db: PGlite): Promise<void> {
   }
 }
 
+async function ensureLocalStaffRoles(db: PGlite): Promise<void> {
+  const identity = new IdentityService(db, new MockSmsProvider());
+  const maker = await identity.ensureStaff(
+    'staff:local-catalog-maker',
+    'Catalog Maker',
+    '+8562087000001',
+  );
+  const owner = await identity.ensureStaff(
+    'staff:local-catalog-owner',
+    'Catalog Owner',
+    '+8562087000002',
+  );
+  await identity.ensureStaffRole(maker.staffProfileId, 'catalog', owner.identityId);
+  await identity.ensureStaffRole(owner.staffProfileId, 'owner', owner.identityId);
+}
+
 /** Seed a tiny active catalog + stock for local API browse (mock only). */
 export async function seedLocalCatalog(db: PGlite): Promise<void> {
   await ensureMockCourier(db);
+  await ensureLocalStaffRoles(db);
 
   const existing = await db.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM app.products WHERE status = 'active'`,
@@ -60,6 +77,8 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
 
   const maker = await identity.ensureStaff('staff:local-catalog-maker', 'Catalog Maker', '+8562087000001');
   const owner = await identity.ensureStaff('staff:local-catalog-owner', 'Catalog Owner', '+8562087000002');
+  await identity.ensureStaffRole(maker.staffProfileId, 'catalog', owner.identityId);
+  await identity.ensureStaffRole(owner.staffProfileId, 'owner', owner.identityId);
 
   const storeFresh = await stores.createStore({ code: 'LOCAL-FRESH', name: 'VTE Fresh Mart' });
   const storeHome = await stores.createStore({ code: 'LOCAL-HOME', name: 'Lane Xang Home' });

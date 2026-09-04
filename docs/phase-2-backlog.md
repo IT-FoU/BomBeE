@@ -50,6 +50,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B30 | Exports list + mock approve/download | **Done** — `GET /v1/exports`, mock-create/approve/mock-download; Exports section |
 | P2-B31 | Notifications inbox/outbox + mock ops | **Done** — `GET /v1/notifications`, mock-enqueue/process/mark-read; Notifications section |
 | P2-B32 | Integrations Center mode + EGO status | **Done** — `GET /v1/integrations`, ego mock-ensure; Integrations section from live flags |
+| P2-B33 | Staff roles catalog + directory (read-only) | **Done** — `GET /v1/staff` roles+directory; seed local role assignments; Staff section |
 
 ## C — Hard rules that stay
 

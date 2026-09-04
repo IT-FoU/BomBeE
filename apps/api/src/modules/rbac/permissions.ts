@@ -27,6 +27,16 @@ const ROLE_DEFAULTS: Record<AppRole, PermissionCode[]> = {
   auditor: ['audit.read', 'backoffice.access'],
 };
 
+export function listRoleCatalog(): Array<{
+  role: AppRole;
+  permissions: PermissionCode[];
+}> {
+  return (Object.keys(ROLE_DEFAULTS) as AppRole[]).map((role) => ({
+    role,
+    permissions: [...ROLE_DEFAULTS[role]],
+  }));
+}
+
 export function defaultPermissionsForRoles(roles: AppRole[]): Set<PermissionCode> {
   const set = new Set<PermissionCode>();
   for (const role of roles) {

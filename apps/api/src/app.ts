@@ -9,6 +9,7 @@ import { mockAdvanceFulfillment, mockDeliverFulfillment } from './modules/fulfil
 import { cancelOrderBeforeHandoff } from './modules/orders/cancelBeforeHandoff.js';
 import { mockExpireDue } from './modules/payments/mockExpireDue.js';
 import { getHealth } from './modules/system/health.js';
+import { listRoleCatalog } from './modules/rbac/permissions.js';
 import type { ApiServices } from './runtime/createServices.js';
 import { evaluateInviteAccess, type InviteRole } from './modules/staging/inviteService.js';
 
@@ -585,6 +586,17 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         ],
         stores,
       });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/staff') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const [roles, staff] = await Promise.all([
+        Promise.resolve(listRoleCatalog()),
+        services.identity.listStaffDirectory(limit),
+      ]);
+      sendJson(res, 200, { ok: true, roles, staff });
       return;
     }
 

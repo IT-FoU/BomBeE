@@ -44,6 +44,24 @@ export class IdentityService {
   }
 
   async ensureStaff(subject: string, displayName: string, phoneE164?: string) {
+    const existing = await this.db.query<{
+      identity_id: string;
+      staff_profile_id: string;
+    }>(
+      `SELECT i.id AS identity_id, sp.id AS staff_profile_id
+       FROM security.auth_identities i
+       JOIN app.staff_profiles sp ON sp.auth_identity_id = i.id
+       WHERE i.subject = $1
+       LIMIT 1`,
+      [subject],
+    );
+    if (existing.rows[0]) {
+      return {
+        identityId: existing.rows[0].identity_id,
+        staffProfileId: existing.rows[0].staff_profile_id,
+      };
+    }
+
     const identity = await this.db.query<{ id: string }>(
       `INSERT INTO security.auth_identities (subject, identity_type, phone_e164)
        VALUES ($1, 'staff', $2) RETURNING id`,
@@ -56,6 +74,53 @@ export class IdentityService {
       [identityId, displayName],
     );
     return { identityId, staffProfileId: staff.rows[0]!.id };
+  }
+
+  async ensureStaffRole(staffProfileId: string, roleCode: string, assignedBy?: string) {
+    await this.db.query(
+      `INSERT INTO security.staff_role_assignments (staff_profile_id, role_code, assigned_by)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (staff_profile_id, role_code) DO NOTHING`,
+      [staffProfileId, roleCode, assignedBy ?? null],
+    );
+  }
+
+  async listStaffDirectory(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      staff_profile_id: string;
+      identity_id: string;
+      subject: string;
+      display_name: string;
+      phone_e164: string | null;
+      status: string;
+      roles: string | null;
+    }>(
+      `SELECT sp.id AS staff_profile_id,
+              i.id AS identity_id,
+              i.subject,
+              sp.display_name,
+              i.phone_e164,
+              i.status,
+              string_agg(sra.role_code, ',' ORDER BY sra.role_code)
+                FILTER (WHERE sra.revoked_at IS NULL) AS roles
+       FROM app.staff_profiles sp
+       JOIN security.auth_identities i ON i.id = sp.auth_identity_id
+       LEFT JOIN security.staff_role_assignments sra ON sra.staff_profile_id = sp.id
+       GROUP BY sp.id, i.id, i.subject, sp.display_name, i.phone_e164, i.status
+       ORDER BY sp.display_name ASC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      staffProfileId: r.staff_profile_id,
+      identityId: r.identity_id,
+      subject: r.subject,
+      displayName: r.display_name,
+      phoneE164: r.phone_e164,
+      status: r.status,
+      roles: r.roles ? r.roles.split(',') : [],
+    }));
   }
 
   async requestOtp(input: {

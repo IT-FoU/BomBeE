@@ -2,13 +2,28 @@ import type { PGlite } from '@electric-sql/pglite';
 
 import { CatalogService } from '../modules/catalog/catalogService.js';
 import { PricingService } from '../modules/catalog/pricingService.js';
+import { DeliveryService } from '../modules/fulfillment/deliveryService.js';
 import { IdentityService } from '../modules/identity/service.js';
 import { MockSmsProvider } from '../modules/identity/otp.js';
 import { InventoryService } from '../modules/inventory/inventoryService.js';
 import { StoreService } from '../modules/stores/storeService.js';
 
+async function ensureMockCourier(db: PGlite): Promise<void> {
+  const existing = await db.query<{ id: string }>(
+    `SELECT id FROM app.couriers WHERE code = 'LOCAL-MOCK' LIMIT 1`,
+  );
+  if (existing.rows[0]) return;
+  const delivery = new DeliveryService(db);
+  await delivery.createCourier({
+    code: 'LOCAL-MOCK',
+    name: 'Local Mock Courier',
+  });
+}
+
 /** Seed a tiny active catalog + stock for local API browse (mock only). */
 export async function seedLocalCatalog(db: PGlite): Promise<void> {
+  await ensureMockCourier(db);
+
   const existing = await db.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM app.products WHERE status = 'active'`,
   );

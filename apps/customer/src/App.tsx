@@ -8,7 +8,7 @@ import { evaluateCodUx, parentChildSummary } from './lib/checkout';
 import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './lib/offline';
 import { requestCustomerOtp, verifyCustomerOtp, fetchSessionMe, logoutSession } from './lib/authApi';
 import { loadCatalogProducts } from './lib/catalogApi';
-import { checkoutLocalCart, fetchOrderView } from './lib/checkoutApi';
+import { checkoutLocalCart, fetchOrderView, mockAdvanceFulfillment } from './lib/checkoutApi';
 import {
   confirmChildrenMock,
   createQrPayment,
@@ -81,6 +81,11 @@ export function App() {
   const [paymentStatus, setPaymentStatus] = useState('');
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState('');
+  const [trackingChildren, setTrackingChildren] = useState<
+    Array<{ id: string; store_id: string; status: string; total_lak: number | string }>
+  >([]);
+  const [trackBusy, setTrackBusy] = useState(false);
+  const [trackError, setTrackError] = useState('');
   const [notifications] = useState([
     { id: 'n1', title: locale === 'lo' ? 'ຮ້ານຢືນຢັນແລ້ວ' : 'Store confirmed', unread: true },
   ]);
@@ -249,6 +254,46 @@ export function App() {
         setPayError(err instanceof Error ? err.message : 'payment_failed');
       } finally {
         setPayBusy(false);
+      }
+    })();
+  }
+
+  function refreshTracking() {
+    const token = sessionStorage.getItem('bombee_session');
+    if (!token || !apiOrderId) return;
+    setTrackBusy(true);
+    setTrackError('');
+    void (async () => {
+      try {
+        const view = await fetchOrderView(token, apiOrderId);
+        setTrackingChildren(view.byStore);
+        setOrderStatus(String(view.combined.status));
+      } catch (err) {
+        setTrackError(err instanceof Error ? err.message : 'tracking_failed');
+      } finally {
+        setTrackBusy(false);
+      }
+    })();
+  }
+
+  function advanceTracking() {
+    assertOnlineForMutation(online, 'fulfillment');
+    const token = sessionStorage.getItem('bombee_session');
+    if (!token || !apiOrderId) {
+      setTrackError('Sign in and place an API order first');
+      return;
+    }
+    setTrackBusy(true);
+    setTrackError('');
+    void (async () => {
+      try {
+        const result = await mockAdvanceFulfillment(token, apiOrderId);
+        setTrackingChildren(result.order.byStore);
+        setOrderStatus(String(result.order.combined.status));
+      } catch (err) {
+        setTrackError(err instanceof Error ? err.message : 'fulfillment_failed');
+      } finally {
+        setTrackBusy(false);
       }
     })();
   }
@@ -798,14 +843,51 @@ export function App() {
         {route === 'tracking' && (
           <section className="page">
             <h1>Tracking</h1>
-            {sampleOrder.children.map((c) => (
-              <ol key={c.id} className="timeline">
-                <li>Confirmed — {c.storeName}</li>
-                <li>Packed</li>
-                <li>Handed to courier</li>
-                <li>In transit ({c.status})</li>
-              </ol>
-            ))}
+            {apiOrderId && loggedIn ? (
+              <>
+                <p className="muted">Order {apiOrderLabel || apiOrderId}</p>
+                <div className="cta-row">
+                  <button
+                    type="button"
+                    className="cta ghost"
+                    disabled={trackBusy}
+                    onClick={() => refreshTracking()}
+                  >
+                    Refresh status
+                  </button>
+                  <button
+                    type="button"
+                    className="cta"
+                    disabled={trackBusy}
+                    onClick={() => advanceTracking()}
+                  >
+                    Mock advance fulfillment
+                  </button>
+                </div>
+                {trackError ? <p className="error">{trackError}</p> : null}
+                {(trackingChildren.length > 0 ? trackingChildren : []).map((c) => (
+                  <ol key={c.id} className="timeline">
+                    <li>Child {c.id.slice(0, 8)}… — store {c.store_id.slice(0, 8)}…</li>
+                    <li>Status: {c.status}</li>
+                    <li>Total: {formatLak(LAK(Number(c.total_lak)))}</li>
+                  </ol>
+                ))}
+                {trackingChildren.length === 0 && !trackBusy ? (
+                  <p className="muted">Refresh or advance to load live child statuses.</p>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {sampleOrder.children.map((c) => (
+                  <ol key={c.id} className="timeline">
+                    <li>Confirmed — {c.storeName}</li>
+                    <li>Packed</li>
+                    <li>Handed to courier</li>
+                    <li>In transit ({c.status})</li>
+                  </ol>
+                ))}
+              </>
+            )}
             <h2>After-sales</h2>
             <button type="button" className="cta ghost">
               Request return / refund + evidence

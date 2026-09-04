@@ -93,3 +93,35 @@ export async function fetchOrderView(
   }
   return (await res.json()) as OrderView;
 }
+
+export type FulfillmentAdvanceResult = {
+  ok: true;
+  children: Array<{
+    childOrderId: string;
+    from: string;
+    to: string;
+    steps: string[];
+    trackingNumber?: string;
+  }>;
+  order: {
+    combined: OrderView['combined'];
+    byStore: OrderView['byStore'];
+  };
+};
+
+/** Local/mock: advance paid children through packing → courier → in_transit. */
+export async function mockAdvanceFulfillment(
+  sessionToken: string,
+  parentId: string,
+): Promise<FulfillmentAdvanceResult> {
+  const res = await fetch(`${apiBaseUrl()}/v1/orders/${parentId}/fulfillment/mock-advance`, {
+    method: 'POST',
+    headers: authHeaders(sessionToken),
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `fulfillment_advance_failed_${res.status}`);
+  }
+  return (await res.json()) as FulfillmentAdvanceResult;
+}

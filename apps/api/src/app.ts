@@ -5,6 +5,7 @@ import { BRAND_NAME, CURRENCY_CODE, DISPLAY_TIMEZONE } from '@bombee/shared';
 
 import { readJsonBody } from './http/readJsonBody.js';
 import { applyCors } from './http/cors.js';
+import { mockAdvanceFulfillment } from './modules/fulfillment/mockAdvance.js';
 import { getHealth } from './modules/system/health.js';
 import type { ApiServices } from './runtime/createServices.js';
 import { evaluateInviteAccess, type InviteRole } from './modules/staging/inviteService.js';
@@ -666,6 +667,39 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         return;
       }
       sendJson(res, 200, { ok: true, paymentRequestId, status: 'paid' });
+      return;
+    }
+
+    const mockFulfillMatch = url.pathname.match(
+      /^\/v1\/orders\/([^/]+)\/fulfillment\/mock-advance$/,
+    );
+    if (req.method === 'POST' && mockFulfillMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const parentId = decodeURIComponent(mockFulfillMatch[1]!);
+      if (!(await parentOwnedBy(services, parentId, session.identityId))) {
+        sendJson(res, 403, { error: 'order_forbidden' });
+        return;
+      }
+      try {
+        const children = await mockAdvanceFulfillment(
+          services,
+          parentId,
+          session.identityId,
+        );
+        const views = await services.orders.getOrderViews(parentId);
+        sendJson(res, 200, { ok: true, children, order: views });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'fulfillment_advance_failed';
+        sendJson(res, message === 'mock_courier_missing' ? 500 : 400, { error: message });
+      }
       return;
     }
 

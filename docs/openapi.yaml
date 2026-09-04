@@ -601,6 +601,40 @@ paths:
       responses:
         '200':
           description: Promotions array
+  /v1/recalls:
+    get:
+      summary: List product recalls (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Recalls array
+  /v1/ops/recalls/mock-start:
+    post:
+      summary: Local/mock start product recall
+      responses:
+        '201':
+          description: Recall started
+        '403':
+          description: Mock ops disabled
+  /v1/ops/recalls/{recallId}/contact:
+    post:
+      summary: Contact affected order and maybe complete recall
+      parameters:
+        - in: path
+          name: recallId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contact recorded
+        '403':
+          description: Mock ops disabled
   /v1/ops/promotions/mock-create:
     post:
       summary: Local/mock create active promotion

@@ -107,4 +107,68 @@ export class RecallService {
     }
     return { complete: done, openCount: open.rows[0]?.n ?? 0 };
   }
+
+  async listRecalls(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      product_id: string;
+      lot_id: string | null;
+      reason: string;
+      status: string;
+      store_bears_cost: boolean;
+      created_by: string | null;
+      created_at: string;
+      completed_at: string | null;
+      affected_count: number;
+      pending_count: number;
+    }>(
+      `SELECT r.id, r.product_id, r.lot_id, r.reason, r.status, r.store_bears_cost,
+              r.created_by, r.created_at::text, r.completed_at::text,
+              (SELECT count(*)::int FROM app.recall_affected_orders a WHERE a.recall_id = r.id) AS affected_count,
+              (SELECT count(*)::int FROM app.recall_affected_orders a
+                WHERE a.recall_id = r.id
+                  AND (a.contact_status = 'pending' OR a.resolution = 'pending')) AS pending_count
+       FROM app.product_recalls r
+       ORDER BY r.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      recallId: r.id,
+      productId: r.product_id,
+      lotId: r.lot_id,
+      reason: r.reason,
+      status: r.status,
+      storeBearsCost: r.store_bears_cost,
+      createdBy: r.created_by,
+      createdAt: r.created_at,
+      completedAt: r.completed_at,
+      affectedCount: Number(r.affected_count),
+      pendingCount: Number(r.pending_count),
+    }));
+  }
+
+  async listAffected(recallId: string, limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      child_order_id: string;
+      customer_identity_id: string;
+      contact_status: string;
+      resolution: string;
+    }>(
+      `SELECT child_order_id, customer_identity_id, contact_status, resolution
+       FROM app.recall_affected_orders
+       WHERE recall_id = $1
+       ORDER BY child_order_id
+       LIMIT $2`,
+      [recallId, capped],
+    );
+    return rows.rows.map((r) => ({
+      childOrderId: r.child_order_id,
+      customerIdentityId: r.customer_identity_id,
+      contactStatus: r.contact_status,
+      resolution: r.resolution,
+    }));
+  }
 }

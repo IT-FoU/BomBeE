@@ -1171,3 +1171,97 @@ export async function moderateTikTokLink(
   }
   return (await res.json()) as { links?: TikTokLinkRow[]; status?: string };
 }
+
+export type RecallRow = {
+  recallId: string;
+  productId: string;
+  lotId: string | null;
+  reason: string;
+  status: string;
+  storeBearsCost: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  affectedCount: number;
+  pendingCount: number;
+};
+
+export type RecallAffectedRow = {
+  childOrderId: string;
+  customerIdentityId: string;
+  contactStatus: string;
+  resolution: string;
+};
+
+export async function listRecalls(limit = 50): Promise<RecallRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/recalls?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`recalls_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { recalls: RecallRow[] };
+  return body.recalls;
+}
+
+export async function mockStartRecall(input: {
+  productId?: string;
+  reason?: string;
+} = {}): Promise<{
+  recallId: string;
+  affectedCount: number;
+  recalls: RecallRow[];
+  affected: RecallAffectedRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/recalls/mock-start`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      productId: input.productId,
+      reason: input.reason,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `recall_start_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    recallId: string;
+    affectedCount: number;
+    recalls: RecallRow[];
+    affected: RecallAffectedRow[];
+  };
+}
+
+export async function contactRecallAffected(
+  recallId: string,
+  input: {
+    childOrderId?: string;
+    contactStatus?: 'contacted' | 'unreachable';
+    resolution?: 'refund' | 'replacement' | 'declined' | 'pending';
+  } = {},
+): Promise<{
+  recalls?: RecallRow[];
+  affected?: RecallAffectedRow[];
+  complete?: boolean;
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/recalls/${encodeURIComponent(recallId)}/contact`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        childOrderId: input.childOrderId,
+        contactStatus: input.contactStatus ?? 'contacted',
+        resolution: input.resolution ?? 'refund',
+      }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `recall_contact_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    recalls?: RecallRow[];
+    affected?: RecallAffectedRow[];
+    complete?: boolean;
+  };
+}

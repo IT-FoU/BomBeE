@@ -727,6 +727,110 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/recalls') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const recalls = await services.recalls.listRecalls(limit);
+      sendJson(res, 200, { ok: true, recalls });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/recalls/mock-start') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        productId?: string;
+        product_id?: string;
+        reason?: string;
+        lotId?: string;
+        lot_id?: string;
+      }>(req);
+      let productId = body.productId ?? body.product_id;
+      if (!productId) {
+        const product = await services.db.query<{ id: string }>(
+          `SELECT id FROM app.products WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+        );
+        productId = product.rows[0]?.id;
+      }
+      if (!productId) {
+        sendJson(res, 409, { error: 'no_active_product' });
+        return;
+      }
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        const created = await services.recalls.startRecall({
+          productId,
+          lotId: body.lotId ?? body.lot_id,
+          reason: body.reason?.trim() || 'local_mock_recall',
+          createdBy: actorIdentityId,
+        });
+        const recalls = await services.recalls.listRecalls(50);
+        const affected = await services.recalls.listAffected(created.recallId, 50);
+        sendJson(res, 201, { ok: true, ...created, recalls, affected });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'recall_start_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const recallContactMatch = url.pathname.match(
+      /^\/v1\/ops\/recalls\/([^/]+)\/contact$/,
+    );
+    if (req.method === 'POST' && recallContactMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const recallId = decodeURIComponent(recallContactMatch[1]!);
+      const body = await readJsonBody<{
+        childOrderId?: string;
+        child_order_id?: string;
+        contactStatus?: 'contacted' | 'unreachable';
+        contact_status?: 'contacted' | 'unreachable';
+        resolution?: 'refund' | 'replacement' | 'declined' | 'pending';
+      }>(req);
+      let childOrderId = body.childOrderId ?? body.child_order_id;
+      if (!childOrderId) {
+        const first = await services.recalls.listAffected(recallId, 1);
+        childOrderId = first[0]?.childOrderId;
+      }
+      if (!childOrderId) {
+        sendJson(res, 409, { error: 'no_affected_orders' });
+        return;
+      }
+      const contactStatus = body.contactStatus ?? body.contact_status ?? 'contacted';
+      if (!['contacted', 'unreachable'].includes(contactStatus)) {
+        sendJson(res, 400, { error: 'invalid_contact_status' });
+        return;
+      }
+      try {
+        await services.recalls.recordContact({
+          recallId,
+          childOrderId,
+          contactStatus,
+          resolution: body.resolution ?? 'refund',
+        });
+        const completion = await services.recalls.isComplete(recallId);
+        const recalls = await services.recalls.listRecalls(50);
+        const affected = await services.recalls.listAffected(recallId, 50);
+        sendJson(res, 200, {
+          ok: true,
+          recallId,
+          childOrderId,
+          ...completion,
+          recalls,
+          affected,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'recall_contact_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/refunds') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

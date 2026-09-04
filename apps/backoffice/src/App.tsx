@@ -68,6 +68,9 @@ import {
   listTikTokLinks,
   mockSubmitTikTokLink,
   moderateTikTokLink,
+  listRecalls,
+  mockStartRecall,
+  contactRecallAffected,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -93,6 +96,7 @@ import {
   type DeletionRequestRow,
   type ReviewRow,
   type TikTokLinkRow,
+  type RecallRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -117,6 +121,7 @@ const navItems = [
   { id: 'backups', label: { lo: 'ສຳຮອງ', en: 'Backups' } },
   { id: 'privacy', label: { lo: 'ຄວາມເປັນສ່ວນຕົວ', en: 'Privacy' } },
   { id: 'content', label: { lo: 'ເນື້ອຫາ', en: 'Content' } },
+  { id: 'recalls', label: { lo: 'ເອີ້ນຄືນ', en: 'Recalls' } },
 ] as const;
 
 const SAMPLE_AMOUNT = LAK(1_250_000);
@@ -177,6 +182,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [productReviews, setProductReviews] = useState<ReviewRow[]>([]);
   const [tiktokLinks, setTiktokLinks] = useState<TikTokLinkRow[]>([]);
   const [contentNote, setContentNote] = useState('');
+  const [recallRows, setRecallRows] = useState<RecallRow[]>([]);
+  const [recallNote, setRecallNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -210,6 +217,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           deletionRows,
           reviewRows,
           tiktokRows,
+          recallList,
         ] = await Promise.all([
           listInvites(),
           listStores(),
@@ -232,6 +240,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listDeletionRequests(50),
           listReviews(50),
           listTikTokLinks(50),
+          listRecalls(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
@@ -257,6 +266,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setDeletionRequests(deletionRows);
         setProductReviews(reviewRows);
         setTiktokLinks(tiktokRows);
+        setRecallRows(recallList);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -2386,6 +2396,107 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh content
             </button>
           </section>
+          <section aria-labelledby="recalls-heading" id="recalls">
+            <h2 id="recalls-heading">
+              <span lang="en">Recalls</span>
+              {' / '}
+              <span lang="lo">ເອີ້ນຄືນ</span>
+            </h2>
+            <p className="lede">
+              Product recalls archive listings, track affected orders, and mark customer contact
+              complete (store bears cost).
+            </p>
+            {recallNote ? (
+              <p className="lede" role="status">
+                {recallNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Product recalls">
+              {recallRows.length === 0 ? <li>No recalls yet</li> : null}
+              {recallRows.map((row) => (
+                <li key={row.recallId}>
+                  {row.status} · affected {row.affectedCount} · pending {row.pendingCount} ·{' '}
+                  {row.reason} · {row.recallId.slice(0, 8)}…
+                  {row.status === 'active' && row.pendingCount > 0 ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setRecallNote('');
+                          void (async () => {
+                            try {
+                              const result = await contactRecallAffected(row.recallId);
+                              if (result.recalls) setRecallRows(result.recalls);
+                              setRecallNote(
+                                result.complete
+                                  ? `Completed ${row.recallId.slice(0, 8)}…`
+                                  : `Contacted order on ${row.recallId.slice(0, 8)}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'recall_contact_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Contact next
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setRecallNote('');
+                void (async () => {
+                  try {
+                    const result = await mockStartRecall({ reason: 'BO mock recall' });
+                    setRecallRows(result.recalls);
+                    setRecallNote(
+                      `Started ${result.recallId.slice(0, 8)}… (${result.affectedCount} affected)`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'recall_start_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock start recall
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setRecallRows(await listRecalls(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'recalls_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh recalls
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -2411,6 +2522,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'backups',
                   'privacy',
                   'content',
+                  'recalls',
                 ].includes(item.id),
             )
             .map((item) => (

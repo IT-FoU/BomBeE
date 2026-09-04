@@ -8,6 +8,7 @@ import { CatalogService } from '../modules/catalog/catalogService.js';
 import { ExportService } from '../modules/exports/service.js';
 import { DeliveryService } from '../modules/fulfillment/deliveryService.js';
 import { ReturnService } from '../modules/fulfillment/returnService.js';
+import { RecallService } from '../modules/fulfillment/recallService.js';
 import { SettlementService } from '../modules/fulfillment/settlementService.js';
 import { IdentityService } from '../modules/identity/service.js';
 import { MockSmsProvider } from '../modules/identity/otp.js';
@@ -49,6 +50,7 @@ export type ApiServices = {
   settlements: SettlementService;
   support: SupportService;
   returns: ReturnService;
+  recalls: RecallService;
   promotions: PromotionService;
   audit: AuditService;
   exports: ExportService;
@@ -79,6 +81,7 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
   const returns = new ReturnService(db);
   const promotions = new PromotionService(db);
   const audit = new AuditService(db);
+  const recalls = new RecallService(db, audit);
   const exports = new ExportService(db);
   const notifications = new NotificationDispatchService(
     db,
@@ -106,6 +109,7 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     settlements,
     support,
     returns,
+    recalls,
     promotions,
     audit,
     exports,

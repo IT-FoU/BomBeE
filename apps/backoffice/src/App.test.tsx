@@ -30,6 +30,7 @@ describe('backoffice shell QA', () => {
         'backups',
         'privacy',
         'content',
+        'recalls',
       ]),
     );
   });

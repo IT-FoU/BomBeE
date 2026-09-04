@@ -206,20 +206,21 @@ export class PaymentService {
     await this.db.query(
       `UPDATE finance.payment_attempts
        SET status = 'confirmed', evidence_status = 'verified',
-           bank_or_courier_ref = $2, confirmed_at = timezone('utc', now()),
+           bank_or_courier_ref = $2, confirmed_at = $5,
            channel = $3, amount_reported_lak = $4
        WHERE id = $1`,
-      [input.attemptId, input.bankRef, input.channel, input.amountLak],
+      [input.attemptId, input.bankRef, input.channel, input.amountLak, now.toISOString()],
     );
 
     try {
       await this.db.query(
-        `INSERT INTO finance.payment_receipts (payment_attempt_id, amount_lak, source)
-         VALUES ($1,$2,$3)`,
+        `INSERT INTO finance.payment_receipts (payment_attempt_id, amount_lak, source, received_at)
+         VALUES ($1,$2,$3,$4)`,
         [
           input.attemptId,
           input.amountLak,
           input.channel === 'bank_api' ? 'bank_api' : 'manual',
+          now.toISOString(),
         ],
       );
     } catch {

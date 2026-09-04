@@ -24,6 +24,27 @@ export async function seedLocalCatalog(db: PGlite): Promise<void> {
   const storeFresh = await stores.createStore({ code: 'LOCAL-FRESH', name: 'VTE Fresh Mart' });
   const storeHome = await stores.createStore({ code: 'LOCAL-HOME', name: 'Lane Xang Home' });
 
+  async function activateStore(storeId: string) {
+    for (const docType of ['owner_id', 'store_info', 'bank_account', 'contract'] as const) {
+      const docId = await stores.uploadDocument({
+        storeId,
+        docType,
+        storageKey: `private/${storeId}/${docType}.pdf`,
+        expiresAt: '2027-12-31',
+      });
+      await stores.verifyDocument(docId, storeId);
+    }
+    await stores.addFulfillmentLocation({
+      storeId,
+      name: 'Main',
+      addressLine: 'Vientiane',
+      active: true,
+    });
+    await stores.activateIfReady(storeId);
+  }
+
+  await activateStore(storeFresh);
+  await activateStore(storeHome);
   const brandWater = await catalog.createBrand({
     slug: 'mekong-pure',
     name: 'Mekong Pure',

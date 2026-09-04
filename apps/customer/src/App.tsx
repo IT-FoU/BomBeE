@@ -8,6 +8,7 @@ import { evaluateCodUx, parentChildSummary } from './lib/checkout';
 import { assertOnlineForMutation, isSensitiveRoute, readNetworkStatus } from './lib/offline';
 import { requestCustomerOtp, verifyCustomerOtp, fetchSessionMe, logoutSession } from './lib/authApi';
 import { loadCatalogProducts } from './lib/catalogApi';
+import { checkoutLocalCart, fetchOrderView } from './lib/checkoutApi';
 
 type Route =
   | 'home'
@@ -65,6 +66,10 @@ export function App() {
   const [paymentMethod, setPaymentMethod] = useState<'qr' | 'cod'>('qr');
   const [selectedQrStores, setSelectedQrStores] = useState<string[]>(['store-a', 'store-c']);
   const [orderStatus, setOrderStatus] = useState('awaiting_supplier');
+  const [apiOrderId, setApiOrderId] = useState('');
+  const [apiOrderLabel, setApiOrderLabel] = useState('');
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
   const [notifications] = useState([
     { id: 'n1', title: locale === 'lo' ? 'ຮ້ານຢືນຢັນແລ້ວ' : 'Store confirmed', unread: true },
   ]);
@@ -106,12 +111,12 @@ export function App() {
   });
 
   const sampleOrder = {
-    parentId: 'P-1001',
+    parentId: apiOrderId || 'P-1001',
     status: orderStatus,
     children: totals.groups.map((g, i) => ({
       id: `C-${i + 1}`,
       storeName: g.storeName,
-      status: orderStatus === 'awaiting_supplier' ? 'pending_supplier' : 'in_transit',
+      status: orderStatus === 'awaiting_supplier' || orderStatus === 'pending_supplier' ? 'pending_supplier' : 'in_transit',
       totalLak: g.subtotalLak + (SHIPPING[g.storeId] ?? 10000),
     })),
   };
@@ -159,8 +164,51 @@ export function App() {
 
   function placeOrder() {
     assertOnlineForMutation(online, 'checkout');
-    setOrderStatus('awaiting_supplier');
-    go('orders');
+    const token = sessionStorage.getItem('bombee_session');
+    if (!token || !loggedIn) {
+      setCheckoutError(locale === 'lo' ? 'ກະລຸນາເຂົ້າສູ່ລະບົບ OTP ກ່ອນ' : 'Sign in with OTP first');
+      go('otp');
+      return;
+    }
+    if (catalogSource !== 'api' || cart.length === 0) {
+      setOrderStatus('awaiting_supplier');
+      setApiOrderLabel('fixture checkout (local stub)');
+      go('orders');
+      return;
+    }
+    setCheckoutBusy(true);
+    setCheckoutError('');
+    void (async () => {
+      try {
+        const shippingLakByStore: Record<string, number> = {};
+        for (const g of groupCartByStore(cart)) {
+          shippingLakByStore[g.storeId] = SHIPPING[g.storeId] ?? 10000;
+        }
+        const result = await checkoutLocalCart({
+          sessionToken: token,
+          lines: cart.map((l) => ({
+            storeId: l.storeId,
+            variantId: l.variantId,
+            quantity: l.quantity,
+          })),
+          shippingLakByStore,
+        });
+        setApiOrderId(result.parentId);
+        setApiOrderLabel(result.orderNumber);
+        setOrderStatus('awaiting_supplier');
+        try {
+          const view = await fetchOrderView(token, result.parentId);
+          setOrderStatus(String(view.combined.status));
+        } catch {
+          /* keep awaiting_supplier */
+        }
+        go('orders');
+      } catch (err) {
+        setCheckoutError(err instanceof Error ? err.message : 'checkout_failed');
+      } finally {
+        setCheckoutBusy(false);
+      }
+    })();
   }
 
   function pay() {
@@ -606,7 +654,7 @@ export function App() {
             <button
               type="button"
               className="cta primary"
-              disabled={!online}
+              disabled={!online || checkoutBusy}
               onClick={() => {
                 try {
                   placeOrder();
@@ -615,8 +663,9 @@ export function App() {
                 }
               }}
             >
-              Place order (wait for supplier)
+              {checkoutBusy ? 'Placing…' : 'Place order (wait for supplier)'}
             </button>
+            {checkoutError ? <p className="error">{checkoutError}</p> : null}
           </section>
         )}
 
@@ -660,8 +709,9 @@ export function App() {
           <section className="page">
             <h1>{locale === 'lo' ? 'ປະຫວັດອໍເດີ' : 'Order history'}</h1>
             <p>
-              Parent {sampleOrder.parentId} — {sampleOrder.status}
+              Parent {apiOrderLabel || sampleOrder.parentId} — {sampleOrder.status}
             </p>
+            {apiOrderId ? <p className="muted">API order id: {apiOrderId}</p> : null}
             <h2>Combined</h2>
             <p>Total {formatLak(LAK(orderSummary.combinedTotalLak))}</p>
             <h2>By store</h2>

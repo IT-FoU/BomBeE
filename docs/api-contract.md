@@ -19,6 +19,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/stores` | Create store draft (`onboarding`) |
 | GET | `/v1/catalog/categories` | Non-prohibited categories |
 | GET | `/v1/catalog/products` | Active products + approved prices (local seed) |
+| POST | `/v1/carts` | Create cart (customer Bearer) |
+| POST | `/v1/carts/:id/items` | Upsert cart line |
+| POST | `/v1/carts/:id/checkout` | Create parent/child orders (no payment) |
+| GET | `/v1/orders/:parentId` | Order views for owning customer |
 
 ## Domain services (in-process; tested via Vitest + PGlite)
 

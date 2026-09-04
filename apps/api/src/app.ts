@@ -275,6 +275,111 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/carts') {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const cartId = await services.orders.createCart(session.identityId);
+      sendJson(res, 201, { ok: true, cartId });
+      return;
+    }
+
+    const cartItemsMatch = url.pathname.match(/^\/v1\/carts\/([^/]+)\/items$/);
+    if (req.method === 'POST' && cartItemsMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const cartId = decodeURIComponent(cartItemsMatch[1]!);
+      const owned = await cartOwnedBy(services, cartId, session.identityId);
+      if (!owned) {
+        sendJson(res, 403, { error: 'cart_forbidden' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        variantId?: string;
+        quantity?: number;
+      }>(req);
+      if (!body.storeId || !body.variantId || !body.quantity || body.quantity < 1) {
+        sendJson(res, 400, { error: 'invalid_cart_item' });
+        return;
+      }
+      await services.orders.addCartItem(cartId, {
+        storeId: body.storeId,
+        variantId: body.variantId,
+        quantity: body.quantity,
+      });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    const cartCheckoutMatch = url.pathname.match(/^\/v1\/carts\/([^/]+)\/checkout$/);
+    if (req.method === 'POST' && cartCheckoutMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const cartId = decodeURIComponent(cartCheckoutMatch[1]!);
+      const owned = await cartOwnedBy(services, cartId, session.identityId);
+      if (!owned) {
+        sendJson(res, 403, { error: 'cart_forbidden' });
+        return;
+      }
+      const body = await readJsonBody<{ shippingLakByStore?: Record<string, number> }>(req);
+      try {
+        const result = await services.orders.checkout({
+          cartId,
+          customerIdentityId: session.identityId,
+          actorIdentityId: session.identityId,
+          shippingLakByStore: body.shippingLakByStore,
+          correlationId: crypto.randomUUID(),
+        });
+        sendJson(res, 201, { ok: true, ...result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'checkout_failed';
+        const status =
+          message === 'cart_empty' ||
+          message === 'variant_not_active' ||
+          message === 'store_not_accepting_orders' ||
+          message === 'price_not_approved'
+            ? 409
+            : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    const orderMatch = url.pathname.match(/^\/v1\/orders\/([^/]+)$/);
+    if (req.method === 'GET' && orderMatch) {
+      const session = await requireCustomerSession(req, services);
+      if (!session) {
+        sendJson(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      const parentId = decodeURIComponent(orderMatch[1]!);
+      const owner = await services.db.query<{ customer_identity_id: string }>(
+        `SELECT customer_identity_id FROM app.parent_orders WHERE id = $1`,
+        [parentId],
+      );
+      const row = owner.rows[0];
+      if (!row) {
+        sendJson(res, 404, { error: 'order_not_found' });
+        return;
+      }
+      if (row.customer_identity_id !== session.identityId) {
+        sendJson(res, 403, { error: 'order_forbidden' });
+        return;
+      }
+      const views = await services.orders.getOrderViews(parentId);
+      sendJson(res, 200, { ok: true, ...views });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/') {
       sendJson(res, 200, {
         name: BRAND_NAME,
@@ -300,4 +405,21 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('content-length', String(Buffer.byteLength(payload)));
   res.end(payload);
+}
+
+async function requireCustomerSession(req: IncomingMessage, services: ApiServices) {
+  const auth = req.headers.authorization ?? '';
+  const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : '';
+  if (!token) return null;
+  const session = await services.identity.getSession(token);
+  if (!session || session.audience !== 'customer') return null;
+  return session;
+}
+
+async function cartOwnedBy(services: ApiServices, cartId: string, identityId: string) {
+  const row = await services.db.query<{ customer_identity_id: string }>(
+    `SELECT customer_identity_id FROM app.carts WHERE id = $1`,
+    [cartId],
+  );
+  return row.rows[0]?.customer_identity_id === identityId;
 }

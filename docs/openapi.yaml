@@ -181,6 +181,92 @@ paths:
       responses:
         '200':
           description: Product browse DTOs
+  /v1/carts:
+    post:
+      summary: Create cart for customer session
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Cart created
+        '401':
+          description: Unauthorized
+  /v1/carts/{cartId}/items:
+    post:
+      summary: Upsert cart line
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [storeId, variantId, quantity]
+              properties:
+                storeId:
+                  type: string
+                variantId:
+                  type: string
+                quantity:
+                  type: integer
+      responses:
+        '200':
+          description: Line upserted
+        '400':
+          description: Invalid line
+        '403':
+          description: Cart not owned
+  /v1/carts/{cartId}/checkout:
+    post:
+      summary: Checkout cart into parent/child orders (no payment)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shippingLakByStore:
+                  type: object
+                  additionalProperties:
+                    type: integer
+      responses:
+        '201':
+          description: Order created
+        '409':
+          description: Domain conflict (empty cart, inactive variant, store closed, …)
+  /v1/orders/{parentId}:
+    get:
+      summary: Order views for owning customer
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Combined + by-store views
+        '403':
+          description: Not owner
+        '404':
+          description: Missing
 components:
   securitySchemes:
     bearerAuth:

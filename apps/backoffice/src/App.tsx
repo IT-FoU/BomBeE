@@ -38,6 +38,10 @@ import {
   listPromotions,
   mockCreatePromotion,
   pausePromotion,
+  listRefunds,
+  mockCreateRefund,
+  approveRefund,
+  mockPayRefund,
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
@@ -48,6 +52,7 @@ import {
   type SupportTicketRow,
   type ReturnRequestRow,
   type PromotionRow,
+  type RefundApprovalRow,
 } from './lib/opsApi';
 
 const navItems = [
@@ -105,6 +110,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [returnNote, setReturnNote] = useState('');
   const [promotions, setPromotions] = useState<PromotionRow[]>([]);
   const [promoNote, setPromoNote] = useState('');
+  const [refunds, setRefunds] = useState<RefundApprovalRow[]>([]);
+  const [refundNote, setRefundNote] = useState('');
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -116,18 +123,29 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [invites, stores, cod, orders, products, batches, tickets, returns, promos] =
-          await Promise.all([
-            listInvites(),
-            listStores(),
-            listCodShipments(),
-            listOrders(30),
-            listCatalogProducts(50),
-            listSettlementBatches(50),
-            listSupportTickets(50),
-            listReturns(50),
-            listPromotions(50),
-          ]);
+        const [
+          invites,
+          stores,
+          cod,
+          orders,
+          products,
+          batches,
+          tickets,
+          returns,
+          promos,
+          refundRows,
+        ] = await Promise.all([
+          listInvites(),
+          listStores(),
+          listCodShipments(),
+          listOrders(30),
+          listCatalogProducts(50),
+          listSettlementBatches(50),
+          listSupportTickets(50),
+          listReturns(50),
+          listPromotions(50),
+          listRefunds(50),
+        ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
         setCodShipments(cod);
@@ -137,6 +155,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setSupportTickets(tickets);
         setReturnRequests(returns);
         setPromotions(promos);
+        setRefunds(refundRows);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -1196,6 +1215,137 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               Refresh promotions
             </button>
           </section>
+          <section aria-labelledby="approvals-heading" id="approvals">
+            <h2 id="approvals-heading">
+              <span lang="en">Approvals</span>
+              {' / '}
+              <span lang="lo">ອະນຸມັດ</span>
+            </h2>
+            <p className="lede">
+              Local refund approvals — mock create from paid delivered children, approve
+              (maker-checker), then mock-pay via ledger.
+            </p>
+            {refundNote ? (
+              <p className="lede" role="status">
+                {refundNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Refund approvals">
+              {refunds.length === 0 ? <li>No refund approvals yet</li> : null}
+              {refunds.map((row) => (
+                <li key={row.approvalId}>
+                  {row.status} · {formatLak(LAK(row.amountLak))} · {row.reason} · child{' '}
+                  {row.childOrderId.slice(0, 8)}…
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setRefundNote('');
+                          void (async () => {
+                            try {
+                              const result = await approveRefund(row.approvalId);
+                              if (result.refunds) setRefunds(result.refunds);
+                              setRefundNote(
+                                `Approved ${row.approvalId.slice(0, 8)}… · SLA ${result.slaDueAt ?? ''}`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'refund_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve
+                      </button>
+                    </>
+                  ) : null}
+                  {row.status === 'approved' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setRefundNote('');
+                          void (async () => {
+                            try {
+                              const result = await mockPayRefund(row.approvalId);
+                              if (result.refunds) setRefunds(result.refunds);
+                              setRefundNote(
+                                `Paid ${row.approvalId.slice(0, 8)}…${result.withinSla === false ? ' (SLA miss)' : ''}`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'refund_pay_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Mock pay
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setRefundNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateRefund({ reason: 'BO mock refund' });
+                    setRefunds(result.refunds);
+                    setRefundNote(`Opened ${result.approvalId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'refund_create_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create refund
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setRefunds(await listRefunds(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'refunds_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh refunds
+            </button>
+          </section>
           {navItems
             .filter(
               (item) =>
@@ -1214,6 +1364,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'support',
                   'returns',
                   'promotions',
+                  'approvals',
                 ].includes(item.id),
             )
             .map((item) => (

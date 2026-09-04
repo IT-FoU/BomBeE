@@ -578,6 +578,66 @@ paths:
           description: Status paused
         '409':
           description: Promotion not active
+  /v1/refunds:
+    get:
+      summary: List refund approvals (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Refunds array
+  /v1/ops/refunds/mock-create:
+    post:
+      summary: Local/mock refund request for paid delivered child
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                amount_lak:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Refund approval created
+        '409':
+          description: No eligible child
+  /v1/ops/refunds/{approvalId}/approve:
+    post:
+      summary: Local/mock approve refund (distinct finance actor)
+      parameters:
+        - in: path
+          name: approvalId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status approved + SLA due
+        '409':
+          description: Self-approval denied or not pending
+  /v1/ops/refunds/{approvalId}/mock-pay:
+    post:
+      summary: Local/mock ledger pay for approved refund
+      parameters:
+        - in: path
+          name: approvalId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status paid
+        '409':
+          description: Not approved or payment request missing
   /v1/orders/{parentId}:
     get:
       summary: Order views for owning customer

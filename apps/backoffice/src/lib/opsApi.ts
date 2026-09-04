@@ -528,3 +528,82 @@ export async function pausePromotion(
   }
   return (await res.json()) as { promotions?: PromotionRow[]; status?: string };
 }
+
+export type RefundApprovalRow = {
+  approvalId: string;
+  refundRequestId: string;
+  childOrderId: string;
+  parentOrderId: string;
+  amountLak: number;
+  reason: string;
+  status: string;
+  slaDueAt: string | null;
+};
+
+export async function listRefunds(limit = 50): Promise<RefundApprovalRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/refunds?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`refunds_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { refunds: RefundApprovalRow[] };
+  return body.refunds;
+}
+
+export async function mockCreateRefund(input: {
+  childOrderId?: string;
+  amountLak?: number;
+  reason?: string;
+} = {}): Promise<{ approvalId: string; refunds: RefundApprovalRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/refunds/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      child_order_id: input.childOrderId,
+      amount_lak: input.amountLak,
+      reason: input.reason,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `refund_create_failed_${res.status}`);
+  }
+  return (await res.json()) as { approvalId: string; refunds: RefundApprovalRow[] };
+}
+
+export async function approveRefund(
+  approvalId: string,
+): Promise<{ refunds?: RefundApprovalRow[]; status?: string; slaDueAt?: string }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/refunds/${approvalId}/approve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `refund_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    refunds?: RefundApprovalRow[];
+    status?: string;
+    slaDueAt?: string;
+  };
+}
+
+export async function mockPayRefund(
+  approvalId: string,
+): Promise<{ refunds?: RefundApprovalRow[]; status?: string; withinSla?: boolean }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/refunds/${approvalId}/mock-pay`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `refund_pay_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    refunds?: RefundApprovalRow[];
+    status?: string;
+    withinSla?: boolean;
+  };
+}

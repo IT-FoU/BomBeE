@@ -230,4 +230,37 @@ export class ReturnService {
       [returnRequestId],
     );
   }
+
+  async listRefundApprovals(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      approval_id: string;
+      refund_request_id: string;
+      child_order_id: string;
+      parent_order_id: string;
+      amount_lak: number;
+      reason: string;
+      status: string;
+      sla_due_at: string | null;
+    }>(
+      `SELECT a.id AS approval_id, a.refund_request_id, r.child_order_id, co.parent_order_id,
+              a.amount_lak, r.reason, a.status, a.sla_due_at::text
+       FROM app.refund_approvals a
+       JOIN app.refund_requests r ON r.id = a.refund_request_id
+       JOIN app.child_orders co ON co.id = r.child_order_id
+       ORDER BY r.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      approvalId: r.approval_id,
+      refundRequestId: r.refund_request_id,
+      childOrderId: r.child_order_id,
+      parentOrderId: r.parent_order_id,
+      amountLak: Number(r.amount_lak),
+      reason: r.reason,
+      status: r.status,
+      slaDueAt: r.sla_due_at,
+    }));
+  }
 }

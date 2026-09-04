@@ -502,6 +502,171 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/refunds') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const refunds = await services.returns.listRefundApprovals(limit);
+      sendJson(res, 200, { ok: true, refunds });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/refunds/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        child_order_id?: string;
+        childOrderId?: string;
+        amount_lak?: number;
+        reason?: string;
+      }>(req);
+      let childOrderId = body.child_order_id ?? body.childOrderId;
+      if (!childOrderId) {
+        const eligible = await services.db.query<{ id: string; total_lak: number }>(
+          `SELECT co.id, co.total_lak
+           FROM app.child_orders co
+           WHERE co.payment_received = true
+             AND co.status IN ('delivered', 'return_requested')
+             AND NOT EXISTS (
+               SELECT 1 FROM app.refund_requests rr
+               WHERE rr.child_order_id = co.id AND rr.status IN ('pending', 'approved', 'paid')
+             )
+           ORDER BY co.updated_at DESC
+           LIMIT 1`,
+        );
+        childOrderId = eligible.rows[0]?.id;
+      }
+      if (!childOrderId) {
+        sendJson(res, 409, { error: 'no_eligible_child_for_refund' });
+        return;
+      }
+      const child = await services.db.query<{
+        id: string;
+        total_lak: number;
+        payment_received: boolean;
+      }>(
+        `SELECT id, total_lak, payment_received FROM app.child_orders WHERE id = $1`,
+        [childOrderId],
+      );
+      if (!child.rows[0]) {
+        sendJson(res, 404, { error: 'child_order_not_found' });
+        return;
+      }
+      if (!child.rows[0].payment_received) {
+        sendJson(res, 409, { error: 'payment_not_received' });
+        return;
+      }
+      const amountLak =
+        typeof body.amount_lak === 'number' && body.amount_lak > 0
+          ? Math.floor(body.amount_lak)
+          : Number(child.rows[0].total_lak);
+      if (amountLak <= 0) {
+        sendJson(res, 400, { error: 'invalid_amount' });
+        return;
+      }
+      try {
+        const makerIdentityId = await resolveOpsActor(services);
+        const created = await services.returns.createRefundRequest({
+          childOrderId,
+          amountLak,
+          reason: body.reason?.trim() || 'local_mock_refund',
+          makerIdentityId,
+        });
+        const refunds = await services.returns.listRefundApprovals(50);
+        sendJson(res, 201, { ok: true, ...created, refunds });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'refund_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const refundApproveMatch = url.pathname.match(/^\/v1\/ops\/refunds\/([^/]+)\/approve$/);
+    if (req.method === 'POST' && refundApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const approvalId = decodeURIComponent(refundApproveMatch[1]!);
+      try {
+        const maker = await services.db.query<{ maker_identity_id: string }>(
+          `SELECT maker_identity_id FROM app.refund_approvals WHERE id = $1`,
+          [approvalId],
+        );
+        if (!maker.rows[0]) {
+          sendJson(res, 404, { error: 'refund_approval_not_found' });
+          return;
+        }
+        const approverIdentityId = await resolveOpsApprover(
+          services,
+          maker.rows[0].maker_identity_id,
+        );
+        const approved = await services.returns.approveRefund({
+          approvalId,
+          approverIdentityId,
+        });
+        const refunds = await services.returns.listRefundApprovals(50);
+        sendJson(res, 200, { ok: true, approvalId, status: 'approved', ...approved, refunds });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'refund_approve_failed';
+        const status =
+          message === 'refund_approval_not_found'
+            ? 404
+            : message === 'self_approval_denied' || message === 'refund_not_pending'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    const refundPayMatch = url.pathname.match(/^\/v1\/ops\/refunds\/([^/]+)\/mock-pay$/);
+    if (req.method === 'POST' && refundPayMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const approvalId = decodeURIComponent(refundPayMatch[1]!);
+      const linked = await services.db.query<{
+        payment_request_id: string | null;
+        status: string;
+      }>(
+        `SELECT a.status,
+                (
+                  SELECT pa.payment_request_id
+                  FROM finance.payment_allocations pa
+                  JOIN app.refund_requests rr ON rr.id = a.refund_request_id
+                  WHERE pa.child_order_id = rr.child_order_id
+                  LIMIT 1
+                ) AS payment_request_id
+         FROM app.refund_approvals a
+         WHERE a.id = $1`,
+        [approvalId],
+      );
+      if (!linked.rows[0]) {
+        sendJson(res, 404, { error: 'refund_approval_not_found' });
+        return;
+      }
+      if (!linked.rows[0].payment_request_id) {
+        sendJson(res, 409, { error: 'payment_request_missing' });
+        return;
+      }
+      try {
+        const paid = await services.returns.payRefundViaLedger({
+          approvalId,
+          paymentRequestId: linked.rows[0].payment_request_id,
+        });
+        const refunds = await services.returns.listRefundApprovals(50);
+        sendJson(res, 200, { ok: true, approvalId, status: 'paid', ...paid, refunds });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'refund_pay_failed';
+        const status = message === 'refund_not_approved' ? 409 : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/promotions/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

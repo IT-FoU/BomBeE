@@ -181,3 +181,58 @@ export async function opsMockAdvance(parentId: string) {
 export async function opsMockDeliver(parentId: string) {
   return opsOrderAction(`/v1/ops/orders/${parentId}/fulfillment/mock-deliver`);
 }
+
+export type OpsCatalogProduct = {
+  id: string;
+  titleEn: string;
+  titleLo: string;
+  storeName: string;
+  priceLak: number;
+  availableQty: number;
+  variants: Array<{ id: string; sku: string; label: string; priceLak: number }>;
+};
+
+export async function listCatalogProducts(limit = 50): Promise<OpsCatalogProduct[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/catalog/products?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`catalog_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { products: OpsCatalogProduct[] };
+  return body.products;
+}
+
+export type OpsStockView = {
+  variantId: string;
+  availableQty: number;
+  balances: Array<{
+    balanceId: string;
+    storeId: string;
+    onHand: number;
+    reserved: number;
+    available: number;
+    lotId: string;
+    lotCode: string | null;
+    expiryDate: string | null;
+  }>;
+};
+
+export async function fetchVariantStock(variantId: string): Promise<OpsStockView> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/inventory/stock?variantId=${encodeURIComponent(variantId)}`,
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `stock_failed_${res.status}`);
+  }
+  const body = (await res.json()) as OpsStockView & { ok?: boolean };
+  return {
+    variantId: body.variantId,
+    availableQty: Number(body.availableQty),
+    balances: (body.balances ?? []).map((b) => ({
+      ...b,
+      onHand: Number(b.onHand),
+      reserved: Number(b.reserved),
+      available: Number(b.available),
+    })),
+  };
+}

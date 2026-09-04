@@ -13,6 +13,8 @@ import {
 import {
   createInvite,
   createStoreDraft,
+  fetchVariantStock,
+  listCatalogProducts,
   listCodShipments,
   listInvites,
   listOrders,
@@ -24,7 +26,9 @@ import {
   type CodShipmentRow,
   type IssuedInvite,
   type IssuedStore,
+  type OpsCatalogProduct,
   type OpsOrderRow,
+  type OpsStockView,
 } from './lib/opsApi';
 
 const navItems = [
@@ -71,6 +75,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [storeDrafts, setStoreDrafts] = useState<IssuedStore[]>([]);
   const [codShipments, setCodShipments] = useState<CodShipmentRow[]>([]);
   const [opsOrders, setOpsOrders] = useState<OpsOrderRow[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<OpsCatalogProduct[]>([]);
+  const [stockDetail, setStockDetail] = useState<OpsStockView | null>(null);
   const [remitBusyId, setRemitBusyId] = useState('');
   const [remitNote, setRemitNote] = useState('');
 
@@ -82,16 +88,18 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [invites, stores, cod, orders] = await Promise.all([
+        const [invites, stores, cod, orders, products] = await Promise.all([
           listInvites(),
           listStores(),
           listCodShipments(),
           listOrders(30),
+          listCatalogProducts(50),
         ]);
         setIssuedInvites(invites);
         setStoreDrafts(stores);
         setCodShipments(cod);
         setOpsOrders(orders);
+        setCatalogProducts(products);
       } catch {
         /* API may be down during static shell QA */
       }
@@ -349,6 +357,95 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               ))}
             </ul>
           </section>
+          <section aria-labelledby="catalog-heading" id="catalog">
+            <h2 id="catalog-heading">
+              <span lang="en">Catalog</span>
+              {' / '}
+              <span lang="lo">ສິນຄ້າ</span>
+            </h2>
+            <p className="lede">Active products from local catalog API (with available qty).</p>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                void (async () => {
+                  try {
+                    setCatalogProducts(await listCatalogProducts(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'catalog_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh catalog
+            </button>
+            <ul className="roles" aria-label="Catalog products">
+              {catalogProducts.length === 0 ? <li>No products yet</li> : null}
+              {catalogProducts.map((p) => (
+                <li key={p.id}>
+                  {p.titleEn} · {p.storeName} · {formatLak(LAK(p.priceLak))} · avail{' '}
+                  {p.availableQty}
+                  {p.variants[0] ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          void (async () => {
+                            try {
+                              setStockDetail(await fetchVariantStock(p.variants[0]!.id));
+                            } catch (err) {
+                              setFormError(err instanceof Error ? err.message : 'stock_failed');
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Stock
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section aria-labelledby="inventory-heading" id="inventory">
+            <h2 id="inventory-heading">
+              <span lang="en">Inventory</span>
+              {' / '}
+              <span lang="lo">ສະຕັອກ</span>
+            </h2>
+            <p className="lede">
+              Lot balances for a selected variant (use Stock on a catalog row). Available qty already
+              shown on Catalog.
+            </p>
+            {stockDetail ? (
+              <ul className="roles" aria-label="Stock balances">
+                <li>
+                  Variant {stockDetail.variantId.slice(0, 8)}… · available {stockDetail.availableQty}
+                </li>
+                {stockDetail.balances.map((b) => (
+                  <li key={b.balanceId}>
+                    {b.lotCode ?? b.lotId.slice(0, 8)} · on hand {b.onHand} · reserved {b.reserved} ·
+                    avail {b.available}
+                    {b.expiryDate ? ` · exp ${b.expiryDate}` : ''}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="lede">No variant selected yet.</p>
+            )}
+          </section>
           <section aria-labelledby="orders-heading" id="orders">
             <h2 id="orders-heading">
               <span lang="en">Orders</span>
@@ -560,6 +657,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   'payments',
                   'orders',
                   'fulfillment',
+                  'catalog',
+                  'inventory',
                 ].includes(item.id),
             )
             .map((item) => (

@@ -45,6 +45,11 @@ import {
   listPriceRequests,
   mockProposePrice,
   approvePriceRequest,
+  listContracts,
+  mockCreateContract,
+  listPayoutRequests,
+  mockProposePayout,
+  approvePayoutRequest,
   listAuditEvents,
   mockAuditEvent,
   listExports,
@@ -93,6 +98,9 @@ import {
   type PromotionRow,
   type RefundApprovalRow,
   type PriceRequestRow,
+  type ContractVersionRow,
+  type PayoutRequestRow,
+  type PayoutAccountRow,
   type AuditEventRow,
   type ExportRequestRow,
   type NotificationInboxRow,
@@ -178,6 +186,10 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [refundNote, setRefundNote] = useState('');
   const [priceRequests, setPriceRequests] = useState<PriceRequestRow[]>([]);
   const [pricingNote, setPricingNote] = useState('');
+  const [contractVersions, setContractVersions] = useState<ContractVersionRow[]>([]);
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequestRow[]>([]);
+  const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccountRow[]>([]);
+  const [payoutNote, setPayoutNote] = useState('');
   const [auditEvents, setAuditEvents] = useState<AuditEventRow[]>([]);
   const [auditNote, setAuditNote] = useState('');
   const [exportRequests, setExportRequests] = useState<ExportRequestRow[]>([]);
@@ -230,6 +242,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           promos,
           refundRows,
           priceRows,
+          contractRows,
+          payoutBundle,
           auditRows,
           exportRows,
           notificationBundle,
@@ -257,6 +271,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listPromotions(50),
           listRefunds(50),
           listPriceRequests(50),
+          listContracts(50),
+          listPayoutRequests(50),
           listAuditEvents(50),
           listExports(50),
           listNotifications(50),
@@ -284,6 +300,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setPromotions(promos);
         setRefunds(refundRows);
         setPriceRequests(priceRows);
+        setContractVersions(contractRows);
+        setPayoutRequests(payoutBundle.requests);
+        setPayoutAccounts(payoutBundle.accounts);
         setAuditEvents(auditRows);
         setExportRequests(exportRows);
         setNotificationInbox(notificationBundle.inbox);
@@ -722,7 +741,10 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               {' / '}
               <span lang="lo">ຮ້ານ</span>
             </h2>
-            <p className="lede">Create a local store draft (PGlite; not Production).</p>
+            <p className="lede">
+              Create a local store draft (PGlite; not Production). Contracts are immutable
+              versions; payout account changes need Owner + 2FA with a 48h hold.
+            </p>
             <form
               className="ops-form"
               onSubmit={(event) => {
@@ -762,6 +784,75 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               {storeDrafts.map((store) => (
                 <li key={store.id}>
                   {store.name} · {store.code} · {store.status}
+                </li>
+              ))}
+            </ul>
+            {payoutNote ? (
+              <p className="lede" role="status">
+                {payoutNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Store contracts">
+              {contractVersions.length === 0 ? <li>No contract versions yet</li> : null}
+              {contractVersions.map((row) => (
+                <li key={row.contractId}>
+                  v{row.versionNo} · {row.revenueModel} · {row.settlementCadence} · store{' '}
+                  {row.storeId.slice(0, 8)}… · from {row.effectiveFrom}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setPayoutNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateContract({ commissionBps: 1000 });
+                    setContractVersions(result.contracts);
+                    setPayoutNote(`Contract v${result.versionNo} created`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'contract_create_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create contract
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setContractVersions(await listContracts(50));
+                    const payouts = await listPayoutRequests(50);
+                    setPayoutRequests(payouts.requests);
+                    setPayoutAccounts(payouts.accounts);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'stores_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh contracts & payouts
+            </button>
+            <ul className="roles" aria-label="Payout accounts">
+              {payoutAccounts.length === 0 ? <li>No payout accounts yet</li> : null}
+              {payoutAccounts.map((row) => (
+                <li key={row.versionId}>
+                  {row.status} · {row.bankName} ···{row.accountNumberLast4} ·{' '}
+                  {row.accountHolder}
+                  {row.payoutHoldUntil ? ` · hold until ${row.payoutHoldUntil}` : ''}
                 </li>
               ))}
             </ul>
@@ -1719,8 +1810,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ອະນຸມັດ</span>
             </h2>
             <p className="lede">
-              Local refund and price approvals — mock create refunds or price changes, approve
-              (maker-checker; below-cost needs Owner + 2FA locally), then mock-pay refunds.
+              Local refund, price, and payout approvals — mock create, approve (maker-checker;
+              below-cost / payout changes need Owner + 2FA; payouts get 48h hold), then mock-pay
+              refunds.
             </p>
             {refundNote ? (
               <p className="lede" role="status">
@@ -1953,6 +2045,101 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh prices
+            </button>
+            {payoutNote ? (
+              <p className="lede" role="status">
+                {payoutNote}
+              </p>
+            ) : null}
+            <ul className="roles" aria-label="Payout change requests">
+              {payoutRequests.length === 0 ? <li>No payout change requests yet</li> : null}
+              {payoutRequests.map((row) => (
+                <li key={row.requestId}>
+                  {row.status} · {row.bankName} ···{row.accountNumberLast4} · store{' '}
+                  {row.storeId.slice(0, 8)}…
+                  {row.status === 'pending' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setPayoutNote('');
+                          void (async () => {
+                            try {
+                              const result = await approvePayoutRequest(row.requestId);
+                              if (result.requests) setPayoutRequests(result.requests);
+                              if (result.accounts) setPayoutAccounts(result.accounts);
+                              setPayoutNote(
+                                `Approved payout ${row.requestId.slice(0, 8)}… hold ${result.holdUntil ?? ''}`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'payout_approve_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Approve payout
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setPayoutNote('');
+                void (async () => {
+                  try {
+                    const result = await mockProposePayout({
+                      bankName: 'BCEL',
+                      accountHolder: 'BO Mock Payout',
+                    });
+                    setPayoutRequests(result.requests);
+                    setPayoutAccounts(result.accounts);
+                    setPayoutNote(`Proposed payout ${result.requestId.slice(0, 8)}…`);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'payout_propose_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock propose payout
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    const payouts = await listPayoutRequests(50);
+                    setPayoutRequests(payouts.requests);
+                    setPayoutAccounts(payouts.accounts);
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'payouts_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh payouts
             </button>
           </section>
           <section aria-labelledby="audit-heading" id="audit">

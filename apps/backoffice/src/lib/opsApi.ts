@@ -676,6 +676,147 @@ export async function approvePriceRequest(
   return (await res.json()) as { requests?: PriceRequestRow[]; status?: string };
 }
 
+export type ContractVersionRow = {
+  contractId: string;
+  storeId: string;
+  versionNo: number;
+  revenueModel: string;
+  markupBps: number | null;
+  commissionBps: number | null;
+  perOrderFeeLak: number | null;
+  settlementCadence: string;
+  customCadenceDays: number | null;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  createdAt: string;
+  createdBy: string | null;
+};
+
+export async function listContracts(limit = 50): Promise<ContractVersionRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/stores/contracts?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`contracts_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { contracts: ContractVersionRow[] };
+  return body.contracts;
+}
+
+export async function mockCreateContract(input: {
+  storeId?: string;
+  commissionBps?: number;
+} = {}): Promise<{ id: string; versionNo: number; contracts: ContractVersionRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/stores/contracts/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      storeId: input.storeId,
+      commissionBps: input.commissionBps,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `contract_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    id: string;
+    versionNo: number;
+    contracts: ContractVersionRow[];
+  };
+}
+
+export type PayoutRequestRow = {
+  requestId: string;
+  storeId: string;
+  requestedVersionId: string;
+  makerIdentityId: string;
+  approverIdentityId: string | null;
+  status: string;
+  requires2fa: boolean;
+  createdAt: string;
+  decidedAt: string | null;
+  bankName: string;
+  accountNumberLast4: string;
+  accountHolder: string;
+  versionStatus: string;
+  payoutHoldUntil: string | null;
+};
+
+export type PayoutAccountRow = {
+  versionId: string;
+  storeId: string;
+  versionNo: number;
+  bankName: string;
+  accountNumberLast4: string;
+  accountHolder: string;
+  status: string;
+  activatedAt: string | null;
+  payoutHoldUntil: string | null;
+};
+
+export async function listPayoutRequests(
+  limit = 50,
+): Promise<{ requests: PayoutRequestRow[]; accounts: PayoutAccountRow[] }> {
+  const res = await fetch(`${apiBaseUrl()}/v1/payouts/requests?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`payouts_list_failed_${res.status}`);
+  }
+  return (await res.json()) as { requests: PayoutRequestRow[]; accounts: PayoutAccountRow[] };
+}
+
+export async function mockProposePayout(input: {
+  storeId?: string;
+  bankName?: string;
+  accountNumberLast4?: string;
+  accountHolder?: string;
+} = {}): Promise<{
+  requestId: string;
+  requests: PayoutRequestRow[];
+  accounts: PayoutAccountRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/payouts/mock-propose`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `payout_propose_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    requestId: string;
+    requests: PayoutRequestRow[];
+    accounts: PayoutAccountRow[];
+  };
+}
+
+export async function approvePayoutRequest(
+  requestId: string,
+): Promise<{
+  requests?: PayoutRequestRow[];
+  accounts?: PayoutAccountRow[];
+  status?: string;
+  holdUntil?: string;
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/payouts/${encodeURIComponent(requestId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ stepUpVerified: true }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `payout_approve_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    requests?: PayoutRequestRow[];
+    accounts?: PayoutAccountRow[];
+    status?: string;
+    holdUntil?: string;
+  };
+}
+
 export type AuditEventRow = {
   eventId: string;
   actorIdentityId: string | null;

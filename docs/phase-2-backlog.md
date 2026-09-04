@@ -64,6 +64,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B44 | Customer phone-change OTP + recovery HTTP | **Done** — dual OTP start/confirm, recovery-document + recovery list; Privacy BO |
 | P2-B45 | Review edit + supplier response approval | **Done** — `PATCH /v1/reviews/:id`, supplier-response + approve; Content BO |
 | P2-B46 | Price propose/approve HTTP + Approvals BO | **Done** — `/v1/pricing/requests`, mock-propose + approve (below-cost Owner+2FA) |
+| P2-B47 | Payout change approve + contracts list | **Done** — contracts list/mock-create; payouts propose/approve (Owner+2FA, 48h hold) |
 
 ## C — Hard rules that stay
 

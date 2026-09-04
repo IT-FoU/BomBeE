@@ -34,6 +34,9 @@ import { ContentService } from '../modules/content/contentService.js';
 import { InviteService } from '../modules/staging/inviteService.js';
 import { StoreService } from '../modules/stores/storeService.js';
 import { QualityService } from '../modules/stores/qualityService.js';
+import { ContractService } from '../modules/stores/contractService.js';
+import { PayoutService } from '../modules/stores/payoutService.js';
+import { NotificationBus } from '../modules/notifications/bus.js';
 import { SupportService } from '../modules/support/supportService.js';
 import { seedLocalCatalog } from './seedLocalCatalog.js';
 
@@ -43,6 +46,9 @@ export type ApiServices = {
   identity: IdentityService;
   invites: InviteService;
   stores: StoreService;
+  quality: QualityService;
+  contracts: ContractService;
+  payouts: PayoutService;
   catalog: CatalogService;
   pricing: PricingService;
   orders: OrderService;
@@ -64,7 +70,6 @@ export type ApiServices = {
   imageSearch: ImageSearchService;
   privacy: CustomerPrivacyService;
   content: ContentService;
-  quality: QualityService;
 };
 
 /** Local/mock runtime: in-memory PGlite + mock SMS (no hosted DB required). */
@@ -75,6 +80,8 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
   const invites = new InviteService(db);
   const stores = new StoreService(db);
   const quality = new QualityService(db);
+  const contracts = new ContractService(db);
+  const payouts = new PayoutService(db, new NotificationBus());
   const catalog = new CatalogService(db);
   const pricing = new PricingService(db);
   const orders = new OrderService(db);
@@ -106,6 +113,9 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     identity,
     invites,
     stores,
+    quality,
+    contracts,
+    payouts,
     catalog,
     pricing,
     orders,
@@ -127,6 +137,5 @@ export async function createLocalApiServices(_env: BombeeEnv): Promise<ApiServic
     imageSearch,
     privacy,
     content,
-    quality,
   };
 }

@@ -141,4 +141,91 @@ export class PayoutService {
     }
     return { ok: true as const, versionId: active.id };
   }
+
+  async listChangeRequests(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      requested_version_id: string;
+      maker_identity_id: string;
+      approver_identity_id: string | null;
+      status: string;
+      requires_2fa: boolean;
+      created_at: string;
+      decided_at: string | null;
+      bank_name: string;
+      account_number_last4: string;
+      account_holder: string;
+      version_status: string;
+      payout_hold_until: string | null;
+    }>(
+      `SELECT r.id, r.store_id, r.requested_version_id, r.maker_identity_id,
+              r.approver_identity_id, r.status, r.requires_2fa,
+              r.created_at::text, r.decided_at::text,
+              v.bank_name, v.account_number_last4, v.account_holder,
+              v.status AS version_status, v.payout_hold_until::text
+       FROM finance.payout_change_requests r
+       JOIN finance.payout_account_versions v ON v.id = r.requested_version_id
+       ORDER BY r.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      requestId: r.id,
+      storeId: r.store_id,
+      requestedVersionId: r.requested_version_id,
+      makerIdentityId: r.maker_identity_id,
+      approverIdentityId: r.approver_identity_id,
+      status: r.status,
+      requires2fa: r.requires_2fa,
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+      bankName: r.bank_name,
+      accountNumberLast4: r.account_number_last4,
+      accountHolder: r.account_holder,
+      versionStatus: r.version_status,
+      payoutHoldUntil: r.payout_hold_until,
+    }));
+  }
+
+  async listAccounts(input: { storeId?: string; limit?: number } = {}) {
+    const capped = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      version_no: number;
+      bank_name: string;
+      account_number_last4: string;
+      account_holder: string;
+      status: string;
+      activated_at: string | null;
+      payout_hold_until: string | null;
+    }>(
+      input.storeId
+        ? `SELECT id, store_id, version_no, bank_name, account_number_last4, account_holder,
+                  status, activated_at::text, payout_hold_until::text
+           FROM finance.payout_account_versions
+           WHERE store_id = $1
+           ORDER BY version_no DESC
+           LIMIT $2`
+        : `SELECT id, store_id, version_no, bank_name, account_number_last4, account_holder,
+                  status, activated_at::text, payout_hold_until::text
+           FROM finance.payout_account_versions
+           ORDER BY created_at DESC
+           LIMIT $1`,
+      input.storeId ? [input.storeId, capped] : [capped],
+    );
+    return rows.rows.map((r) => ({
+      versionId: r.id,
+      storeId: r.store_id,
+      versionNo: r.version_no,
+      bankName: r.bank_name,
+      accountNumberLast4: r.account_number_last4,
+      accountHolder: r.account_holder,
+      status: r.status,
+      activatedAt: r.activated_at,
+      payoutHoldUntil: r.payout_hold_until,
+    }));
+  }
 }

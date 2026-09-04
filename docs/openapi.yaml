@@ -163,6 +163,64 @@ paths:
           description: Invalid payload
         '409':
           description: Code taken
+  /v1/stores/contracts:
+    get:
+      summary: List store contract versions
+      parameters:
+        - in: query
+          name: storeId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Contract versions array
+  /v1/ops/stores/contracts/mock-create:
+    post:
+      summary: Local mock create immutable contract version
+      responses:
+        '201':
+          description: Contract created
+        '403':
+          description: Mock ops disabled
+  /v1/payouts/requests:
+    get:
+      summary: List payout change requests and account versions
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Requests and accounts
+  /v1/ops/payouts/mock-propose:
+    post:
+      summary: Local mock propose payout account change
+      responses:
+        '201':
+          description: Pending payout request
+        '403':
+          description: Mock ops disabled
+  /v1/ops/payouts/{requestId}/approve:
+    post:
+      summary: Approve payout change (Owner + 2FA, 48h hold)
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approved with holdUntil
+        '403':
+          description: Owner or 2FA required
+        '409':
+          description: Not pending or self-approval
   /v1/stores/quality:
     get:
       summary: List quality events and suspensions

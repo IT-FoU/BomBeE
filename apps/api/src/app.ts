@@ -240,6 +240,226 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/stores/contracts') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const storeId = url.searchParams.get('storeId')?.trim() || undefined;
+      const contracts = await services.contracts.listVersions({ storeId, limit });
+      sendJson(res, 200, { ok: true, contracts });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/stores/contracts/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        revenueModel?: 'markup' | 'commission' | 'per_order_fee' | 'mixed';
+        revenue_model?: 'markup' | 'commission' | 'per_order_fee' | 'mixed';
+        commissionBps?: number;
+        commission_bps?: number;
+        settlementCadence?: 'daily' | 'weekly' | 'monthly' | 'custom';
+        settlement_cadence?: 'daily' | 'weekly' | 'monthly' | 'custom';
+        effectiveFrom?: string;
+        effective_from?: string;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 409, { error: 'no_active_store' });
+          return;
+        }
+        const actorIdentityId = await resolveOpsActor(services);
+        const created = await services.contracts.createVersion({
+          storeId,
+          createdBy: actorIdentityId,
+          terms: {
+            revenueModel: body.revenueModel ?? body.revenue_model ?? 'commission',
+            commissionBps:
+              typeof body.commissionBps === 'number'
+                ? body.commissionBps
+                : typeof body.commission_bps === 'number'
+                  ? body.commission_bps
+                  : 1000,
+            settlementCadence:
+              body.settlementCadence ?? body.settlement_cadence ?? 'weekly',
+            effectiveFrom:
+              body.effectiveFrom ??
+              body.effective_from ??
+              new Date().toISOString().slice(0, 10),
+          },
+        });
+        const contracts = await services.contracts.listVersions({ limit: 50 });
+        sendJson(res, 201, { ok: true, ...created, storeId, contracts });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'contract_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/payouts/requests') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const [requests, accounts] = await Promise.all([
+        services.payouts.listChangeRequests(limit),
+        services.payouts.listAccounts({ limit }),
+      ]);
+      sendJson(res, 200, { ok: true, requests, accounts });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/payouts/mock-propose') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        bankName?: string;
+        bank_name?: string;
+        accountNumberLast4?: string;
+        account_number_last4?: string;
+        accountHolder?: string;
+        account_holder?: string;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 409, { error: 'no_active_store' });
+          return;
+        }
+        const maker = await services.identity.ensureStaff(
+          'staff:local-catalog-maker',
+          'Catalog Maker',
+          '+8562087000001',
+        );
+        const versionId = await services.payouts.createPendingVersion({
+          storeId,
+          bankName: body.bankName ?? body.bank_name ?? 'BCEL',
+          accountNumberLast4:
+            body.accountNumberLast4 ??
+            body.account_number_last4 ??
+            String(Date.now()).slice(-4),
+          accountHolder:
+            body.accountHolder ?? body.account_holder ?? 'Local Mock Account',
+        });
+        const requestId = await services.payouts.requestChange({
+          storeId,
+          requestedVersionId: versionId,
+          makerIdentityId: maker.identityId,
+        });
+        const [requests, accounts] = await Promise.all([
+          services.payouts.listChangeRequests(50),
+          services.payouts.listAccounts({ limit: 50 }),
+        ]);
+        sendJson(res, 201, {
+          ok: true,
+          requestId,
+          versionId,
+          storeId,
+          status: 'pending',
+          requests,
+          accounts,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'payout_propose_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const payoutApproveMatch = url.pathname.match(/^\/v1\/ops\/payouts\/([^/]+)\/approve$/);
+    if (req.method === 'POST' && payoutApproveMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const requestId = decodeURIComponent(payoutApproveMatch[1]!);
+      const body = await readJsonBody<{
+        stepUpVerified?: boolean;
+        step_up_verified?: boolean;
+      }>(req);
+      try {
+        const reqRow = await services.db.query<{
+          maker_identity_id: string;
+          status: string;
+        }>(
+          `SELECT maker_identity_id, status FROM finance.payout_change_requests WHERE id = $1`,
+          [requestId],
+        );
+        if (!reqRow.rows[0]) {
+          sendJson(res, 404, { error: 'payout_request_not_found' });
+          return;
+        }
+        if (reqRow.rows[0].status !== 'pending') {
+          sendJson(res, 409, { error: 'not_pending' });
+          return;
+        }
+        const makerIdentityId = reqRow.rows[0].maker_identity_id;
+        const owner = await services.identity.ensureStaff(
+          'staff:local-catalog-owner',
+          'Catalog Owner',
+          '+8562087000002',
+        );
+        if (owner.identityId === makerIdentityId) {
+          sendJson(res, 409, { error: 'self_approval' });
+          return;
+        }
+        const stepUpVerified = body.stepUpVerified ?? body.step_up_verified ?? true;
+        const approved = await services.payouts.approveChange({
+          requestId,
+          approverIdentityId: owner.identityId,
+          actorRoles: ['owner'],
+          stepUpVerified,
+        });
+        if (!approved.ok) {
+          const status =
+            approved.reason === 'not_found'
+              ? 404
+              : approved.reason === 'not_pending' || approved.reason === 'self_approval'
+                ? 409
+                : approved.reason === 'owner_required' || approved.reason === '2fa_required'
+                  ? 403
+                  : 400;
+          sendJson(res, status, { error: approved.reason });
+          return;
+        }
+        const [requests, accounts] = await Promise.all([
+          services.payouts.listChangeRequests(50),
+          services.payouts.listAccounts({ limit: 50 }),
+        ]);
+        sendJson(res, 200, {
+          ok: true,
+          requestId,
+          status: 'approved',
+          holdUntil: approved.holdUntil,
+          requests,
+          accounts,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'payout_approve_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/cod/shipments') {
       const rows = await services.db.query<{
         id: string;

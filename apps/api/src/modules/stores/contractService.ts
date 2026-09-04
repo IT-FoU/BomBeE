@@ -137,4 +137,54 @@ export class ContractService {
       return true;
     }
   }
+
+  async listVersions(input: { storeId?: string; limit?: number } = {}) {
+    const capped = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      version_no: number;
+      revenue_model: RevenueModel;
+      markup_bps: number | null;
+      commission_bps: number | null;
+      per_order_fee_lak: number | null;
+      settlement_cadence: SettlementCadence;
+      custom_cadence_days: number | null;
+      effective_from: string;
+      effective_to: string | null;
+      created_at: string;
+      created_by: string | null;
+    }>(
+      input.storeId
+        ? `SELECT id, store_id, version_no, revenue_model, markup_bps, commission_bps,
+                  per_order_fee_lak, settlement_cadence, custom_cadence_days,
+                  effective_from::text, effective_to::text, created_at::text, created_by
+           FROM finance.store_contract_versions
+           WHERE store_id = $1
+           ORDER BY version_no DESC
+           LIMIT $2`
+        : `SELECT id, store_id, version_no, revenue_model, markup_bps, commission_bps,
+                  per_order_fee_lak, settlement_cadence, custom_cadence_days,
+                  effective_from::text, effective_to::text, created_at::text, created_by
+           FROM finance.store_contract_versions
+           ORDER BY created_at DESC
+           LIMIT $1`,
+      input.storeId ? [input.storeId, capped] : [capped],
+    );
+    return rows.rows.map((r) => ({
+      contractId: r.id,
+      storeId: r.store_id,
+      versionNo: r.version_no,
+      revenueModel: r.revenue_model,
+      markupBps: r.markup_bps,
+      commissionBps: r.commission_bps,
+      perOrderFeeLak: r.per_order_fee_lak,
+      settlementCadence: r.settlement_cadence,
+      customCadenceDays: r.custom_cadence_days,
+      effectiveFrom: r.effective_from,
+      effectiveTo: r.effective_to,
+      createdAt: r.created_at,
+      createdBy: r.created_by,
+    }));
+  }
 }

@@ -17,6 +17,11 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/invites` | Create beta invite |
 | GET | `/v1/stores` | List stores |
 | POST | `/v1/stores` | Create store draft (`onboarding`) |
+| GET | `/v1/stores/contracts` | List store contract versions (optional `storeId`) |
+| POST | `/v1/ops/stores/contracts/mock-create` | Local/mock immutable contract version |
+| GET | `/v1/payouts/requests` | List payout change requests + account versions |
+| POST | `/v1/ops/payouts/mock-propose` | Local/mock pending payout account change |
+| POST | `/v1/ops/payouts/:requestId/approve` | Approve payout change (Owner+2FA; 48h hold) |
 | GET | `/v1/stores/quality` | Quality events + suspensions (optional `storeId`) |
 | POST | `/v1/ops/stores/quality/mock-event` | Local/mock record quality event(s); may suspend |
 | POST | `/v1/ops/stores/:id/reactivate` | Local/mock reactivate suspended store with evidence |

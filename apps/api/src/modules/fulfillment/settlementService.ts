@@ -98,6 +98,47 @@ export class SettlementService {
     }));
   }
 
+  async listCarryforwards(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      store_name: string;
+      amount_lak: number;
+      source_batch_id: string | null;
+      status: string;
+      collection_request_id: string | null;
+      collection_status: string | null;
+      created_at: string;
+    }>(
+      `SELECT c.id, c.store_id, s.name AS store_name, c.amount_lak, c.source_batch_id,
+              c.status, col.id AS collection_request_id, col.status AS collection_status,
+              c.created_at::text
+       FROM finance.store_balance_carryforward c
+       JOIN app.stores s ON s.id = c.store_id
+       LEFT JOIN LATERAL (
+         SELECT id, status FROM finance.collection_requests
+         WHERE carryforward_id = c.id
+         ORDER BY created_at DESC
+         LIMIT 1
+       ) col ON true
+       ORDER BY c.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      carryforwardId: r.id,
+      storeId: r.store_id,
+      storeName: r.store_name,
+      amountLak: Number(r.amount_lak),
+      sourceBatchId: r.source_batch_id,
+      status: r.status,
+      collectionRequestId: r.collection_request_id,
+      collectionStatus: r.collection_status,
+      createdAt: r.created_at,
+    }));
+  }
+
   async listLines(batchId: string) {
     const rows = await this.db.query<{
       id: string;

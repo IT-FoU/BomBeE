@@ -724,6 +724,46 @@ paths:
           description: Mock ops disabled
         '409':
           description: No eligible orders or payout missing/on hold
+  /v1/settlements/carryforwards:
+    get:
+      summary: List store balance carryforwards + collection requests
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Carryforwards array
+  /v1/ops/settlements/mock-carryforward:
+    post:
+      summary: Local/mock negative carryforward (optional collection request)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                amount_lak:
+                  type: integer
+                  description: Must be negative (default -25000)
+                source_batch_id:
+                  type: string
+                collect:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Carryforward recorded
+        '400':
+          description: Amount not negative
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Store not found
   /v1/settlements/{batchId}/lines:
     get:
       summary: Settlement lines for a batch
@@ -790,6 +830,35 @@ paths:
           description: Line disputed; batch partially_disputed
         '409':
           description: Dispute window exceeded
+  /v1/ops/settlements/{batchId}/hold-line:
+    post:
+      summary: Local/mock hold a settlement line and recompute held/net
+      parameters:
+        - in: path
+          name: batchId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                  description: Optional; defaults to first unheld line
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Line held; lines and batches returned
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Batch or line not found
+        '409':
+          description: No settlement lines
   /v1/support/tickets:
     get:
       summary: List support tickets (local ops)

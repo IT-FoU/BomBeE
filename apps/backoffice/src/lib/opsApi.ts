@@ -881,6 +881,91 @@ export async function disputeSettlementBatch(
   });
 }
 
+export type SettlementCarryforwardRow = {
+  carryforwardId: string;
+  storeId: string;
+  storeName: string;
+  amountLak: number;
+  sourceBatchId: string | null;
+  status: string;
+  collectionRequestId: string | null;
+  collectionStatus: string | null;
+  createdAt: string;
+};
+
+export async function listSettlementCarryforwards(
+  limit = 50,
+): Promise<SettlementCarryforwardRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/settlements/carryforwards?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`settlement_carryforwards_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { carryforwards: SettlementCarryforwardRow[] };
+  return body.carryforwards;
+}
+
+export async function holdSettlementLine(
+  batchId: string,
+  input: { childOrderId?: string; reason?: string } = {},
+): Promise<{
+  batches?: SettlementBatchRow[];
+  lines?: SettlementLineRow[];
+  childOrderId?: string;
+  holdReason?: string;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/settlements/${batchId}/hold-line`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      child_order_id: input.childOrderId,
+      reason: input.reason,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `settlement_hold_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    batches?: SettlementBatchRow[];
+    lines?: SettlementLineRow[];
+    childOrderId?: string;
+    holdReason?: string;
+  };
+}
+
+export async function mockSettlementCarryforward(input: {
+  storeId?: string;
+  amountLak?: number;
+  sourceBatchId?: string;
+  collect?: boolean;
+} = {}): Promise<{
+  carryforwardId: string;
+  collectionRequestId?: string;
+  carryforwards?: SettlementCarryforwardRow[];
+  amountLak?: number;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/settlements/mock-carryforward`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      store_id: input.storeId,
+      amount_lak: input.amountLak,
+      source_batch_id: input.sourceBatchId,
+      collect: input.collect,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `settlement_carryforward_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    carryforwardId: string;
+    collectionRequestId?: string;
+    carryforwards?: SettlementCarryforwardRow[];
+    amountLak?: number;
+  };
+}
+
 export type SupportTicketRow = {
   ticketId: string;
   subject: string;

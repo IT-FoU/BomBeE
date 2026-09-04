@@ -198,4 +198,138 @@ describe('settlement HTTP', () => {
     expect(dispute.body().status).toBe('partially_disputed');
     expect(dispute.body().disputeId).toBeTruthy();
   });
+
+  it('holds a settlement line and records negative carryforward', async () => {
+    const productsRes = mockRes();
+    await router(mockReq('GET', '/v1/catalog/products'), productsRes.res);
+    const products = productsRes.body().products as Array<{
+      storeId: string;
+      variants: Array<{ id: string }>;
+    }>;
+    const product = products[1] ?? products[0]!;
+    const variant = product.variants[0]!;
+
+    const cartRes = mockRes();
+    await router(
+      mockReq('POST', '/v1/carts', {}, { authorization: `Bearer ${token}` }),
+      cartRes.res,
+    );
+    const cartId = cartRes.body().cartId as string;
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/items`,
+        { storeId: product.storeId, variantId: variant.id, quantity: 1 },
+        { authorization: `Bearer ${token}` },
+      ),
+      mockRes().res,
+    );
+    const checkoutRes = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/checkout`,
+        { shippingLakByStore: { [product.storeId]: 5000 } },
+        { authorization: `Bearer ${token}` },
+      ),
+      checkoutRes.res,
+    );
+    const parentId = checkoutRes.body().parentId as string;
+    await router(mockReq('POST', `/v1/ops/orders/${parentId}/confirm-children`, {}), mockRes().res);
+    const qr = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/orders/${parentId}/payments/qr`,
+        {},
+        { authorization: `Bearer ${token}` },
+      ),
+      qr.res,
+    );
+    await router(
+      mockReq(
+        'POST',
+        `/v1/payments/${qr.body().paymentRequestId}/mock-confirm`,
+        {},
+        { authorization: `Bearer ${token}` },
+      ),
+      mockRes().res,
+    );
+    await router(
+      mockReq('POST', `/v1/ops/orders/${parentId}/fulfillment/mock-advance`, {}),
+      mockRes().res,
+    );
+    await router(
+      mockReq('POST', `/v1/ops/orders/${parentId}/fulfillment/mock-deliver`, {}),
+      mockRes().res,
+    );
+
+    const created = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/settlements/mock-create', { store_id: product.storeId }),
+      created.res,
+    );
+    expect(created.res.statusCode).toBe(201);
+    const batchId = created.body().batchId as string;
+    const heldBefore = Number(created.body().heldLak ?? 0);
+    const netBefore = Number(created.body().netLak);
+
+    const held = mockRes();
+    await router(mockReq('POST', `/v1/ops/settlements/${batchId}/hold-line`, {}), held.res);
+    expect(held.res.statusCode).toBe(200);
+    expect(held.body().held).toBe(true);
+    expect(
+      (held.body().lines as Array<{ held: boolean }>).some((l) => l.held),
+    ).toBe(true);
+    const heldBatch = (
+      held.body().batches as Array<{ batchId: string; heldLak: number; netLak: number }>
+    ).find((b) => b.batchId === batchId);
+    expect(Number(heldBatch?.heldLak)).toBeGreaterThan(heldBefore);
+    expect(Number(heldBatch?.netLak)).toBeLessThan(netBefore);
+
+    const carry = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/settlements/mock-carryforward', {
+        store_id: product.storeId,
+        amount_lak: -25000,
+        source_batch_id: batchId,
+        collect: true,
+      }),
+      carry.res,
+    );
+    expect(carry.res.statusCode).toBe(201);
+    expect(carry.body().carryforwardId).toBeTruthy();
+    expect(carry.body().collectionRequestId).toBeTruthy();
+
+    const list = mockRes();
+    await router(mockReq('GET', '/v1/settlements/carryforwards'), list.res);
+    expect(list.res.statusCode).toBe(200);
+    expect(
+      (
+        list.body().carryforwards as Array<{
+          carryforwardId: string;
+          amountLak: number;
+          status: string;
+          collectionRequestId: string | null;
+        }>
+      ).some(
+        (c) =>
+          c.carryforwardId === carry.body().carryforwardId &&
+          c.amountLak === -25000 &&
+          c.status === 'open' &&
+          Boolean(c.collectionRequestId),
+      ),
+    ).toBe(true);
+
+    const bad = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/settlements/mock-carryforward', {
+        store_id: product.storeId,
+        amount_lak: 100,
+      }),
+      bad.res,
+    );
+    expect(bad.res.statusCode).toBe(400);
+    expect(bad.body().error).toBe('carryforward_must_be_negative');
+  });
 });

@@ -50,6 +50,9 @@ import {
   submitSettlementBatch,
   approveSettlementBatch,
   disputeSettlementBatch,
+  listSettlementCarryforwards,
+  holdSettlementLine,
+  mockSettlementCarryforward,
   listSupportTickets,
   mockCreateSupportTicket,
   replySupportTicket,
@@ -130,6 +133,7 @@ import {
   type InventoryAdjustmentRow,
   type StockImportBatchRow,
   type SettlementBatchRow,
+  type SettlementCarryforwardRow,
   type SupportTicketRow,
   type ReturnRequestRow,
   type PromotionRow,
@@ -226,6 +230,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [stockImportBatches, setStockImportBatches] = useState<StockImportBatchRow[]>([]);
   const [inventoryNote, setInventoryNote] = useState('');
   const [settlementBatches, setSettlementBatches] = useState<SettlementBatchRow[]>([]);
+  const [settlementCarryforwards, setSettlementCarryforwards] = useState<
+    SettlementCarryforwardRow[]
+  >([]);
   const [settlementNote, setSettlementNote] = useState('');
   const [supportTickets, setSupportTickets] = useState<SupportTicketRow[]>([]);
   const [supportNote, setSupportNote] = useState('');
@@ -298,6 +305,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           inventoryAdjRows,
           stockImportRows,
           batches,
+          carryforwardRows,
           tickets,
           returns,
           promos,
@@ -336,6 +344,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listInventoryAdjustments(50),
           listStockImportBatches(50),
           listSettlementBatches(50),
+          listSettlementCarryforwards(50),
           listSupportTickets(50),
           listReturns(50),
           listPromotions(50),
@@ -374,6 +383,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setInventoryAdjustments(inventoryAdjRows);
         setStockImportBatches(stockImportRows);
         setSettlementBatches(batches);
+        setSettlementCarryforwards(carryforwardRows);
         setSupportTickets(tickets);
         setReturnRequests(returns);
         setPromotions(promos);
@@ -1840,8 +1850,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ຈ່າຍຮ້ານ</span>
             </h2>
             <p className="lede">
-              Local settlement batches — create draft, submit, approve (maker-checker), or dispute a
-              line (delivered + paid children; active payout required).
+              Local settlement batches — create draft, submit, approve (maker-checker), hold a line,
+              dispute, or record negative carryforward + collection request.
             </p>
             {settlementNote ? (
               <p className="lede" role="status">
@@ -1854,6 +1864,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 <li key={batch.batchId}>
                   {batch.status} · {batch.storeName} · {batch.lineCount} lines · net{' '}
                   {formatLak(LAK(batch.netLak))}
+                  {batch.heldLak > 0 ? ` · held ${formatLak(LAK(batch.heldLak))}` : ''}
                   {batch.status === 'draft' ? (
                     <>
                       {' '}
@@ -1918,6 +1929,40 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                       </button>
                     </>
                   ) : null}
+                  {batch.status === 'draft' || batch.status === 'pending_approval' ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setSettlementNote('');
+                          void (async () => {
+                            try {
+                              const result = await holdSettlementLine(batch.batchId, {
+                                reason: 'BO mock hold',
+                              });
+                              if (result.batches) setSettlementBatches(result.batches);
+                              setSettlementNote(
+                                `Held line on ${batch.batchId.slice(0, 8)}… · child ${result.childOrderId?.slice(0, 8) ?? ''}…`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'settlement_hold_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Hold line
+                      </button>
+                    </>
+                  ) : null}
                   {batch.status !== 'partially_disputed' ? (
                     <>
                       {' '}
@@ -1955,6 +2000,19 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 </li>
               ))}
             </ul>
+            <ul className="roles" aria-label="Settlement carryforwards">
+              {settlementCarryforwards.length === 0 ? (
+                <li>No negative carryforwards yet</li>
+              ) : null}
+              {settlementCarryforwards.map((row) => (
+                <li key={row.carryforwardId}>
+                  {row.status} · {row.storeName} · {formatLak(LAK(row.amountLak))}
+                  {row.collectionRequestId
+                    ? ` · collect ${row.collectionStatus ?? 'open'} ${row.collectionRequestId.slice(0, 8)}…`
+                    : ''}
+                </li>
+              ))}
+            </ul>
             <button
               type="button"
               className="cta"
@@ -1988,9 +2046,44 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               disabled={formBusy}
               onClick={() => {
                 setFormBusy(true);
+                setFormError('');
+                setSettlementNote('');
+                void (async () => {
+                  try {
+                    const result = await mockSettlementCarryforward({
+                      storeId: settlementBatches[0]?.storeId,
+                      sourceBatchId: settlementBatches[0]?.batchId,
+                      amountLak: -25000,
+                    });
+                    if (result.carryforwards) setSettlementCarryforwards(result.carryforwards);
+                    setSettlementNote(
+                      `Carryforward ${result.carryforwardId.slice(0, 8)}… · ${formatLak(LAK(result.amountLak ?? -25000))}` +
+                        (result.collectionRequestId
+                          ? ` · collect ${result.collectionRequestId.slice(0, 8)}…`
+                          : ''),
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'settlement_carryforward_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock carryforward (−25k)
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
                 void (async () => {
                   try {
                     setSettlementBatches(await listSettlementBatches(50));
+                    setSettlementCarryforwards(await listSettlementCarryforwards(50));
                   } catch (err) {
                     setFormError(
                       err instanceof Error ? err.message : 'settlements_list_failed',

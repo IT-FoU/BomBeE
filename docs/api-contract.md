@@ -58,11 +58,14 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/orders/:parentId/fulfillment/mock-advance` | Local ops packing→in_transit |
 | POST | `/v1/ops/orders/:parentId/fulfillment/mock-deliver` | Local ops POD→delivered |
 | GET | `/v1/settlements` | List settlement batches (local ops) |
+| GET | `/v1/settlements/carryforwards` | List store balance carryforwards + collection requests |
+| POST | `/v1/ops/settlements/mock-carryforward` | Local/mock negative carryforward (optional collection) |
 | POST | `/v1/ops/settlements/mock-create` | Local/mock draft batch for delivered+paid children (optional `store_id`) |
 | GET | `/v1/settlements/:batchId/lines` | Settlement lines for a batch |
 | POST | `/v1/ops/settlements/:batchId/submit` | Local/mock submit draft → `pending_approval` |
 | POST | `/v1/ops/settlements/:batchId/approve` | Local/mock approve (distinct finance actor; maker-checker) |
 | POST | `/v1/ops/settlements/:batchId/dispute` | Local/mock dispute a line (`child_order_id` optional → first line) |
+| POST | `/v1/ops/settlements/:batchId/hold-line` | Local/mock hold a line (`child_order_id` optional → first unheld); recomputes held/net |
 | GET | `/v1/support/tickets` | List support tickets (local ops) |
 | GET | `/v1/me/support/tickets` | List own support tickets (Bearer) |
 | POST | `/v1/me/support/tickets` | Open support ticket (Bearer) |

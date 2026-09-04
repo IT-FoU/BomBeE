@@ -3496,6 +3496,74 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/settlements/carryforwards') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const carryforwards = await services.settlements.listCarryforwards(limit);
+      sendJson(res, 200, { ok: true, carryforwards });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/settlements/mock-carryforward') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        amountLak?: number;
+        amount_lak?: number;
+        sourceBatchId?: string;
+        source_batch_id?: string;
+        collect?: boolean;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const fromBatch = await services.db.query<{ store_id: string }>(
+            `SELECT store_id FROM finance.settlement_batches ORDER BY created_at DESC LIMIT 1`,
+          );
+          storeId = fromBatch.rows[0]?.store_id;
+        }
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 404, { error: 'store_not_found' });
+          return;
+        }
+        const amountLak =
+          typeof body.amountLak === 'number'
+            ? Math.trunc(body.amountLak)
+            : typeof body.amount_lak === 'number'
+              ? Math.trunc(body.amount_lak)
+              : -25000;
+        const created = await services.settlements.recordNegativeCarryForward({
+          storeId,
+          amountLak,
+          sourceBatchId: (body.sourceBatchId ?? body.source_batch_id)?.trim() || undefined,
+          collect: body.collect ?? true,
+        });
+        const carryforwards = await services.settlements.listCarryforwards(50);
+        sendJson(res, 201, {
+          ok: true,
+          ...created,
+          storeId,
+          amountLak,
+          status: 'open',
+          carryforwards,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'carryforward_failed';
+        sendJson(res, message === 'carryforward_must_be_negative' ? 400 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/settlements/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });
@@ -3683,6 +3751,68 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
               ? 409
               : 400;
         sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    const settlementHoldMatch = url.pathname.match(
+      /^\/v1\/ops\/settlements\/([^/]+)\/hold-line$/,
+    );
+    if (req.method === 'POST' && settlementHoldMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const batchId = decodeURIComponent(settlementHoldMatch[1]!);
+      const body = await readJsonBody<{
+        child_order_id?: string;
+        childOrderId?: string;
+        reason?: string;
+      }>(req);
+      try {
+        const batch = await services.db.query<{ id: string }>(
+          `SELECT id FROM finance.settlement_batches WHERE id = $1`,
+          [batchId],
+        );
+        if (!batch.rows[0]) {
+          sendJson(res, 404, { error: 'batch_not_found' });
+          return;
+        }
+        let childOrderId = body.child_order_id ?? body.childOrderId;
+        const lines = await services.settlements.listLines(batchId);
+        if (!childOrderId) {
+          childOrderId = lines.find((l) => !l.held)?.childOrderId ?? lines[0]?.childOrderId;
+        }
+        if (!childOrderId) {
+          sendJson(res, 409, { error: 'no_settlement_lines' });
+          return;
+        }
+        if (!lines.some((l) => l.childOrderId === childOrderId)) {
+          sendJson(res, 404, { error: 'settlement_line_not_found' });
+          return;
+        }
+        const holdReason = body.reason?.trim() || 'local_mock_hold';
+        await services.settlements.holdLine({
+          batchId,
+          childOrderId,
+          reason: holdReason,
+        });
+        const [updatedLines, batches] = await Promise.all([
+          services.settlements.listLines(batchId),
+          services.settlements.listBatches(50),
+        ]);
+        sendJson(res, 200, {
+          ok: true,
+          batchId,
+          childOrderId,
+          held: true,
+          holdReason,
+          lines: updatedLines,
+          batches,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'settlement_hold_failed';
+        sendJson(res, 400, { error: message });
       }
       return;
     }

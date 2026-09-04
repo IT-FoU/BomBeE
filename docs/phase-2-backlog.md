@@ -23,7 +23,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B3 | Legal Lo/En copy human review | KI-12-03 |
 | P2-B4 | Expand OpenAPI from `docs/api-contract.md` | **Done (auth+health)** — `docs/openapi.yaml` |
 | P2-B5 | Performance budgets in CI (bundle size check) | **Done** — `scripts/check-customer-bundle-budget.mjs` in CI |
-| P2-B6 | Richer synthetic seed into local Postgres | After `docker compose` path |
+| P2-B6 | Richer synthetic seed into local Postgres | **Done** — `pnpm seed:sql` → `supabase/seed/generated_staging_qa.sql` |
 
 ## C — Hard rules that stay
 

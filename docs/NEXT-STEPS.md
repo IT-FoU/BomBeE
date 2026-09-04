@@ -22,6 +22,8 @@ Use mock/local only. Do not put Production secrets in git.
 pnpm db:up
 export DATABASE_URL=postgresql://bombee:bombee@127.0.0.1:54322/bombee
 pnpm db:migrate
+pnpm seed:sql
+# then: psql "$DATABASE_URL" -f supabase/seed/generated_staging_qa.sql
 ```
 
 Branch protection (Owner GitHub admin): [`docs/runbooks/branch-protection.md`](./runbooks/branch-protection.md)  

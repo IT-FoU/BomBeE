@@ -19,6 +19,7 @@
     "test:e2e": "pnpm --filter @bombee/customer run test:e2e",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
     "seed:staging-qa": "node scripts/seed-staging-qa.mjs",
+    "seed:sql": "node scripts/generate-local-seed-sql.mjs",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "bash scripts/apply-migrations.sh",

@@ -508,6 +508,24 @@ paths:
           description: Committed
         '409':
           description: Invalid rows
+  /v1/ops/catalog/import/{batchId}/rollback:
+    post:
+      summary: Roll back preview or failed catalog import batch
+      parameters:
+        - in: path
+          name: batchId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rolled back (idempotent replay when already rolled_back)
+        '404':
+          description: Batch not found
+        '409':
+          description: Cannot roll back a committed batch
+        '403':
+          description: Mock ops disabled
   /v1/catalog/media:
     get:
       summary: List product media

@@ -29,6 +29,7 @@ import {
   listCatalogImportBatches,
   previewCatalogImport,
   commitCatalogImport,
+  rollbackCatalogImport,
   listCatalogMedia,
   mockUploadCatalogMedia,
   issueCatalogMediaSignedUrl,
@@ -1408,6 +1409,36 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                         }}
                       >
                         Commit
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setCatalogNote('');
+                          void (async () => {
+                            try {
+                              const result = await rollbackCatalogImport(row.batchId);
+                              if (result.batches) setImportBatches(result.batches);
+                              else setImportBatches(await listCatalogImportBatches(50));
+                              setCatalogNote(
+                                `Rolled back ${row.batchId.slice(0, 8)}… (${result.status})`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'catalog_import_rollback_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Rollback
                       </button>
                     </>
                   ) : null}

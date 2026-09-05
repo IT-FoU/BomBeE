@@ -1098,6 +1098,32 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const catalogImportRollbackMatch = url.pathname.match(
+      /^\/v1\/ops\/catalog\/import\/([^/]+)\/rollback$/,
+    );
+    if (req.method === 'POST' && catalogImportRollbackMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const batchId = decodeURIComponent(catalogImportRollbackMatch[1]!);
+      try {
+        const rolled = await services.catalog.rollbackImport(batchId);
+        const batches = await services.catalog.listImportBatches(50);
+        sendJson(res, 200, { ok: true, ...rolled, batches });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'catalog_import_rollback_failed';
+        const status =
+          message === 'batch_not_found'
+            ? 404
+            : message === 'cannot_rollback_committed'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/catalog/media') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

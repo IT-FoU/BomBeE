@@ -755,6 +755,28 @@ export async function commitCatalogImport(
   return (await res.json()) as { batches?: CatalogImportBatchRow[]; status?: string };
 }
 
+export async function rollbackCatalogImport(
+  batchId: string,
+): Promise<{ batches?: CatalogImportBatchRow[]; status?: string; replay?: boolean }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/catalog/import/${encodeURIComponent(batchId)}/rollback`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_import_rollback_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    batches?: CatalogImportBatchRow[];
+    status?: string;
+    replay?: boolean;
+  };
+}
+
 export type CatalogMediaRow = {
   mediaId: string;
   productId: string | null;

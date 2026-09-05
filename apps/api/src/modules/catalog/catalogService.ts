@@ -521,6 +521,18 @@ export class CatalogService {
   }
 
   async rollbackImport(batchId: string) {
+    const batch = await this.db.query<{ id: string; status: string }>(
+      `SELECT id, status FROM private.catalog_import_batches WHERE id = $1`,
+      [batchId],
+    );
+    const current = batch.rows[0];
+    if (!current) throw new Error('batch_not_found');
+    if (current.status === 'rolled_back') {
+      return { batchId, status: 'rolled_back' as const, replay: true };
+    }
+    if (current.status === 'committed') {
+      throw new Error('cannot_rollback_committed');
+    }
     await this.db.query(
       `UPDATE private.catalog_import_rows SET status = 'rolled_back'
        WHERE batch_id = $1 AND status IN ('valid', 'applied', 'pending')`,
@@ -530,6 +542,7 @@ export class CatalogService {
       `UPDATE private.catalog_import_batches SET status = 'rolled_back' WHERE id = $1`,
       [batchId],
     );
+    return { batchId, status: 'rolled_back' as const, replay: false };
   }
 
   async listImportBatches(limit = 50) {

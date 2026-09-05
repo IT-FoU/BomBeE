@@ -746,6 +746,103 @@ export async function setCatalogVariantStatus(
   return (await res.json()) as { products?: OpsCatalogStatusProduct[]; status?: string };
 }
 
+export async function mockCreateCatalogBrand(
+  input: {
+    slug?: string;
+    name?: string;
+    evidenceStorageKey?: string;
+    verify?: boolean;
+  } = {},
+): Promise<{
+  brandId: string;
+  slug: string;
+  name: string;
+  products?: OpsCatalogStatusProduct[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/catalog/brands/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_brand_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    brandId: string;
+    slug: string;
+    name: string;
+    products?: OpsCatalogStatusProduct[];
+  };
+}
+
+export async function mockCreateCatalogProduct(
+  input: {
+    storeId?: string;
+    categorySlug?: string;
+    brandId?: string;
+    storeProductId?: string;
+    titleLo?: string;
+    titleEn?: string;
+    hasShelfLife?: boolean;
+  } = {},
+): Promise<{
+  productId: string;
+  storeId: string;
+  storeProductId: string;
+  products?: OpsCatalogStatusProduct[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/catalog/products/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_product_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    productId: string;
+    storeId: string;
+    storeProductId: string;
+    products?: OpsCatalogStatusProduct[];
+  };
+}
+
+export async function mockCreateCatalogVariant(
+  input: {
+    productId?: string;
+    storeId?: string;
+    sku?: string;
+    barcode?: string;
+    hasShelfLife?: boolean;
+  } = {},
+): Promise<{
+  variantId: string;
+  productId: string;
+  storeId: string;
+  sku: string;
+  products?: OpsCatalogStatusProduct[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/catalog/variants/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `catalog_variant_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    variantId: string;
+    productId: string;
+    storeId: string;
+    sku: string;
+    products?: OpsCatalogStatusProduct[];
+  };
+}
+
+
 export type CatalogImportBatchRow = {
   batchId: string;
   storeId: string;

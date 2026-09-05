@@ -489,6 +489,35 @@ paths:
           description: Product + variant status rows
         '403':
           description: Mock ops disabled
+  /v1/ops/catalog/brands/mock-create:
+    post:
+      summary: Local mock create brand
+      responses:
+        '201':
+          description: Brand created
+        '403':
+          description: Mock ops disabled
+  /v1/ops/catalog/products/mock-create:
+    post:
+      summary: Local mock create draft product
+      responses:
+        '201':
+          description: Product created
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No active store
+  /v1/ops/catalog/variants/mock-create:
+    post:
+      summary: Local mock create draft variant
+      responses:
+        '201':
+          description: Variant created
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No draft product
+
   /v1/ops/catalog/products/{id}/status:
     post:
       summary: Set product lifecycle status (mock ops)

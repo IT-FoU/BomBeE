@@ -1049,6 +1049,192 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/catalog/brands/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        slug?: string;
+        name?: string;
+        evidenceStorageKey?: string;
+        evidence_storage_key?: string;
+        verify?: boolean;
+      }>(req);
+      try {
+        const slug =
+          body.slug?.trim() ||
+          `brand-${Date.now().toString(36)}`;
+        const name = body.name?.trim() || `Mock Brand ${slug}`;
+        if (slug.length < 2 || name.length < 2) {
+          sendJson(res, 400, { error: 'invalid_brand' });
+          return;
+        }
+        const brandId = await services.catalog.createBrand({
+          slug,
+          name,
+          evidenceStorageKey:
+            body.evidenceStorageKey ?? body.evidence_storage_key,
+          verify: body.verify ?? Boolean(body.evidenceStorageKey ?? body.evidence_storage_key),
+        });
+        const products = await services.catalog.listOpsProducts(50);
+        sendJson(res, 201, { ok: true, brandId, slug, name, products });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'brand_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/catalog/products/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        categorySlug?: string;
+        category_slug?: string;
+        brandId?: string;
+        brand_id?: string;
+        storeProductId?: string;
+        store_product_id?: string;
+        claimsAuthenticBrand?: boolean;
+        claims_authentic_brand?: boolean;
+        hasShelfLife?: boolean;
+        has_shelf_life?: boolean;
+        titleLo?: string;
+        title_lo?: string;
+        titleEn?: string;
+        title_en?: string;
+        descriptionLo?: string;
+        descriptionEn?: string;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 409, { error: 'no_active_store' });
+          return;
+        }
+        const suffix = Date.now().toString(36);
+        const storeProductId =
+          (body.storeProductId ?? body.store_product_id)?.trim() || `MOCK-${suffix}`;
+        const titleLo = (body.titleLo ?? body.title_lo)?.trim() || `ສິນຄ້າທົດສອບ ${suffix}`;
+        const titleEn = (body.titleEn ?? body.title_en)?.trim() || `Mock Product ${suffix}`;
+        const productId = await services.catalog.createProduct({
+          storeId,
+          categorySlug: (body.categorySlug ?? body.category_slug)?.trim() || 'general',
+          brandId: (body.brandId ?? body.brand_id)?.trim() || undefined,
+          storeProductId,
+          claimsAuthenticBrand:
+            body.claimsAuthenticBrand ?? body.claims_authentic_brand ?? false,
+          hasShelfLife: body.hasShelfLife ?? body.has_shelf_life ?? false,
+          copy: {
+            lo: { title: titleLo, description: body.descriptionLo },
+            en: { title: titleEn, description: body.descriptionEn },
+          },
+        });
+        const products = await services.catalog.listOpsProducts(50);
+        sendJson(res, 201, {
+          ok: true,
+          productId,
+          storeId,
+          storeProductId,
+          products,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'product_create_failed';
+        sendJson(res, message === 'prohibited_category' ? 400 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/catalog/variants/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        productId?: string;
+        product_id?: string;
+        storeId?: string;
+        store_id?: string;
+        sku?: string;
+        barcode?: string;
+        hasShelfLife?: boolean;
+        has_shelf_life?: boolean;
+        productionDate?: string;
+        production_date?: string;
+        expiryDate?: string;
+        expiry_date?: string;
+        ingredients?: string;
+        warnings?: string;
+        attributes?: Record<string, string>;
+      }>(req);
+      try {
+        let productId = (body.productId ?? body.product_id)?.trim();
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!productId) {
+          const draft = await services.db.query<{ id: string; store_id: string }>(
+            `SELECT id, store_id FROM app.products WHERE status = 'draft' ORDER BY created_at DESC LIMIT 1`,
+          );
+          productId = draft.rows[0]?.id;
+          storeId = storeId || draft.rows[0]?.store_id;
+        }
+        if (!productId) {
+          sendJson(res, 409, { error: 'no_draft_product' });
+          return;
+        }
+        if (!storeId) {
+          const prod = await services.db.query<{ store_id: string }>(
+            `SELECT store_id FROM app.products WHERE id = $1`,
+            [productId],
+          );
+          storeId = prod.rows[0]?.store_id;
+        }
+        if (!storeId) {
+          sendJson(res, 404, { error: 'product_not_found' });
+          return;
+        }
+        const suffix = Date.now().toString(36);
+        const sku = body.sku?.trim() || `SKU-${suffix}`;
+        const hasShelfLife = body.hasShelfLife ?? body.has_shelf_life ?? false;
+        const variantId = await services.catalog.createVariant({
+          productId,
+          storeId,
+          sku,
+          barcode: body.barcode?.trim() || undefined,
+          attributes: body.attributes,
+          hasShelfLife,
+          productionDate: body.productionDate ?? body.production_date,
+          expiryDate: body.expiryDate ?? body.expiry_date,
+          ingredients: body.ingredients,
+          warnings: body.warnings,
+        });
+        const products = await services.catalog.listOpsProducts(50);
+        sendJson(res, 201, {
+          ok: true,
+          variantId,
+          productId,
+          storeId,
+          sku,
+          products,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'variant_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/catalog/import/batches') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

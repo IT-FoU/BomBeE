@@ -25,6 +25,9 @@ import {
   listCatalogProducts,
   listOpsCatalogProducts,
   setCatalogProductStatus,
+  mockCreateCatalogBrand,
+  mockCreateCatalogProduct,
+  mockCreateCatalogVariant,
   setCatalogVariantStatus,
   listCatalogImportBatches,
   previewCatalogImport,
@@ -1422,8 +1425,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ສິນຄ້າ</span>
             </h2>
             <p className="lede">
-              Active storefront products plus ops status (activate/pause/archive). Preview/commit
-              imports create drafts — activate product and variant to publish.
+              Active storefront products plus ops status (activate/pause/archive). Mock-create or
+              preview/commit imports make drafts — activate product and variant to publish.
             </p>
             {catalogNote ? (
               <p className="lede" role="status">
@@ -1452,6 +1455,51 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh catalog
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setCatalogNote('');
+                void (async () => {
+                  try {
+                    const brand = await mockCreateCatalogBrand({
+                      name: 'BO Mock Brand',
+                      evidenceStorageKey: `private/brands/bo-${Date.now()}.pdf`,
+                      verify: true,
+                    });
+                    const product = await mockCreateCatalogProduct({
+                      brandId: brand.brandId,
+                      titleEn: 'BO Mock Product',
+                      titleLo: 'ສິນຄ້າ BO',
+                      categorySlug: 'general',
+                    });
+                    const variant = await mockCreateCatalogVariant({
+                      productId: product.productId,
+                      storeId: product.storeId,
+                      sku: `BO-${Date.now().toString(36).toUpperCase()}`,
+                      hasShelfLife: false,
+                    });
+                    if (variant.products) setOpsCatalogProducts(variant.products);
+                    else setOpsCatalogProducts(await listOpsCatalogProducts(50));
+                    setCatalogProducts(await listCatalogProducts(50));
+                    setCatalogNote(
+                      `Created brand ${brand.brandId.slice(0, 8)}… · product ${product.productId.slice(0, 8)}… · variant ${variant.variantId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'catalog_mock_create_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create product+variant
             </button>{' '}
             <button
               type="button"

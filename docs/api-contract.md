@@ -39,6 +39,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/catalog/categories` | Non-prohibited categories |
 | GET | `/v1/catalog/products` | Active products + approved prices + `availableQty` (local seed) |
 | GET | `/v1/ops/catalog/products` | Ops product/variant status list (`status=all\|draft\|active…`) |
+| POST | `/v1/ops/catalog/brands/mock-create` | Local/mock create brand |
+| POST | `/v1/ops/catalog/products/mock-create` | Local/mock create draft product |
+| POST | `/v1/ops/catalog/variants/mock-create` | Local/mock create draft variant |
 | POST | `/v1/ops/catalog/products/:id/status` | Set product status (`draft\|pending_approval\|active\|paused\|archived`) |
 | POST | `/v1/ops/catalog/variants/:id/status` | Set variant status |
 | GET | `/v1/catalog/import/batches` | List catalog import batches (local ops) |

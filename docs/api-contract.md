@@ -18,6 +18,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/stores` | List stores |
 | POST | `/v1/stores` | Create store draft (`onboarding`) |
 | GET | `/v1/stores/documents` | List store onboarding documents (optional `storeId`) |
+| GET | `/v1/stores/contacts` | List store contacts (optional `storeId`) |
+| POST | `/v1/ops/stores/:storeId/contacts/mock-add` | Local/mock add store contact |
 | GET | `/v1/stores/document-expiry-alerts` | List document expiry alerts (`filter=all|due|expired`) |
 | POST | `/v1/ops/stores/documents/mock-evaluate-expiry` | Local/mock backdate/verify expired doc + suspend store |
 | GET | `/v1/stores/:storeId/onboarding` | Checklist + docs + fulfillment + activation gate |

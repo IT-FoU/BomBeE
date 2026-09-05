@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 local — store contacts list + mock-add HTTP
 - Phase 2 local — payment bank reconcile + daily totals proof HTTP
 - Phase 2 local — returns append-communication HTTP
 - Phase 2 local — catalog import rollback HTTP

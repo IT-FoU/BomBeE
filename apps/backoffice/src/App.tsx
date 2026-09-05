@@ -44,8 +44,10 @@ import {
   listSettlementBatches,
   listStores,
   listStoreDocuments,
+  listStoreContacts,
   listDocumentExpiryAlerts,
   mockEvaluateDocumentExpiry,
+  mockAddStoreContact,
   fetchStoreOnboarding,
   mockUploadStoreDocument,
   verifyStoreDocument,
@@ -150,6 +152,7 @@ import {
   type IssuedInvite,
   type IssuedStore,
   type StoreDocumentRow,
+  type StoreContactRow,
   type DocumentExpiryAlertRow,
   type StoreOnboarding,
   type OpsCatalogProduct,
@@ -246,6 +249,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [storeDraftName, setStoreDraftName] = useState('');
   const [storeDrafts, setStoreDrafts] = useState<IssuedStore[]>([]);
   const [storeDocuments, setStoreDocuments] = useState<StoreDocumentRow[]>([]);
+  const [storeContacts, setStoreContacts] = useState<StoreContactRow[]>([]);
   const [docExpiryAlerts, setDocExpiryAlerts] = useState<DocumentExpiryAlertRow[]>([]);
   const [storeOnboarding, setStoreOnboarding] = useState<StoreOnboarding | null>(null);
   const [onboardNote, setOnboardNote] = useState('');
@@ -335,6 +339,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           invites,
           stores,
           storeDocs,
+          contactRows,
           expiryAlertRows,
           cod,
           codProfileRows,
@@ -380,6 +385,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listInvites(),
           listStores(),
           listStoreDocuments(50),
+          listStoreContacts(50),
           listDocumentExpiryAlerts(50),
           listCodShipments(),
           listCodProfiles(50),
@@ -425,6 +431,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setIssuedInvites(invites);
         setStoreDrafts(stores);
         setStoreDocuments(storeDocs);
+        setStoreContacts(contactRows);
         setDocExpiryAlerts(expiryAlertRows);
         setCodShipments(cod);
         setCodProfiles(codProfileRows);
@@ -1224,6 +1231,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   try {
                     setStoreDrafts(await listStores());
                     setStoreDocuments(await listStoreDocuments(50));
+                    setStoreContacts(await listStoreContacts(50));
                     setDocExpiryAlerts(await listDocumentExpiryAlerts(50));
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : 'stores_refresh_failed');
@@ -1234,7 +1242,72 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh stores & docs
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setOnboardNote('');
+                void (async () => {
+                  try {
+                    const store = storeDrafts[0];
+                    if (!store) {
+                      setFormError('no_store_draft');
+                      return;
+                    }
+                    const result = await mockAddStoreContact(store.id, {
+                      contactType: 'owner',
+                      fullName: `Owner ${store.code}`,
+                      phoneE164: '+8562083000069',
+                      isPrimary: true,
+                    });
+                    setStoreContacts(result.contacts);
+                    if (result.onboarding) setStoreOnboarding(result.onboarding);
+                    setOnboardNote(
+                      `Contact ${result.contactId.slice(0, 8)}… · ${store.code} · ${result.contacts.length} contact(s)`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'store_contact_add_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock add store contact
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setStoreContacts(await listStoreContacts(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'store_contacts_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh contacts
             </button>
+            <ul className="roles" aria-label="Store contacts">
+              {storeContacts.length === 0 ? <li>No store contacts yet</li> : null}
+              {storeContacts.map((row) => (
+                <li key={row.contactId}>
+                  {row.contactType}
+                  {row.isPrimary ? ' · primary' : ''} · {row.fullName} · {row.phoneE164} · store{' '}
+                  {row.storeId.slice(0, 8)}…
+                </li>
+              ))}
+            </ul>
             {payoutNote ? (
               <p className="lede" role="status">
                 {payoutNote}

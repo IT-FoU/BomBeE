@@ -119,6 +119,68 @@ export async function listStoreDocuments(
   return body.documents;
 }
 
+export type StoreContactRow = {
+  contactId: string;
+  storeId: string;
+  contactType: string;
+  fullName: string;
+  phoneE164: string;
+  email: string | null;
+  isPrimary: boolean;
+  createdAt: string;
+};
+
+export async function listStoreContacts(
+  limit = 50,
+  storeId?: string,
+): Promise<StoreContactRow[]> {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (storeId) qs.set('storeId', storeId);
+  const res = await fetch(`${apiBaseUrl()}/v1/stores/contacts?${qs}`);
+  if (!res.ok) {
+    throw new Error(`store_contacts_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { contacts: StoreContactRow[] };
+  return body.contacts;
+}
+
+export async function mockAddStoreContact(
+  storeId: string,
+  input: {
+    contactType?: 'owner' | 'ops' | 'finance' | 'support';
+    fullName?: string;
+    phoneE164?: string;
+    isPrimary?: boolean;
+  } = {},
+): Promise<{
+  contactId: string;
+  contacts: StoreContactRow[];
+  onboarding?: StoreOnboarding;
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/stores/${encodeURIComponent(storeId)}/contacts/mock-add`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contactType: input.contactType ?? 'owner',
+        fullName: input.fullName ?? 'Mock Owner',
+        phoneE164: input.phoneE164 ?? '+8562083000069',
+        isPrimary: input.isPrimary ?? true,
+      }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_contact_add_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    contactId: string;
+    contacts: StoreContactRow[];
+    onboarding?: StoreOnboarding;
+  };
+}
+
 export type DocumentExpiryAlertRow = {
   alertId: string;
   documentId: string;

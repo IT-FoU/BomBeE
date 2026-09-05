@@ -179,6 +179,56 @@ paths:
       responses:
         '200':
           description: Documents array
+  /v1/stores/contacts:
+    get:
+      summary: List store contacts
+      parameters:
+        - in: query
+          name: storeId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Contacts array
+  /v1/ops/stores/{storeId}/contacts/mock-add:
+    post:
+      summary: Local mock add store contact
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contactType:
+                  type: string
+                  enum: [owner, ops, finance, support]
+                fullName:
+                  type: string
+                phoneE164:
+                  type: string
+                isPrimary:
+                  type: boolean
+      responses:
+        '201':
+          description: Contact created
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Store not found
+        '409':
+          description: Primary owner already exists
   /v1/stores/document-expiry-alerts:
     get:
       summary: List document expiry alerts

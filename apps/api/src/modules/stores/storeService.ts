@@ -87,18 +87,66 @@ export class StoreService {
     phoneE164: string;
     isPrimary?: boolean;
   }) {
-    await this.db.query(
-      `INSERT INTO app.store_contacts
-        (store_id, contact_type, full_name, phone_e164, is_primary)
-       VALUES ($1,$2,$3,$4,$5)`,
-      [
-        input.storeId,
-        input.contactType,
-        input.fullName,
-        input.phoneE164,
-        input.isPrimary ?? false,
-      ],
+    try {
+      const row = await this.db.query<{ id: string }>(
+        `INSERT INTO app.store_contacts
+          (store_id, contact_type, full_name, phone_e164, is_primary)
+         VALUES ($1,$2,$3,$4,$5)
+         RETURNING id`,
+        [
+          input.storeId,
+          input.contactType,
+          input.fullName,
+          input.phoneE164,
+          input.isPrimary ?? false,
+        ],
+      );
+      return row.rows[0]!.id;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('store_contacts_one_primary_owner')) {
+        throw new Error('primary_owner_exists');
+      }
+      throw err;
+    }
+  }
+
+  async listContacts(input: { storeId?: string; limit?: number } = {}) {
+    const capped = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      store_id: string;
+      contact_type: string;
+      full_name: string;
+      phone_e164: string;
+      email: string | null;
+      is_primary: boolean;
+      created_at: string;
+    }>(
+      input.storeId
+        ? `SELECT id, store_id, contact_type, full_name, phone_e164, email,
+                  is_primary, created_at::text
+           FROM app.store_contacts
+           WHERE store_id = $1
+           ORDER BY created_at DESC
+           LIMIT $2`
+        : `SELECT id, store_id, contact_type, full_name, phone_e164, email,
+                  is_primary, created_at::text
+           FROM app.store_contacts
+           ORDER BY created_at DESC
+           LIMIT $1`,
+      input.storeId ? [input.storeId, capped] : [capped],
     );
+    return rows.rows.map((r) => ({
+      contactId: r.id,
+      storeId: r.store_id,
+      contactType: r.contact_type,
+      fullName: r.full_name,
+      phoneE164: r.phone_e164,
+      email: r.email,
+      isPrimary: r.is_primary,
+      createdAt: r.created_at,
+    }));
   }
 
   async addFulfillmentLocation(input: {

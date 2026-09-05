@@ -258,6 +258,88 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/stores/contacts') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const storeId = url.searchParams.get('storeId')?.trim() || undefined;
+      const contacts = await services.stores.listContacts({ storeId, limit });
+      sendJson(res, 200, { ok: true, contacts });
+      return;
+    }
+
+    const storeContactAddMatch = url.pathname.match(
+      /^\/v1\/ops\/stores\/([^/]+)\/contacts\/mock-add$/,
+    );
+    if (req.method === 'POST' && storeContactAddMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const storeId = decodeURIComponent(storeContactAddMatch[1]!);
+      const body = await readJsonBody<{
+        contactType?: string;
+        contact_type?: string;
+        fullName?: string;
+        full_name?: string;
+        phoneE164?: string;
+        phone_e164?: string;
+        isPrimary?: boolean;
+        is_primary?: boolean;
+      }>(req);
+      try {
+        const store = await services.db.query<{ id: string }>(
+          `SELECT id FROM app.stores WHERE id = $1`,
+          [storeId],
+        );
+        if (!store.rows[0]) {
+          sendJson(res, 404, { error: 'store_not_found' });
+          return;
+        }
+        const contactTypeRaw = (body.contactType ?? body.contact_type ?? 'owner').trim();
+        const allowed = new Set(['owner', 'ops', 'finance', 'support']);
+        if (!allowed.has(contactTypeRaw)) {
+          sendJson(res, 400, { error: 'invalid_contact_type' });
+          return;
+        }
+        const fullName = (body.fullName ?? body.full_name ?? '').trim();
+        const phoneE164 = (body.phoneE164 ?? body.phone_e164 ?? '').trim();
+        if (fullName.length < 2) {
+          sendJson(res, 400, { error: 'invalid_full_name' });
+          return;
+        }
+        if (!phoneE164.startsWith('+') || phoneE164.length < 8) {
+          sendJson(res, 400, { error: 'invalid_phone_e164' });
+          return;
+        }
+        const contactId = await services.stores.addContact({
+          storeId,
+          contactType: contactTypeRaw as 'owner' | 'ops' | 'finance' | 'support',
+          fullName,
+          phoneE164,
+          isPrimary: body.isPrimary ?? body.is_primary ?? contactTypeRaw === 'owner',
+        });
+        const contacts = await services.stores.listContacts({ storeId, limit: 50 });
+        const onboarding = await services.stores.getOnboarding(storeId);
+        sendJson(res, 201, {
+          ok: true,
+          contactId,
+          storeId,
+          contacts,
+          onboarding,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'contact_add_failed';
+        const status =
+          message === 'primary_owner_exists'
+            ? 409
+            : message === 'store_not_found'
+              ? 404
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/stores/document-expiry-alerts') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

@@ -30,6 +30,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/stores/:storeId/activate` | Activate store when checklist+fulfillment ready |
 | GET | `/v1/stores/contracts` | List store contract versions (optional `storeId`) |
 | POST | `/v1/ops/stores/contracts/mock-create` | Local/mock immutable contract version |
+| GET | `/v1/stores/order-contract-snapshots` | List order contract snapshots (optional `storeId`) |
+| POST | `/v1/ops/stores/contracts/mock-snapshot` | Local/mock snapshot effective contract onto child order |
 | GET | `/v1/payouts/requests` | List payout change requests + account versions |
 | POST | `/v1/ops/payouts/mock-propose` | Local/mock pending payout account change |
 | POST | `/v1/ops/payouts/:requestId/approve` | Approve payout change (Owner+2FA; 48h hold) |

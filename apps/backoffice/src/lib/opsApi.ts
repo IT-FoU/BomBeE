@@ -2561,6 +2561,59 @@ export async function mockCreateContract(input: {
   };
 }
 
+export type OrderContractSnapshotRow = {
+  snapshotId: string;
+  childOrderId: string;
+  childOrderNumber: string | null;
+  storeId: string;
+  contractVersionId: string;
+  revenueModel: string;
+  markupBps: number | null;
+  commissionBps: number | null;
+  perOrderFeeLak: number | null;
+  settlementCadence: string;
+  customCadenceDays: number | null;
+  snappedAt: string;
+};
+
+export async function listOrderContractSnapshots(
+  limit = 50,
+): Promise<OrderContractSnapshotRow[]> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/stores/order-contract-snapshots?limit=${limit}`,
+  );
+  if (!res.ok) {
+    throw new Error(`order_contract_snapshots_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { snapshots: OrderContractSnapshotRow[] };
+  return body.snapshots;
+}
+
+export async function mockSnapshotOrderContract(input: {
+  childOrderId?: string;
+} = {}): Promise<{
+  childOrderId: string;
+  contractVersionId: string;
+  snapshots: OrderContractSnapshotRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/stores/contracts/mock-snapshot`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      childOrderId: input.childOrderId,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `contract_snapshot_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    childOrderId: string;
+    contractVersionId: string;
+    snapshots: OrderContractSnapshotRow[];
+  };
+}
+
 export type PayoutRequestRow = {
   requestId: string;
   storeId: string;

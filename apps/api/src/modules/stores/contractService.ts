@@ -187,4 +187,56 @@ export class ContractService {
       createdBy: r.created_by,
     }));
   }
+
+  async listOrderContractSnapshots(input: { storeId?: string; limit?: number } = {}) {
+    const capped = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      child_order_id: string;
+      store_id: string;
+      contract_version_id: string;
+      revenue_model: RevenueModel;
+      markup_bps: number | null;
+      commission_bps: number | null;
+      per_order_fee_lak: number | null;
+      settlement_cadence: SettlementCadence;
+      custom_cadence_days: number | null;
+      snapped_at: string;
+      child_order_number: string | null;
+    }>(
+      input.storeId
+        ? `SELECT s.id, s.child_order_id, s.store_id, s.contract_version_id,
+                  s.revenue_model, s.markup_bps, s.commission_bps, s.per_order_fee_lak,
+                  s.settlement_cadence, s.custom_cadence_days, s.snapped_at::text,
+                  co.child_order_number
+           FROM finance.order_contract_snapshots s
+           LEFT JOIN app.child_orders co ON co.id = s.child_order_id
+           WHERE s.store_id = $1
+           ORDER BY s.snapped_at DESC
+           LIMIT $2`
+        : `SELECT s.id, s.child_order_id, s.store_id, s.contract_version_id,
+                  s.revenue_model, s.markup_bps, s.commission_bps, s.per_order_fee_lak,
+                  s.settlement_cadence, s.custom_cadence_days, s.snapped_at::text,
+                  co.child_order_number
+           FROM finance.order_contract_snapshots s
+           LEFT JOIN app.child_orders co ON co.id = s.child_order_id
+           ORDER BY s.snapped_at DESC
+           LIMIT $1`,
+      input.storeId ? [input.storeId, capped] : [capped],
+    );
+    return rows.rows.map((r) => ({
+      snapshotId: r.id,
+      childOrderId: r.child_order_id,
+      childOrderNumber: r.child_order_number,
+      storeId: r.store_id,
+      contractVersionId: r.contract_version_id,
+      revenueModel: r.revenue_model,
+      markupBps: r.markup_bps,
+      commissionBps: r.commission_bps,
+      perOrderFeeLak: r.per_order_fee_lak,
+      settlementCadence: r.settlement_cadence,
+      customCadenceDays: r.custom_cadence_days,
+      snappedAt: r.snapped_at,
+    }));
+  }
 }

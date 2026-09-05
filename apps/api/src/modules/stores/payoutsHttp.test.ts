@@ -116,4 +116,38 @@ describe('payouts/contracts HTTP', () => {
       ),
     ).toBe(true);
   });
+
+  it('snapshots contract terms onto a child order via HTTP', async () => {
+    const before = mockRes();
+    await router(mockReq('GET', '/v1/stores/order-contract-snapshots'), before.res);
+    expect(before.res.statusCode).toBe(200);
+    const beforeCount = (before.body().snapshots as unknown[]).length;
+
+    const snapped = mockRes();
+    await router(mockReq('POST', '/v1/ops/stores/contracts/mock-snapshot', {}), snapped.res);
+    expect(snapped.res.statusCode).toBe(201);
+    expect(snapped.body().ok).toBe(true);
+    expect(snapped.body().childOrderId).toBeTruthy();
+    expect(snapped.body().contractVersionId).toBeTruthy();
+    expect(
+      (snapped.body().snapshots as Array<{ childOrderId: string }>).some(
+        (s) => s.childOrderId === snapped.body().childOrderId,
+      ),
+    ).toBe(true);
+
+    const listed = mockRes();
+    await router(mockReq('GET', '/v1/stores/order-contract-snapshots?limit=50'), listed.res);
+    expect(listed.res.statusCode).toBe(200);
+    expect((listed.body().snapshots as unknown[]).length).toBe(beforeCount + 1);
+
+    const dup = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/stores/contracts/mock-snapshot', {
+        child_order_id: snapped.body().childOrderId,
+      }),
+      dup.res,
+    );
+    expect(dup.res.statusCode).toBe(409);
+    expect(dup.body().error).toBe('contract_snapshot_exists');
+  });
 });

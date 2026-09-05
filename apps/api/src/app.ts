@@ -522,6 +522,164 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/stores/order-contract-snapshots') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const storeId =
+        url.searchParams.get('storeId') ?? url.searchParams.get('store_id') ?? undefined;
+      const snapshots = await services.contracts.listOrderContractSnapshots({
+        storeId: storeId?.trim() || undefined,
+        limit,
+      });
+      sendJson(res, 200, { ok: true, snapshots });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/stores/contracts/mock-snapshot') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        childOrderId?: string;
+        child_order_id?: string;
+        storeId?: string;
+        store_id?: string;
+        orderCreatedAt?: string;
+        order_created_at?: string;
+      }>(req);
+      try {
+        let childOrderId = (body.childOrderId ?? body.child_order_id)?.trim();
+        if (!childOrderId) {
+          const eligible = await services.db.query<{ id: string }>(
+            `SELECT co.id
+             FROM app.child_orders co
+             WHERE NOT EXISTS (
+               SELECT 1 FROM finance.order_contract_snapshots s
+               WHERE s.child_order_id = co.id
+             )
+             ORDER BY co.created_at DESC
+             LIMIT 1`,
+          );
+          childOrderId = eligible.rows[0]?.id;
+        }
+        if (!childOrderId) {
+          const product = await services.db.query<{
+            variant_id: string;
+            store_id: string;
+          }>(
+            `SELECT pv.id AS variant_id, pv.store_id
+             FROM app.product_variants pv
+             JOIN app.products p ON p.id = pv.product_id
+             WHERE p.status = 'active' AND pv.status = 'active'
+             ORDER BY p.created_at
+             LIMIT 1`,
+          );
+          const sell = product.rows[0];
+          if (!sell) {
+            sendJson(res, 409, { error: 'no_active_product' });
+            return;
+          }
+          const customerId = await services.identity.ensureCustomer(
+            '+8562097222082',
+            'Contract Snapshot QA',
+          );
+          const cartId = await services.orders.createCart(customerId);
+          await services.orders.addCartItem(cartId, {
+            storeId: sell.store_id,
+            variantId: sell.variant_id,
+            quantity: 1,
+          });
+          const createdOrder = await services.orders.checkout({
+            cartId,
+            customerIdentityId: customerId,
+            actorIdentityId: customerId,
+            correlationId: crypto.randomUUID(),
+            shippingLakByStore: { [sell.store_id]: 5000 },
+          });
+          childOrderId = createdOrder.childIds[0];
+        }
+        if (!childOrderId) {
+          sendJson(res, 409, { error: 'no_eligible_child' });
+          return;
+        }
+
+        const child = await services.db.query<{
+          store_id: string;
+          created_at: string;
+        }>(
+          `SELECT store_id, created_at::text FROM app.child_orders WHERE id = $1`,
+          [childOrderId],
+        );
+        if (!child.rows[0]) {
+          sendJson(res, 404, { error: 'child_order_not_found' });
+          return;
+        }
+        const storeId =
+          (body.storeId ?? body.store_id)?.trim() || child.rows[0].store_id;
+        const orderCreatedAt =
+          (body.orderCreatedAt ?? body.order_created_at)?.trim() ||
+          child.rows[0].created_at;
+
+        const versions = await services.contracts.listVersions({ storeId, limit: 50 });
+        const hasEffective = versions.some((v) => {
+          const t = Date.parse(orderCreatedAt);
+          const from = Date.parse(v.effectiveFrom);
+          const to = v.effectiveTo ? Date.parse(v.effectiveTo) : Number.POSITIVE_INFINITY;
+          return t >= from && t < to;
+        });
+        if (!hasEffective) {
+          const actorIdentityId = await resolveOpsActor(services);
+          const fromDate = new Date(Date.parse(orderCreatedAt) - 86_400_000);
+          await services.contracts.createVersion({
+            storeId,
+            createdBy: actorIdentityId,
+            terms: {
+              revenueModel: 'commission',
+              commissionBps: 1000,
+              settlementCadence: 'weekly',
+              effectiveFrom: Number.isNaN(fromDate.getTime())
+                ? '2020-01-01T00:00:00.000Z'
+                : fromDate.toISOString(),
+            },
+          });
+        }
+
+        const selected = await services.contracts.snapshotForChildOrder({
+          childOrderId,
+          storeId,
+          orderCreatedAt,
+        });
+        const snapshots = await services.contracts.listOrderContractSnapshots({ limit: 50 });
+        sendJson(res, 201, {
+          ok: true,
+          childOrderId,
+          storeId,
+          orderCreatedAt,
+          contractVersionId: selected.id,
+          revenueModel: selected.revenueModel,
+          commissionBps: selected.commissionBps ?? null,
+          snapshots,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'contract_snapshot_failed';
+        const status =
+          message === 'no_effective_contract'
+            ? 409
+            : message === 'child_order_not_found'
+              ? 404
+              : /unique|duplicate|23505/i.test(message)
+                ? 409
+                : 400;
+        sendJson(res, status, {
+          error: /unique|duplicate|23505/i.test(message)
+            ? 'contract_snapshot_exists'
+            : message,
+        });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/payouts/requests') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

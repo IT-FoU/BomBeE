@@ -118,6 +118,8 @@ import {
   fetchDailyTotalsProof,
   listContracts,
   mockCreateContract,
+  listOrderContractSnapshots,
+  mockSnapshotOrderContract,
   listPayoutRequests,
   mockProposePayout,
   approvePayoutRequest,
@@ -202,6 +204,7 @@ import {
   type ReconMismatchRow,
   type PaymentAdjustmentRow,
   type ContractVersionRow,
+  type OrderContractSnapshotRow,
   type PayoutRequestRow,
   type PayoutAccountRow,
   type AuditEventRow,
@@ -322,6 +325,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [paymentAdjustments, setPaymentAdjustments] = useState<PaymentAdjustmentRow[]>([]);
   const [adjustNote, setAdjustNote] = useState('');
   const [contractVersions, setContractVersions] = useState<ContractVersionRow[]>([]);
+  const [orderContractSnapshots, setOrderContractSnapshots] = useState<
+    OrderContractSnapshotRow[]
+  >([]);
   const [payoutRequests, setPayoutRequests] = useState<PayoutRequestRow[]>([]);
   const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccountRow[]>([]);
   const [payoutNote, setPayoutNote] = useState('');
@@ -404,6 +410,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           mismatchRows,
           adjustmentRows,
           contractRows,
+          contractSnapshotRows,
           payoutBundle,
           auditRows,
           exportRows,
@@ -456,6 +463,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listReconMismatches(50),
           listPaymentAdjustments(50),
           listContracts(50),
+          listOrderContractSnapshots(50),
           listPayoutRequests(50),
           listAuditEvents(50),
           listExports(50),
@@ -508,6 +516,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setReconMismatches(mismatchRows);
         setPaymentAdjustments(adjustmentRows);
         setContractVersions(contractRows);
+        setOrderContractSnapshots(contractSnapshotRows);
         setPayoutRequests(payoutBundle.requests);
         setPayoutAccounts(payoutBundle.accounts);
         setAuditEvents(auditRows);
@@ -1568,6 +1577,18 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 </li>
               ))}
             </ul>
+            <ul className="roles" aria-label="Order contract snapshots">
+              {orderContractSnapshots.length === 0 ? (
+                <li>No order contract snapshots yet</li>
+              ) : null}
+              {orderContractSnapshots.map((row) => (
+                <li key={row.snapshotId}>
+                  {row.childOrderNumber ?? row.childOrderId.slice(0, 8)} · {row.revenueModel}
+                  {row.commissionBps != null ? ` · ${row.commissionBps}bps` : ''} · store{' '}
+                  {row.storeId.slice(0, 8)}… · {row.snappedAt}
+                </li>
+              ))}
+            </ul>
             <button
               type="button"
               className="cta"
@@ -1597,9 +1618,37 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               disabled={formBusy}
               onClick={() => {
                 setFormBusy(true);
+                setFormError('');
+                setPayoutNote('');
+                void (async () => {
+                  try {
+                    const result = await mockSnapshotOrderContract();
+                    setOrderContractSnapshots(result.snapshots);
+                    setPayoutNote(
+                      `Contract snapshot for child ${result.childOrderId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'contract_snapshot_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock snapshot order contract
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
                 void (async () => {
                   try {
                     setContractVersions(await listContracts(50));
+                    setOrderContractSnapshots(await listOrderContractSnapshots(50));
                     const payouts = await listPayoutRequests(50);
                     setPayoutRequests(payouts.requests);
                     setPayoutAccounts(payouts.accounts);

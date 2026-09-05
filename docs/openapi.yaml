@@ -378,6 +378,44 @@ paths:
           description: Contract created
         '403':
           description: Mock ops disabled
+  /v1/stores/order-contract-snapshots:
+    get:
+      summary: List order contract snapshots
+      parameters:
+        - in: query
+          name: storeId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Snapshots array
+  /v1/ops/stores/contracts/mock-snapshot:
+    post:
+      summary: Local/mock snapshot effective contract terms onto a child order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                store_id:
+                  type: string
+                order_created_at:
+                  type: string
+      responses:
+        '201':
+          description: Snapshot created; list snapshot
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No eligible child or snapshot already exists
   /v1/payouts/requests:
     get:
       summary: List payout change requests and account versions

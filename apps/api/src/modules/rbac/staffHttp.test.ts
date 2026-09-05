@@ -187,4 +187,49 @@ describe('staff HTTP', () => {
     expect(missing.body().error).toBe('staff_profile_not_found');
   });
 
+
+  it('revokes all sessions for a staff identity via mock-revoke-sessions', async () => {
+    const listed = mockRes();
+    await router(mockReq('GET', '/v1/staff'), listed.res);
+    expect(listed.res.statusCode).toBe(200);
+    const staff = listed.body().staff as Array<{ identityId: string; subject: string }>;
+    const maker = staff.find((s) => s.subject === 'staff:local-catalog-maker');
+    expect(maker?.identityId).toBeTruthy();
+
+    await services.identity.createSession({
+      authIdentityId: maker!.identityId,
+      audience: 'backoffice',
+      ttlMs: 60 * 60_000,
+    });
+    await services.identity.createSession({
+      authIdentityId: maker!.identityId,
+      audience: 'backoffice',
+      ttlMs: 60 * 60_000,
+    });
+
+    const revoked = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/identity/mock-revoke-sessions', {
+        identity_id: maker!.identityId,
+        reason: 'qa_revoke_all',
+      }),
+      revoked.res,
+    );
+    expect(revoked.res.statusCode).toBe(200);
+    expect(revoked.body().ok).toBe(true);
+    expect(revoked.body().identityId).toBe(maker!.identityId);
+    expect(revoked.body().revokedCount).toBe(2);
+    expect(revoked.body().reason).toBe('qa_revoke_all');
+
+    const again = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/identity/mock-revoke-sessions', {
+        subject: 'staff:local-catalog-maker',
+      }),
+      again.res,
+    );
+    expect(again.res.statusCode).toBe(200);
+    expect(again.body().revokedCount).toBe(0);
+  });
+
 });

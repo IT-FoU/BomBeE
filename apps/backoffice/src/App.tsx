@@ -135,6 +135,7 @@ import {
   mockEnsureEgoProfiles,
   listStaffDirectory,
   mockLockStaff,
+  mockRevokeAllSessions,
   listOwnerRecoveryRequests,
   mockCreateOwnerRecoveryRequest,
   listDevices,
@@ -782,7 +783,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </h2>
             <p className="lede">
               Role catalog, local staff directory, mock role assign, mock lock (non-owner),
-              unlock (Owner actor), owner recovery requests, and device registration.
+              mock revoke-all sessions, unlock (Owner actor), owner recovery requests, and device
+              registration.
             </p>
             {staffNote ? <p className="lede">{staffNote}</p> : null}
             <ul className="roles" aria-label="Standard staff roles">
@@ -902,6 +904,35 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Mock lock (catalog maker)
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                void (async () => {
+                  try {
+                    const result = await mockRevokeAllSessions({
+                      reason: 'bo_mock_revoke_all',
+                    });
+                    if (result.roles) setStaffRoles(result.roles);
+                    if (result.staff) setStaffDirectory(result.staff);
+                    setStaffNote(
+                      `Revoked ${result.revokedCount} session(s) for ${result.subject ?? result.identityId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'staff_revoke_sessions_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock revoke all sessions
             </button>{' '}
             <button
               type="button"

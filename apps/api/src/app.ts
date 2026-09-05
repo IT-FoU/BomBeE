@@ -4216,6 +4216,52 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/ops/identity/mock-revoke-sessions') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        identityId?: string;
+        identity_id?: string;
+        subject?: string;
+        reason?: string;
+      }>(req);
+      try {
+        const staff = await services.identity.listStaffDirectory(100);
+        const identityId = (body.identityId ?? body.identity_id)?.trim();
+        const subject = body.subject?.trim();
+        const target =
+          (identityId ? staff.find((s) => s.identityId === identityId) : undefined) ??
+          (subject ? staff.find((s) => s.subject === subject) : undefined) ??
+          staff.find((s) => s.subject === 'staff:local-catalog-maker') ??
+          staff.find((s) => !s.roles.includes('owner'));
+        if (!target) {
+          sendJson(res, 404, { error: 'staff_not_found' });
+          return;
+        }
+        const reason = (body.reason ?? 'mock_revoke_all').trim() || 'mock_revoke_all';
+        const revoked = await services.identity.revokeAllSessions(target.identityId, reason);
+        const [roles, directory] = await Promise.all([
+          Promise.resolve(listRoleCatalog()),
+          services.identity.listStaffDirectory(50),
+        ]);
+        sendJson(res, 200, {
+          ok: true,
+          identityId: target.identityId,
+          subject: target.subject,
+          reason,
+          revokedCount: revoked.revokedCount,
+          roles,
+          staff: directory,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'identity_revoke_sessions_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     const staffUnlockMatch = url.pathname.match(/^\/v1\/ops\/staff\/([^/]+)\/unlock$/);
     if (req.method === 'POST' && staffUnlockMatch) {
       if (!mockOpsAllowed(env)) {

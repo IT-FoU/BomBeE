@@ -2108,6 +2108,29 @@ paths:
           description: Mock ops disabled
         '409':
           description: No owner identity available
+  /v1/ops/identity/mock-revoke-sessions:
+    post:
+      summary: Local/mock revoke all active sessions for a staff identity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identity_id:
+                  type: string
+                subject:
+                  type: string
+                reason:
+                  type: string
+                  default: mock_revoke_all
+      responses:
+        '200':
+          description: Sessions revoked; staff directory snapshot
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Staff identity not found
   /v1/ops/identity/mock-lock:
     post:
       summary: Local/mock lock a non-owner staff identity (failed-login threshold)

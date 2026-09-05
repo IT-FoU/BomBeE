@@ -3102,6 +3102,41 @@ export async function mockLockStaff(input: {
   };
 }
 
+export async function mockRevokeAllSessions(input: {
+  identityId?: string;
+  subject?: string;
+  reason?: string;
+} = {}): Promise<{
+  identityId: string;
+  subject?: string;
+  reason: string;
+  revokedCount: number;
+  roles?: StaffRoleCatalogRow[];
+  staff?: StaffDirectoryRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/identity/mock-revoke-sessions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      identity_id: input.identityId,
+      subject: input.subject,
+      reason: input.reason,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `staff_revoke_sessions_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    identityId: string;
+    subject?: string;
+    reason: string;
+    revokedCount: number;
+    roles?: StaffRoleCatalogRow[];
+    staff?: StaffDirectoryRow[];
+  };
+}
+
 export async function unlockStaff(
   identityId: string,
   input: { reason?: string } = {},

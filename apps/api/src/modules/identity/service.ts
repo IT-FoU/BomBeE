@@ -342,12 +342,14 @@ export class IdentityService {
   }
 
   async revokeAllSessions(authIdentityId: string, reason: string) {
-    await this.db.query(
+    const result = await this.db.query<{ id: string }>(
       `UPDATE security.sessions
        SET revoked_at = timezone('utc', now()), revoke_reason = $2
-       WHERE auth_identity_id = $1 AND revoked_at IS NULL`,
+       WHERE auth_identity_id = $1 AND revoked_at IS NULL
+       RETURNING id`,
       [authIdentityId, reason],
     );
+    return { revokedCount: result.rows.length };
   }
 
   async recordFailedLogin(authIdentityId: string) {

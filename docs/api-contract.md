@@ -139,7 +139,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/integrations` | Integration Center status (mode flags, checklist, EGO store rows) |
 | POST | `/v1/ops/integrations/ego/mock-ensure` | Local/mock ensure disabled EGO profiles for active stores |
 | GET | `/v1/staff` | Role catalog defaults + staff directory (local ops) |
-| POST | `/v1/ops/identity/mock-lock` | Local/mock lock non-owner staff (default catalog maker; 5 failed logins) |
+| POST | `/v1/ops/identity/mock-revoke-sessions` | Local/mock revoke all sessions for a staff identity |
+| `/v1/ops/identity/mock-lock` | Local/mock lock non-owner staff (default catalog maker; 5 failed logins) |
 | GET | `/v1/identity/owner-recovery-requests` | List owner recovery requests (local ops) |
 | POST | `/v1/ops/identity/owner-recovery/mock-create` | Local/mock create pending owner recovery request |
 | GET | `/v1/identity/devices` | List registered devices (local ops) |

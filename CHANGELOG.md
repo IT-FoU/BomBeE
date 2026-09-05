@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 local — identity mock-revoke-all-sessions HTTP
 - Phase 2 local — delivery mock-handoff + mock-record-pod HTTP
 - Phase 2 local — delivery list + mock-create HTTP
 - Phase 2 local — packing mark-packed HTTP

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 local — device register list + mock-create HTTP
 - Phase 2 local — owner recovery list + mock-create HTTP
 - Phase 2 local — lot allocation evaluate + expiry alerts HTTP
 - Phase 2 local — courier list + mock-create HTTP

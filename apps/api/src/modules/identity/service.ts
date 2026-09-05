@@ -237,6 +237,44 @@ export class IdentityService {
     return { deviceId, isNew: true as const };
   }
 
+  async listDevices(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      auth_identity_id: string;
+      subject: string | null;
+      display_name: string | null;
+      device_fingerprint: string;
+      user_agent: string | null;
+      ip: string | null;
+      trusted: boolean;
+      first_seen_at: string;
+      last_seen_at: string;
+    }>(
+      `SELECT d.id, d.auth_identity_id, i.subject, sp.display_name,
+              d.device_fingerprint, d.user_agent, d.ip::text,
+              d.trusted, d.first_seen_at::text, d.last_seen_at::text
+       FROM security.devices d
+       JOIN security.auth_identities i ON i.id = d.auth_identity_id
+       LEFT JOIN app.staff_profiles sp ON sp.auth_identity_id = d.auth_identity_id
+       ORDER BY d.last_seen_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      deviceId: r.id,
+      authIdentityId: r.auth_identity_id,
+      subject: r.subject,
+      displayName: r.display_name,
+      fingerprint: r.device_fingerprint,
+      userAgent: r.user_agent,
+      ip: r.ip,
+      trusted: r.trusted,
+      firstSeenAt: r.first_seen_at,
+      lastSeenAt: r.last_seen_at,
+    }));
+  }
+
   async createSession(input: {
     authIdentityId: string;
     deviceId?: string;

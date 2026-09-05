@@ -3772,6 +3772,65 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/identity/devices') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const devices = await services.identity.listDevices(limit);
+      sendJson(res, 200, { ok: true, devices });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/identity/devices/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        authIdentityId?: string;
+        auth_identity_id?: string;
+        fingerprint?: string;
+        userAgent?: string;
+        user_agent?: string;
+        ip?: string;
+      }>(req);
+      try {
+        let authIdentityId = (body.authIdentityId ?? body.auth_identity_id)?.trim();
+        if (!authIdentityId) {
+          const staff = await services.identity.listStaffDirectory(100);
+          const target =
+            staff.find((s) => s.subject === 'staff:local-catalog-maker') ??
+            staff.find((s) => !s.roles.includes('owner')) ??
+            staff[0];
+          authIdentityId = target?.identityId;
+        }
+        if (!authIdentityId) {
+          sendJson(res, 409, { error: 'no_auth_identity' });
+          return;
+        }
+        const fingerprint =
+          body.fingerprint?.trim() ||
+          `mock-fp-${Date.now().toString(36)}`;
+        const registered = await services.identity.registerDevice({
+          authIdentityId,
+          fingerprint,
+          userAgent: (body.userAgent ?? body.user_agent)?.trim() || 'BomBee-BO/mock',
+          ip: body.ip?.trim() || '127.0.0.1',
+        });
+        const devices = await services.identity.listDevices(50);
+        sendJson(res, 201, {
+          ok: true,
+          ...registered,
+          authIdentityId,
+          fingerprint,
+          devices,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'device_register_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/identity/mock-lock') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

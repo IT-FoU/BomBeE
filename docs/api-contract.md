@@ -137,6 +137,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/identity/mock-lock` | Local/mock lock non-owner staff (default catalog maker; 5 failed logins) |
 | GET | `/v1/identity/owner-recovery-requests` | List owner recovery requests (local ops) |
 | POST | `/v1/ops/identity/owner-recovery/mock-create` | Local/mock create pending owner recovery request |
+| GET | `/v1/identity/devices` | List registered devices (local ops) |
+| POST | `/v1/ops/identity/devices/mock-create` | Local/mock register device (idempotent fingerprint) |
 | POST | `/v1/ops/staff/:identityId/unlock` | Unlock locked staff (Owner actor; no self/owner unlock) |
 | POST | `/v1/ops/staff/:staffProfileId/roles/mock-assign` | Local/mock assign APP_ROLE to staff profile |
 | GET | `/v1/reports/dashboard` | Live dashboard KPIs (local ops; optional `store_id`) |

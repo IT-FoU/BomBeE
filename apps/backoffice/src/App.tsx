@@ -132,6 +132,8 @@ import {
   mockLockStaff,
   listOwnerRecoveryRequests,
   mockCreateOwnerRecoveryRequest,
+  listDevices,
+  mockRegisterDevice,
   unlockStaff,
   mockAssignStaffRole,
   fetchDashboardKpis,
@@ -199,6 +201,7 @@ import {
   type IntegrationsStatus,
   type StaffDirectoryRow,
   type OwnerRecoveryRequestRow,
+  type DeviceRow,
   type StaffRoleCatalogRow,
   type DashboardKpis,
   type PaymentsReconcile,
@@ -323,6 +326,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [staffDirectory, setStaffDirectory] = useState<StaffDirectoryRow[]>([]);
   const [staffNote, setStaffNote] = useState('');
   const [ownerRecoveryRequests, setOwnerRecoveryRequests] = useState<OwnerRecoveryRequestRow[]>([]);
+  const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [dashboardKpis, setDashboardKpis] = useState<DashboardKpis | null>(null);
   const [paymentsReconcile, setPaymentsReconcile] = useState<PaymentsReconcile | null>(null);
   const [dashboardNote, setDashboardNote] = useState('');
@@ -391,6 +395,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           integrationsStatus,
           staffBundle,
           ownerRecoveryRows,
+          deviceRows,
           kpis,
           reconcile,
           backupBundle,
@@ -440,6 +445,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listIntegrations(),
           listStaffDirectory(50),
           listOwnerRecoveryRequests(50),
+          listDevices(50),
           fetchDashboardKpis(),
           fetchPaymentsReconcile(),
           listBackups(50),
@@ -492,6 +498,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setStaffRoles(staffBundle.roles);
         setStaffDirectory(staffBundle.staff);
         setOwnerRecoveryRequests(ownerRecoveryRows);
+        setDevices(deviceRows);
         setDashboardKpis(kpis);
         setPaymentsReconcile(reconcile);
         setBackupJobs(backupBundle.jobs);
@@ -765,7 +772,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </h2>
             <p className="lede">
               Role catalog, local staff directory, mock role assign, mock lock (non-owner),
-              unlock (Owner actor), and owner recovery requests.
+              unlock (Owner actor), owner recovery requests, and device registration.
             </p>
             {staffNote ? <p className="lede">{staffNote}</p> : null}
             <ul className="roles" aria-label="Standard staff roles">
@@ -970,6 +977,68 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh owner recovery
+            </button>
+            <ul className="roles" aria-label="Registered devices">
+              {devices.length === 0 ? <li>No registered devices yet</li> : null}
+              {devices.map((d) => (
+                <li key={d.deviceId}>
+                  {d.displayName ?? d.subject ?? d.authIdentityId.slice(0, 8)}… · fp{' '}
+                  {d.fingerprint.slice(0, 12)}… · {d.trusted ? 'trusted' : 'new'}
+                  {d.userAgent ? ` · ${d.userAgent}` : ''}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setStaffNote('');
+                void (async () => {
+                  try {
+                    const result = await mockRegisterDevice({
+                      fingerprint: `bo-fp-${Date.now().toString(36)}`,
+                      userAgent: 'BomBee-BO/mock',
+                    });
+                    if (result.devices) setDevices(result.devices);
+                    else setDevices(await listDevices(50));
+                    setStaffNote(
+                      `${result.isNew ? 'Registered' : 'Seen'} device ${result.deviceId.slice(0, 8)}… · ${result.fingerprint}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'device_register_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock register device
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setDevices(await listDevices(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'devices_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh devices
             </button>
           </section>
           <section aria-labelledby="invites-heading" id="invites">

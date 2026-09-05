@@ -2789,6 +2789,63 @@ export async function listStaffDirectory(
   };
 }
 
+export type DeviceRow = {
+  deviceId: string;
+  authIdentityId: string;
+  subject: string | null;
+  displayName: string | null;
+  fingerprint: string;
+  userAgent: string | null;
+  ip: string | null;
+  trusted: boolean;
+  firstSeenAt: string;
+  lastSeenAt: string;
+};
+
+export async function listDevices(limit = 50): Promise<DeviceRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/identity/devices?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`devices_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { devices: DeviceRow[] };
+  return body.devices;
+}
+
+export async function mockRegisterDevice(input: {
+  authIdentityId?: string;
+  fingerprint?: string;
+  userAgent?: string;
+  ip?: string;
+} = {}): Promise<{
+  deviceId: string;
+  isNew: boolean;
+  authIdentityId: string;
+  fingerprint: string;
+  devices?: DeviceRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/identity/devices/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      auth_identity_id: input.authIdentityId,
+      fingerprint: input.fingerprint,
+      user_agent: input.userAgent,
+      ip: input.ip,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `device_register_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    deviceId: string;
+    isNew: boolean;
+    authIdentityId: string;
+    fingerprint: string;
+    devices?: DeviceRow[];
+  };
+}
+
 export type OwnerRecoveryRequestRow = {
   requestId: string;
   ownerIdentityId: string;

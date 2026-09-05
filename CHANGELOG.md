@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 local — inventory reservation consume + expire-due HTTP
 - Phase 2 local — customer PII access log HTTP
 - Phase 2 local — order contract snapshot HTTP
 - Phase 2 local — privacy order-address snapshot + store delivery-view HTTP

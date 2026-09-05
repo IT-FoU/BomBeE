@@ -741,6 +741,66 @@ paths:
       responses:
         '200':
           description: Adjustments array
+  /v1/inventory/reservations:
+    get:
+      summary: List inventory reservations
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Reservations array
+  /v1/ops/inventory/reservations/mock-consume:
+    post:
+      summary: Local/mock consume an active inventory reservation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reservation_id:
+                  type: string
+                balance_id:
+                  type: string
+                quantity:
+                  type: integer
+      responses:
+        '200':
+          description: Reservation consumed; list snapshot
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No eligible balance/reservation
+  /v1/ops/inventory/reservations/mock-expire-due:
+    post:
+      summary: Local/mock expire due QR inventory reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ensure_due:
+                  type: boolean
+                balance_id:
+                  type: string
+                now:
+                  oneOf:
+                    - type: string
+                    - type: number
+      responses:
+        '200':
+          description: Expired reservations; list snapshot
+        '403':
+          description: Mock ops disabled
   /v1/ops/inventory/lots/mock-create:
     post:
       summary: Local mock create inventory lot and ensure zero balance

@@ -1119,6 +1119,84 @@ export async function listInventoryAdjustments(
   return body.adjustments;
 }
 
+export type InventoryReservationRow = {
+  reservationId: string;
+  balanceId: string;
+  quantity: number;
+  reservationType: string;
+  status: string;
+  paymentDeadlineAt: string | null;
+  expiresAt: string | null;
+  idempotencyKey: string;
+  correlationId: string;
+  createdAt: string;
+  releasedAt: string | null;
+  variantId: string | null;
+  storeId: string | null;
+};
+
+export async function listInventoryReservations(
+  limit = 50,
+  status?: string,
+): Promise<InventoryReservationRow[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (status) params.set('status', status);
+  const res = await fetch(`${apiBaseUrl()}/v1/inventory/reservations?${params}`);
+  if (!res.ok) {
+    throw new Error(`inventory_reservations_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { reservations: InventoryReservationRow[] };
+  return body.reservations;
+}
+
+export async function mockConsumeInventoryReservation(input: {
+  reservationId?: string;
+  balanceId?: string;
+  quantity?: number;
+} = {}): Promise<{
+  reservationId: string;
+  status: string;
+  reservations: InventoryReservationRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/inventory/reservations/mock-consume`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `reservation_consume_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    reservationId: string;
+    status: string;
+    reservations: InventoryReservationRow[];
+  };
+}
+
+export async function mockExpireDueInventoryReservations(input: {
+  ensureDue?: boolean;
+  balanceId?: string;
+} = {}): Promise<{
+  expiredCount: number;
+  reservations: InventoryReservationRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/inventory/reservations/mock-expire-due`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `reservation_expire_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    expiredCount: number;
+    reservations: InventoryReservationRow[];
+  };
+}
+
+
 export type LotExpiryAlertRow = {
   alertId: string;
   lotId: string;

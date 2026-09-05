@@ -271,4 +271,58 @@ export class ReservationService {
     }
     return results;
   }
+
+  async listReservations(limit = 50, status?: string) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      balance_id: string;
+      quantity: number;
+      reservation_type: string;
+      status: string;
+      payment_deadline_at: string | null;
+      expires_at: string | null;
+      idempotency_key: string;
+      correlation_id: string;
+      created_at: string;
+      released_at: string | null;
+      variant_id: string | null;
+      store_id: string | null;
+    }>(
+      status
+        ? `SELECT r.id, r.balance_id, r.quantity, r.reservation_type, r.status,
+                  r.payment_deadline_at::text, r.expires_at::text, r.idempotency_key,
+                  r.correlation_id::text, r.created_at::text, r.released_at::text,
+                  b.variant_id, b.store_id
+           FROM private.inventory_reservations r
+           LEFT JOIN private.inventory_balances b ON b.id = r.balance_id
+           WHERE r.status = $2
+           ORDER BY r.created_at DESC
+           LIMIT $1`
+        : `SELECT r.id, r.balance_id, r.quantity, r.reservation_type, r.status,
+                  r.payment_deadline_at::text, r.expires_at::text, r.idempotency_key,
+                  r.correlation_id::text, r.created_at::text, r.released_at::text,
+                  b.variant_id, b.store_id
+           FROM private.inventory_reservations r
+           LEFT JOIN private.inventory_balances b ON b.id = r.balance_id
+           ORDER BY r.created_at DESC
+           LIMIT $1`,
+      status ? [capped, status] : [capped],
+    );
+    return rows.rows.map((r) => ({
+      reservationId: r.id,
+      balanceId: r.balance_id,
+      quantity: r.quantity,
+      reservationType: r.reservation_type,
+      status: r.status,
+      paymentDeadlineAt: r.payment_deadline_at,
+      expiresAt: r.expires_at,
+      idempotencyKey: r.idempotency_key,
+      correlationId: r.correlation_id,
+      createdAt: r.created_at,
+      releasedAt: r.released_at,
+      variantId: r.variant_id,
+      storeId: r.store_id,
+    }));
+  }
 }

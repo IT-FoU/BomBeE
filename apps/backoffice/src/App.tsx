@@ -15,6 +15,9 @@ import {
   createStoreDraft,
   fetchVariantStock,
   listInventoryAdjustments,
+  listInventoryReservations,
+  mockConsumeInventoryReservation,
+  mockExpireDueInventoryReservations,
   opsReceiveStock,
   opsAdjustStock,
   mockCreateInventoryLot,
@@ -190,6 +193,7 @@ import {
   type OpsStockView,
   type LotExpiryAlertRow,
   type InventoryAdjustmentRow,
+  type InventoryReservationRow,
   type StockImportBatchRow,
   type SettlementBatchRow,
   type SettlementCarryforwardRow,
@@ -300,6 +304,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [catalogNote, setCatalogNote] = useState('');
   const [stockDetail, setStockDetail] = useState<OpsStockView | null>(null);
   const [inventoryAdjustments, setInventoryAdjustments] = useState<InventoryAdjustmentRow[]>([]);
+  const [inventoryReservations, setInventoryReservations] = useState<InventoryReservationRow[]>([]);
   const [stockImportBatches, setStockImportBatches] = useState<StockImportBatchRow[]>([]);
   const [inventoryNote, setInventoryNote] = useState('');
   const [lotExpiryAlerts, setLotExpiryAlerts] = useState<LotExpiryAlertRow[]>([]);
@@ -397,6 +402,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           importBatchRows,
           mediaRows,
           inventoryAdjRows,
+          inventoryReservationRows,
           stockImportRows,
           lotExpiryAlertRows,
           batches,
@@ -451,6 +457,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listCatalogImportBatches(50),
           listCatalogMedia(50),
           listInventoryAdjustments(50),
+          listInventoryReservations(50),
           listStockImportBatches(50),
           listLotExpiryAlerts(50),
           listSettlementBatches(50),
@@ -505,6 +512,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setImportBatches(importBatchRows);
         setCatalogMedia(mediaRows);
         setInventoryAdjustments(inventoryAdjRows);
+        setInventoryReservations(inventoryReservationRows);
         setStockImportBatches(stockImportRows);
         setLotExpiryAlerts(lotExpiryAlertRows);
         setSettlementBatches(batches);
@@ -4675,7 +4683,93 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             >
               Refresh adjustments
             </button>
-          </section>
+          
+            <ul className="roles" aria-label="Inventory reservations">
+              {inventoryReservations.length === 0 ? (
+                <li>No inventory reservations yet</li>
+              ) : null}
+              {inventoryReservations.map((row) => (
+                <li key={row.reservationId}>
+                  {row.reservationType} · {row.status} · qty {row.quantity} · balance{' '}
+                  {row.balanceId.slice(0, 8)}…
+                  {row.expiresAt ? ` · exp ${row.expiresAt}` : ''}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setInventoryNote('');
+                void (async () => {
+                  try {
+                    const result = await mockConsumeInventoryReservation();
+                    setInventoryReservations(result.reservations);
+                    setInventoryNote(
+                      `Consumed reservation ${result.reservationId.slice(0, 8)}… (${result.status})`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'reservation_consume_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock consume reservation
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setInventoryNote('');
+                void (async () => {
+                  try {
+                    const result = await mockExpireDueInventoryReservations({ ensureDue: true });
+                    setInventoryReservations(result.reservations);
+                    setInventoryNote(`Expired ${result.expiredCount} due QR reservation(s)`);
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'reservation_expire_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock expire due reservations
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setInventoryReservations(await listInventoryReservations(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'reservation_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh reservations
+            </button>
+</section>
           <section aria-labelledby="audit-heading" id="audit">
             <h2 id="audit-heading">
               <span lang="en">Audit</span>

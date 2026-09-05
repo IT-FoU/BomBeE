@@ -1789,6 +1789,181 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/inventory/reservations') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const status = url.searchParams.get('status')?.trim() || undefined;
+      const reservations = await services.reservations.listReservations(limit, status);
+      sendJson(res, 200, { ok: true, reservations });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/reservations/mock-consume') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        reservationId?: string;
+        reservation_id?: string;
+        balanceId?: string;
+        balance_id?: string;
+        quantity?: number;
+      }>(req);
+      try {
+        let reservationId = (body.reservationId ?? body.reservation_id)?.trim();
+        if (!reservationId) {
+          const active = await services.db.query<{ id: string }>(
+            `SELECT id FROM private.inventory_reservations
+             WHERE status = 'active'
+             ORDER BY created_at DESC
+             LIMIT 1`,
+          );
+          reservationId = active.rows[0]?.id;
+        }
+        if (!reservationId) {
+          let balanceId = (body.balanceId ?? body.balance_id)?.trim();
+          if (!balanceId) {
+            const bal = await services.db.query<{ id: string }>(
+              `SELECT id FROM private.inventory_balances
+               WHERE on_hand - reserved - safety_buffer > 0
+               ORDER BY updated_at DESC
+               LIMIT 1`,
+            );
+            balanceId = bal.rows[0]?.id;
+          }
+          if (!balanceId) {
+            sendJson(res, 409, { error: 'no_eligible_balance' });
+            return;
+          }
+          const qty =
+            typeof body.quantity === 'number' && body.quantity > 0 ? body.quantity : 1;
+          const reserved = await services.reservations.reserve({
+            balanceId,
+            quantity: qty,
+            reservationType: 'cod',
+            idempotencyKey: `mock-consume:${balanceId}:${crypto.randomUUID()}`,
+            correlationId: crypto.randomUUID(),
+          });
+          if (!reserved.ok) {
+            sendJson(res, 409, { error: reserved.reason });
+            return;
+          }
+          reservationId = reserved.reservationId;
+        }
+
+        const consumed = await services.reservations.consume({
+          reservationId,
+          correlationId: crypto.randomUUID(),
+          reason: 'ops_mock_consume',
+        });
+        if (!consumed.ok) {
+          sendJson(res, 409, { error: consumed.reason });
+          return;
+        }
+        const reservations = await services.reservations.listReservations(50);
+        sendJson(res, 200, {
+          ok: true,
+          reservationId,
+          status: consumed.status,
+          idempotentReplay: consumed.idempotentReplay,
+          quantity: 'quantity' in consumed ? consumed.quantity : undefined,
+          reservations,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'reservation_consume_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/reservations/mock-expire-due') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        now?: string | number;
+        balanceId?: string;
+        balance_id?: string;
+        ensureDue?: boolean;
+        ensure_due?: boolean;
+      }>(req);
+      try {
+        const ensureDue = body.ensureDue ?? body.ensure_due ?? true;
+        if (ensureDue) {
+          const dueExisting = await services.db.query<{ id: string }>(
+            `SELECT id FROM private.inventory_reservations
+             WHERE status = 'active' AND reservation_type = 'qr'
+               AND expires_at IS NOT NULL
+               AND expires_at <= timezone('utc', now())
+             LIMIT 1`,
+          );
+          if (!dueExisting.rows[0]) {
+            let balanceId = (body.balanceId ?? body.balance_id)?.trim();
+            if (!balanceId) {
+              const bal = await services.db.query<{ id: string }>(
+                `SELECT id FROM private.inventory_balances
+                 WHERE on_hand - reserved - safety_buffer > 0
+                 ORDER BY updated_at DESC
+                 LIMIT 1`,
+              );
+              balanceId = bal.rows[0]?.id;
+            }
+            if (!balanceId) {
+              sendJson(res, 409, { error: 'no_eligible_balance' });
+              return;
+            }
+            const paymentDeadlineAt = Date.now() - 120_000;
+            const reserved = await services.reservations.reserve({
+              balanceId,
+              quantity: 1,
+              reservationType: 'qr',
+              paymentDeadlineAt,
+              idempotencyKey: `mock-expire:${balanceId}:${crypto.randomUUID()}`,
+              correlationId: crypto.randomUUID(),
+              now: paymentDeadlineAt,
+            });
+            if (!reserved.ok) {
+              sendJson(res, 409, { error: reserved.reason });
+              return;
+            }
+            await services.db.query(
+              `UPDATE private.inventory_reservations
+               SET expires_at = timezone('utc', now()) - interval '1 minute',
+                   payment_deadline_at = timezone('utc', now()) - interval '2 minutes'
+               WHERE id = $1`,
+              [reserved.reservationId],
+            );
+          }
+        }
+
+        let nowMs = Date.now();
+        if (typeof body.now === 'number' && Number.isFinite(body.now)) {
+          nowMs = body.now;
+        } else if (typeof body.now === 'string' && body.now.trim()) {
+          const parsed = Date.parse(body.now);
+          if (Number.isNaN(parsed)) {
+            sendJson(res, 400, { error: 'invalid_now' });
+            return;
+          }
+          nowMs = parsed;
+        }
+        const expired = await services.reservations.expireDue(nowMs);
+        const reservations = await services.reservations.listReservations(50);
+        sendJson(res, 200, {
+          ok: true,
+          expiredCount: expired.length,
+          expired,
+          reservations,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'reservation_expire_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/lots/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 local — store quality rolling-counts + mock-suspend HTTP
 - Phase 2 local — settlement payout version HTTP
 - Phase 2 local — store document-expiry suspend HTTP
 - Phase 2 local — promotion apply-to-order HTTP

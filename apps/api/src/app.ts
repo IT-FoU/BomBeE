@@ -17,6 +17,10 @@ import { listRoleCatalog } from './modules/rbac/permissions.js';
 import type { BackupType } from './modules/backup/backupService.js';
 import type { ApiServices } from './runtime/createServices.js';
 import { evaluateInviteAccess, type InviteRole } from './modules/staging/inviteService.js';
+import {
+  QUALITY_THRESHOLDS,
+  QUALITY_WINDOW_MS,
+} from './modules/stores/qualityService.js';
 
 export function createAppRouter(env: BombeeEnv, services: ApiServices) {
   return async function appRouter(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -3806,6 +3810,115 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'quality_event_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/stores/quality/rolling-counts') {
+      const storeId = url.searchParams.get('storeId')?.trim();
+      if (!storeId) {
+        sendJson(res, 400, { error: 'store_id_required' });
+        return;
+      }
+      const nowRaw = url.searchParams.get('now');
+      const now = nowRaw ? Date.parse(nowRaw) : Date.now();
+      if (!Number.isFinite(now)) {
+        sendJson(res, 400, { error: 'invalid_now' });
+        return;
+      }
+      try {
+        const counts = await services.quality.rollingCounts(storeId, now);
+        sendJson(res, 200, {
+          ok: true,
+          storeId,
+          now: new Date(now).toISOString(),
+          windowMs: QUALITY_WINDOW_MS,
+          counts,
+          thresholds: QUALITY_THRESHOLDS,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'quality_rolling_counts_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/stores/quality/mock-suspend') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        reasonCode?: string;
+        reason_code?: string;
+        reasonDetail?: string;
+        reason_detail?: string;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores
+             WHERE status IN ('active', 'onboarding')
+             ORDER BY created_at DESC LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 409, { error: 'no_active_store' });
+          return;
+        }
+        const allowedReasonCodes = new Set([
+          'slow_response_or_pack',
+          'stock_mismatch',
+          'wrong_damaged_mismatch',
+          'fraud_or_security',
+          'document_expired',
+          'manual',
+        ]);
+        const reasonCode =
+          (body.reasonCode ?? body.reason_code)?.trim() || 'manual';
+        if (!allowedReasonCodes.has(reasonCode)) {
+          sendJson(res, 400, { error: 'invalid_reason_code' });
+          return;
+        }
+        const reasonDetail =
+          (body.reasonDetail ?? body.reason_detail)?.trim() ||
+          'local mock quality suspension';
+        const actorIdentityId = await resolveOpsActor(services);
+        await services.quality.suspend({
+          storeId,
+          reasonCode,
+          reasonDetail,
+          suspendedBy: actorIdentityId,
+        });
+        const [counts, events, suspensions, store] = await Promise.all([
+          services.quality.rollingCounts(storeId, Date.now()),
+          services.quality.listEvents(50, storeId),
+          services.quality.listSuspensions(50),
+          services.db.query<{ id: string; status: string; can_accept_orders: boolean }>(
+            `SELECT id, status, can_accept_orders FROM app.stores WHERE id = $1`,
+            [storeId],
+          ),
+        ]);
+        const suspension = suspensions.find((s) => s.storeId === storeId && s.active);
+        sendJson(res, 200, {
+          ok: true,
+          storeId,
+          storeStatus: store.rows[0]?.status,
+          canAcceptOrders: store.rows[0]?.can_accept_orders,
+          reasonCode,
+          reasonDetail,
+          suspension,
+          counts,
+          events,
+          suspensions,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'quality_suspend_failed';
         sendJson(res, 400, { error: message });
       }
       return;

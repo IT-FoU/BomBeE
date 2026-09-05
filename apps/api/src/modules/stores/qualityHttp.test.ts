@@ -103,4 +103,47 @@ describe('store quality HTTP', () => {
     expect(reactivated.res.statusCode).toBe(200);
     expect(reactivated.body().status).toBe('active');
   });
+
+  it('returns rolling counts and suspends via ops mock', async () => {
+    const stores = mockRes();
+    await router(mockReq('GET', '/v1/stores'), stores.res);
+    const storeId = (stores.body().stores as Array<{ id: string; status: string }>).find(
+      (s) => s.status === 'active',
+    )?.id;
+    expect(storeId).toBeTruthy();
+
+    const countsBefore = mockRes();
+    await router(
+      mockReq('GET', `/v1/stores/quality/rolling-counts?storeId=${storeId}`),
+      countsBefore.res,
+    );
+    expect(countsBefore.res.statusCode).toBe(200);
+    expect(countsBefore.body().storeId).toBe(storeId);
+    expect(countsBefore.body().counts).toBeTruthy();
+    expect(countsBefore.body().thresholds).toBeTruthy();
+
+    const suspended = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/stores/quality/mock-suspend', {
+        store_id: storeId,
+        reason_code: 'manual',
+        reason_detail: 'qa direct suspend',
+      }),
+      suspended.res,
+    );
+    expect(suspended.res.statusCode).toBe(200);
+    expect(suspended.body().storeId).toBe(storeId);
+    expect(suspended.body().storeStatus).toBe('suspended');
+    expect(suspended.body().canAcceptOrders).toBe(false);
+    expect(
+      (suspended.body().suspension as { reasonCode: string; active: boolean } | undefined)
+        ?.reasonCode,
+    ).toBe('manual');
+    expect(
+      (suspended.body().suspensions as Array<{ storeId: string; active: boolean; reasonCode: string }>).some(
+        (s) => s.storeId === storeId && s.active && s.reasonCode === 'manual',
+      ),
+    ).toBe(true);
+  });
+
 });

@@ -4104,6 +4104,63 @@ export async function mockQualityEvent(input: {
   };
 }
 
+
+export async function listQualityRollingCounts(storeId: string): Promise<{
+  storeId: string;
+  counts: Record<string, number>;
+  thresholds: Record<string, number>;
+  windowMs: number;
+}> {
+  const qs = new URLSearchParams({ storeId });
+  const res = await fetch(`${apiBaseUrl()}/v1/stores/quality/rolling-counts?${qs}`);
+  if (!res.ok) {
+    throw new Error(`quality_rolling_counts_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    storeId: string;
+    counts: Record<string, number>;
+    thresholds: Record<string, number>;
+    windowMs: number;
+  };
+}
+
+export async function mockQualitySuspend(input: {
+  storeId?: string;
+  reasonCode?: string;
+  reasonDetail?: string;
+} = {}): Promise<{
+  storeId: string;
+  storeStatus?: string;
+  canAcceptOrders?: boolean;
+  suspension?: { suspensionId: string; reasonCode: string; active: boolean };
+  counts?: Record<string, number>;
+  events: QualityEventRow[];
+  suspensions: SuspensionRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/stores/quality/mock-suspend`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      store_id: input.storeId,
+      reason_code: input.reasonCode,
+      reason_detail: input.reasonDetail,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `quality_suspend_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    storeId: string;
+    storeStatus?: string;
+    canAcceptOrders?: boolean;
+    suspension?: { suspensionId: string; reasonCode: string; active: boolean };
+    counts?: Record<string, number>;
+    events: QualityEventRow[];
+    suspensions: SuspensionRow[];
+  };
+}
+
 export async function reactivateStore(
   storeId: string,
   evidence?: string,

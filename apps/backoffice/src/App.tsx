@@ -178,6 +178,8 @@ import {
   contactRecallAffected,
   listStoreQuality,
   mockQualityEvent,
+  listQualityRollingCounts,
+  mockQualitySuspend,
   reactivateStore,
   type CodShipmentRow,
   type CodProfileRow,
@@ -5969,6 +5971,36 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh quality
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setQualityNote('');
+                void (async () => {
+                  try {
+                    const result = await mockQualitySuspend({
+                      reasonCode: 'manual',
+                      reasonDetail: 'backoffice mock quality suspend',
+                    });
+                    setQualityEvents(result.events);
+                    setSuspensions(result.suspensions);
+                    const counts = await listQualityRollingCounts(result.storeId);
+                    setQualityNote(
+                      `Quality suspend · store ${result.storeId.slice(0, 8)}… · ${result.storeStatus ?? ''} · reason ${result.suspension?.reasonCode ?? 'manual'} · counts ${JSON.stringify(counts.counts)}`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'quality_suspend_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock quality suspend
             </button>
           </section>
           {navItems

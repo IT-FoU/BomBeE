@@ -1397,6 +1397,51 @@ paths:
           description: Mock ops disabled
         '409':
           description: Courier code already taken
+  /v1/deliveries:
+    get:
+      summary: List shipment deliveries (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Deliveries array
+  /v1/ops/deliveries/mock-create:
+    post:
+      summary: Local/mock create delivery for eligible child without existing delivery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                courier_id:
+                  type: string
+                courier_code:
+                  type: string
+                  default: LOCAL-MOCK
+                channel:
+                  type: string
+                  enum: [manual, api]
+                  default: manual
+                tracking_hint:
+                  type: string
+                package_photo_key:
+                  type: string
+      responses:
+        '201':
+          description: Delivery created; list snapshot
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Courier or contract missing
+        '409':
+          description: No eligible child order
   /v1/packing-deadlines:
     get:
       summary: List packing SLA deadlines (local ops)

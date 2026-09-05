@@ -101,6 +101,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/packing-deadlines/mock-mark-packed` | Local/mock schedule packing deadline + mark packed |
 | GET | `/v1/couriers` | List couriers + latest contract (local ops) |
 | POST | `/v1/ops/couriers/mock-create` | Local/mock create courier + contract v1 |
+| GET | `/v1/deliveries` | List shipment deliveries (local ops) |
+| POST | `/v1/ops/deliveries/mock-create` | Local/mock create delivery for eligible child |
 | GET | `/v1/me/returns` | List own return requests (Bearer) |
 | POST | `/v1/me/returns` | Request return for owned delivered child (Bearer) |
 | POST | `/v1/ops/returns/mock-create` | Local/mock return for delivered child (optional `child_order_id`) |

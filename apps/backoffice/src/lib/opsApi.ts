@@ -1870,6 +1870,75 @@ export async function mockCreateCourier(input: {
   };
 }
 
+
+export type DeliveryRow = {
+  deliveryId: string;
+  shipmentId: string;
+  childOrderId: string;
+  courierId: string;
+  courierCode: string;
+  channel: string;
+  trackingNumber: string;
+  packagePhotoKey: string | null;
+  handoffAt: string | null;
+  deliveredAt: string | null;
+  status: string;
+  createdAt: string;
+  childStatus: string;
+};
+
+export async function listDeliveries(limit = 50): Promise<DeliveryRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/deliveries?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`deliveries_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { deliveries: DeliveryRow[] };
+  return body.deliveries;
+}
+
+export async function mockCreateDelivery(input: {
+  childOrderId?: string;
+  courierId?: string;
+  courierCode?: string;
+  channel?: 'manual' | 'api';
+  trackingHint?: string;
+  packagePhotoKey?: string;
+} = {}): Promise<{
+  deliveryId: string;
+  shipmentId: string;
+  trackingNumber: string;
+  childOrderId: string;
+  courierId: string;
+  channel: string;
+  deliveries?: DeliveryRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/deliveries/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      child_order_id: input.childOrderId,
+      courier_id: input.courierId,
+      courier_code: input.courierCode,
+      channel: input.channel,
+      tracking_hint: input.trackingHint,
+      package_photo_key: input.packagePhotoKey,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `delivery_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    deliveryId: string;
+    shipmentId: string;
+    trackingNumber: string;
+    childOrderId: string;
+    courierId: string;
+    channel: string;
+    deliveries?: DeliveryRow[];
+  };
+}
+
 export type PackingDeadlineRow = {
   packingDeadlineId: string;
   childOrderId: string;

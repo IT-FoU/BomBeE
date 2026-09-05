@@ -4,6 +4,10 @@ import type { BombeeEnv } from '@bombee/config';
 import { APP_ROLES, BRAND_NAME, CURRENCY_CODE, DISPLAY_TIMEZONE } from '@bombee/shared';
 
 import { readJsonBody } from './http/readJsonBody.js';
+import {
+  ApiCourierAdapter,
+  ManualCourierAdapter,
+} from './modules/fulfillment/deliveryService.js';
 import { applyCors } from './http/cors.js';
 import { mockAdvanceFulfillment, mockDeliverFulfillment } from './modules/fulfillment/mockAdvance.js';
 import { cancelOrderBeforeHandoff } from './modules/orders/cancelBeforeHandoff.js';
@@ -2612,6 +2616,113 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
             ? 409
             : 400;
         sendJson(res, status, { error: message.includes('23505') ? 'courier_code_taken' : message });
+      }
+      return;
+    }
+
+
+    if (req.method === 'GET' && url.pathname === '/v1/deliveries') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const deliveries = await services.delivery.listDeliveries(limit);
+      sendJson(res, 200, { ok: true, deliveries });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/deliveries/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        childOrderId?: string;
+        child_order_id?: string;
+        courierId?: string;
+        courier_id?: string;
+        courierCode?: string;
+        courier_code?: string;
+        channel?: string;
+        trackingHint?: string;
+        tracking_hint?: string;
+        packagePhotoKey?: string;
+        package_photo_key?: string;
+      }>(req);
+      try {
+        let childOrderId = (body.childOrderId ?? body.child_order_id)?.trim();
+        if (!childOrderId) {
+          const eligible = await services.db.query<{ id: string }>(
+            `SELECT co.id
+             FROM app.child_orders co
+             WHERE NOT EXISTS (
+               SELECT 1 FROM app.shipment_deliveries d
+               WHERE d.child_order_id = co.id
+             )
+             ORDER BY co.created_at DESC
+             LIMIT 1`,
+          );
+          childOrderId = eligible.rows[0]?.id;
+        }
+        if (!childOrderId) {
+          sendJson(res, 409, { error: 'no_eligible_child' });
+          return;
+        }
+
+        let courierId = (body.courierId ?? body.courier_id)?.trim();
+        const courierCode = (body.courierCode ?? body.courier_code)?.trim();
+        if (!courierId) {
+          const courier = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.couriers
+             WHERE code = $1
+             LIMIT 1`,
+            [courierCode || 'LOCAL-MOCK'],
+          );
+          courierId = courier.rows[0]?.id;
+        }
+        if (!courierId) {
+          sendJson(res, 404, { error: 'courier_not_found' });
+          return;
+        }
+
+        const channelRaw = (body.channel ?? 'manual').trim().toLowerCase();
+        if (channelRaw !== 'manual' && channelRaw !== 'api') {
+          sendJson(res, 400, { error: 'invalid_channel' });
+          return;
+        }
+        const channel = channelRaw as 'manual' | 'api';
+        const adapter =
+          channel === 'api' ? new ApiCourierAdapter() : new ManualCourierAdapter();
+        const actorIdentityId = await resolveOpsActor(services);
+        const trackingHint =
+          body.trackingHint ??
+          body.tracking_hint ??
+          `MOCK-${childOrderId.replace(/-/g, '').slice(0, 12)}`;
+        const packagePhotoKey =
+          body.packagePhotoKey ??
+          body.package_photo_key ??
+          `mock/pkg/${childOrderId}.jpg`;
+
+        const created = await services.delivery.createDelivery({
+          childOrderId,
+          courierId,
+          channel,
+          adapter,
+          packagePhotoKey,
+          trackingHint,
+          actorIdentityId,
+        });
+        const deliveries = await services.delivery.listDeliveries(50);
+        sendJson(res, 201, {
+          ok: true,
+          ...created,
+          childOrderId,
+          courierId,
+          channel,
+          deliveries,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'delivery_create_failed';
+        const status = message === 'courier_contract_missing' ? 404 : 400;
+        sendJson(res, status, { error: message });
       }
       return;
     }

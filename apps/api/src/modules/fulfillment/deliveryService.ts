@@ -193,6 +193,51 @@ export class DeliveryService {
     }));
   }
 
+  async listDeliveries(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      shipment_id: string;
+      child_order_id: string;
+      courier_id: string;
+      courier_code: string;
+      channel: string;
+      tracking_number: string;
+      package_photo_key: string | null;
+      handoff_at: string | null;
+      delivered_at: string | null;
+      status: string;
+      created_at: string;
+      child_status: string;
+    }>(
+      `SELECT d.id, d.shipment_id, d.child_order_id, d.courier_id, c.code AS courier_code,
+              d.channel, d.tracking_number, d.package_photo_key,
+              d.handoff_at::text, d.delivered_at::text, d.status, d.created_at::text,
+              co.status AS child_status
+       FROM app.shipment_deliveries d
+       JOIN app.couriers c ON c.id = d.courier_id
+       JOIN app.child_orders co ON co.id = d.child_order_id
+       ORDER BY d.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      deliveryId: r.id,
+      shipmentId: r.shipment_id,
+      childOrderId: r.child_order_id,
+      courierId: r.courier_id,
+      courierCode: r.courier_code,
+      channel: r.channel,
+      trackingNumber: r.tracking_number,
+      packagePhotoKey: r.package_photo_key,
+      handoffAt: r.handoff_at,
+      deliveredAt: r.delivered_at,
+      status: r.status,
+      createdAt: r.created_at,
+      childStatus: r.child_status,
+    }));
+  }
+
   async createDelivery(input: {
     childOrderId: string;
     courierId: string;

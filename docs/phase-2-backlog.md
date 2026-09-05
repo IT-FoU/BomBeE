@@ -95,6 +95,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B75 | Owner recovery list + mock-create HTTP | **Done** — owner-recovery-requests list + ops mock-create; Staff BO |
 | P2-B76 | Device register list + mock-create HTTP | **Done** — devices list + ops mock-create; Staff BO |
 | P2-B77 | Packing mark-packed HTTP | **Done** — ops packing-deadlines/mock-mark-packed; Fulfillment BO |
+| P2-B78 | Delivery list + mock-create HTTP | **Done** — deliveries list + ops mock-create; Fulfillment BO |
 
 ## C — Hard rules that stay
 

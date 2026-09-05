@@ -90,6 +90,8 @@ import {
   listPackingDeadlines,
   listCouriers,
   mockCreateCourier,
+  listDeliveries,
+  mockCreateDelivery,
   mockEvaluatePackingDeadline,
   mockMarkPackingDeadline,
   listPromotions,
@@ -186,6 +188,7 @@ import {
   type DeliveryClaimRow,
   type PackingDeadlineRow,
   type CourierRow,
+  type DeliveryRow,
   type PromotionRow,
   type RefundApprovalRow,
   type PriceRequestRow,
@@ -299,6 +302,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [deliveryClaims, setDeliveryClaims] = useState<DeliveryClaimRow[]>([]);
   const [packingDeadlines, setPackingDeadlines] = useState<PackingDeadlineRow[]>([]);
   const [couriers, setCouriers] = useState<CourierRow[]>([]);
+  const [deliveries, setDeliveries] = useState<DeliveryRow[]>([]);
   const [fulfillmentNote, setFulfillmentNote] = useState('');
   const [promotions, setPromotions] = useState<PromotionRow[]>([]);
   const [promoNote, setPromoNote] = useState('');
@@ -382,6 +386,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           claimRows,
           packingRows,
           courierRows,
+          deliveryRows,
           promos,
           refundRows,
           priceRows,
@@ -432,6 +437,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listDeliveryClaims(50),
           listPackingDeadlines(50),
           listCouriers(50),
+          listDeliveries(50),
           listPromotions(50),
           listRefunds(50),
           listPriceRequests(50),
@@ -482,6 +488,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setDeliveryClaims(claimRows);
         setPackingDeadlines(packingRows);
         setCouriers(courierRows);
+        setDeliveries(deliveryRows);
         setPromotions(promos);
         setRefunds(refundRows);
         setPriceRequests(priceRows);
@@ -2498,8 +2505,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ຈັດສົ່ງ</span>
             </h2>
             <p className="lede">
-              Orders still use Confirm / Advance / Deliver. Here: couriers, packing SLA deadlines
-              (evaluate / mark packed), and lost/damaged delivery claims.
+              Orders still use Confirm / Advance / Deliver. Here: couriers, deliveries (mock-create),
+              packing SLA deadlines (evaluate / mark packed), and lost/damaged delivery claims.
             </p>
             {fulfillmentNote ? (
               <p className="lede" role="status">
@@ -2654,6 +2661,64 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh couriers
+            </button>
+            <ul className="roles" aria-label="Deliveries">
+              {deliveries.length === 0 ? <li>No deliveries yet</li> : null}
+              {deliveries.map((d) => (
+                <li key={d.deliveryId}>
+                  {d.status} · {d.channel} · {d.courierCode} · track {d.trackingNumber} · child{' '}
+                  {d.childOrderId.slice(0, 8)}…
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setFulfillmentNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateDelivery({ channel: 'manual' });
+                    if (result.deliveries) setDeliveries(result.deliveries);
+                    else setDeliveries(await listDeliveries(50));
+                    setFulfillmentNote(
+                      `Created delivery ${result.deliveryId.slice(0, 8)}… · ${result.trackingNumber}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'delivery_create_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock create delivery
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setDeliveries(await listDeliveries(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'deliveries_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh deliveries
             </button>
             <ul className="roles" aria-label="Delivery claims">
               {deliveryClaims.length === 0 ? <li>No delivery claims yet</li> : null}

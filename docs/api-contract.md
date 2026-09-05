@@ -57,6 +57,9 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/inventory/balances/:balanceId/reconcile` | Ledger vs balance reconcile report |
 | POST | `/v1/ops/inventory/safety-buffer` | Local/mock set safety buffer (updates existing balances) |
 | GET | `/v1/inventory/adjustments` | List inventory adjustment requests (local ops) |
+| GET | `/v1/inventory/reservations` | List inventory reservations (optional `status`) |
+| POST | `/v1/ops/inventory/reservations/mock-consume` | Local/mock consume active reservation (creates COD hold if needed) |
+| POST | `/v1/ops/inventory/reservations/mock-expire-due` | Local/mock expire due QR reservations |
 | POST | `/v1/ops/inventory/lots/mock-create` | Local/mock create lot + ensure zero balance |
 | GET | `/v1/inventory/lot-expiry-alerts` | List lot expiry alerts (local ops) |
 | POST | `/v1/ops/inventory/lots/mock-evaluate-allocation` | Local/mock evaluate lot for allocation (writes alerts on fail) |

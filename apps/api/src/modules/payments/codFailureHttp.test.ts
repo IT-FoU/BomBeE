@@ -186,4 +186,35 @@ describe('COD failure / restore / redelivery fee HTTP', () => {
       ),
     ).toBe(true);
   });
+
+  it('ensures a COD profile via ops mock', async () => {
+    const ensured = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/cod/profiles/mock-ensure', {
+        phone_e164: '+8562097008899',
+        display_name: 'COD Ensure QA',
+      }),
+      ensured.res,
+    );
+    expect(ensured.res.statusCode).toBe(200);
+    const customerIdentityId = ensured.body().customerIdentityId as string;
+    expect(customerIdentityId).toBeTruthy();
+    expect(ensured.body().profile).toBeTruthy();
+    expect(
+      (ensured.body().profiles as Array<{ customerIdentityId: string }>).some(
+        (p) => p.customerIdentityId === customerIdentityId,
+      ),
+    ).toBe(true);
+
+    const again = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/cod/profiles/mock-ensure', {
+        customer_identity_id: customerIdentityId,
+      }),
+      again.res,
+    );
+    expect(again.res.statusCode).toBe(200);
+    expect(again.body().customerIdentityId).toBe(customerIdentityId);
+  });
+
 });

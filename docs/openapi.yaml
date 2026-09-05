@@ -2972,6 +2972,26 @@ paths:
       responses:
         '200':
           description: Profiles array
+  /v1/ops/cod/profiles/mock-ensure:
+    post:
+      summary: Local/mock ensure COD profile exists for a customer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_identity_id:
+                  type: string
+                phone_e164:
+                  type: string
+                display_name:
+                  type: string
+      responses:
+        '200':
+          description: Profile ensured; profiles list
+        '403':
+          description: Mock ops disabled
   /v1/ops/cod/profiles/mock-failure:
     post:
       summary: Local/mock customer-caused COD failure (2nd forces QR)

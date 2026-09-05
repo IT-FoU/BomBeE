@@ -202,6 +202,7 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/cod/shipments` | List COD shipments (local ops) |
 | POST | `/v1/cod/shipments/:id/mock-remit` | Local/mock courier remittance + COD reconcile (does not change delivery) |
 | GET | `/v1/cod/profiles` | List COD customer profiles (fails / QR-forced) |
+| POST | `/v1/ops/cod/profiles/mock-ensure` | Local/mock `ensureCodProfile` (create profile if missing) |
 | POST | `/v1/ops/cod/profiles/mock-failure` | Local/mock customer-caused COD failure (2nd → QR forced) |
 | POST | `/v1/ops/cod/profiles/:customerIdentityId/restore` | Restore COD eligibility (staff audit) |
 | GET | `/v1/cod/redelivery-fees` | List redelivery fees |

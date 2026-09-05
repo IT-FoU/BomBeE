@@ -1132,6 +1132,46 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/ops/cod/profiles/mock-ensure') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        customerIdentityId?: string;
+        customer_identity_id?: string;
+        phoneE164?: string;
+        phone_e164?: string;
+        displayName?: string;
+        display_name?: string;
+      }>(req);
+      try {
+        let customerIdentityId = (
+          body.customerIdentityId ?? body.customer_identity_id
+        )?.trim();
+        if (!customerIdentityId) {
+          const phone =
+            (body.phoneE164 ?? body.phone_e164)?.trim() || '+8562097008899';
+          const displayName =
+            (body.displayName ?? body.display_name)?.trim() || 'Local COD Ensure Customer';
+          customerIdentityId = await services.identity.ensureCustomer(phone, displayName);
+        }
+        await services.payments.ensureCodProfile(customerIdentityId);
+        const profiles = await services.payments.listCodProfiles(50);
+        const profile = profiles.find((p) => p.customerIdentityId === customerIdentityId);
+        sendJson(res, 200, {
+          ok: true,
+          customerIdentityId,
+          profile,
+          profiles,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'cod_ensure_profile_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/cod/profiles/mock-failure') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

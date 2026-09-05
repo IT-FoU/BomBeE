@@ -531,6 +531,36 @@ export async function listRedeliveryFees(limit = 50): Promise<RedeliveryFeeRow[]
   return body.fees;
 }
 
+
+export async function mockEnsureCodProfile(input: {
+  customerIdentityId?: string;
+  phoneE164?: string;
+  displayName?: string;
+} = {}): Promise<{
+  customerIdentityId: string;
+  profile?: CodProfileRow;
+  profiles?: CodProfileRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/cod/profiles/mock-ensure`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      customer_identity_id: input.customerIdentityId,
+      phone_e164: input.phoneE164,
+      display_name: input.displayName,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `cod_ensure_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    customerIdentityId: string;
+    profile?: CodProfileRow;
+    profiles?: CodProfileRow[];
+  };
+}
+
 export async function mockCodFailure(input: {
   customerIdentityId?: string;
   customerCaused?: boolean;

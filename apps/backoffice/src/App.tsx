@@ -46,6 +46,7 @@ import {
   listCodProfiles,
   listRedeliveryFees,
   mockCodFailure,
+  mockEnsureCodProfile,
   restoreCodProfile,
   mockRequireRedeliveryFee,
   listInvites,
@@ -3213,6 +3214,31 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Mock redelivery fee
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setRemitNote('');
+                void (async () => {
+                  try {
+                    const result = await mockEnsureCodProfile({});
+                    if (result.profiles) setCodProfiles(result.profiles);
+                    setRemitNote(
+                      `COD ensure · customer ${result.customerIdentityId.slice(0, 8)}… · fails ${result.profile?.failedCodCount ?? 0} · ${result.profile?.qrForced ? 'QR forced' : 'COD ok'}`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'cod_ensure_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock ensure COD profile
             </button>{' '}
             <button
               type="button"

@@ -75,6 +75,7 @@ import {
   listReturns,
   mockCreateReturn,
   approveReturn,
+  appendReturnCommunication,
   listDeliveryClaims,
   mockOpenDeliveryClaim,
   resolveDeliveryClaim,
@@ -2941,6 +2942,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 <li key={row.returnRequestId}>
                   {row.status} · {row.reason} · {formatLak(LAK(row.amountLak))} · child{' '}
                   {row.childOrderId.slice(0, 8)}…
+                  {row.communications?.length
+                    ? ` · msgs ${row.communications.length}`
+                    : ''}
                   {row.status === 'pending' ? (
                     <>
                       {' '}
@@ -2972,7 +2976,38 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                         Approve
                       </button>
                     </>
-                  ) : null}
+                  ) : null}{' '}
+                  <button
+                    type="button"
+                    className="cta"
+                    disabled={formBusy}
+                    onClick={() => {
+                      setFormBusy(true);
+                      setFormError('');
+                      setReturnNote('');
+                      void (async () => {
+                        try {
+                          const result = await appendReturnCommunication(row.returnRequestId, {
+                            from: 'support',
+                            text: 'Received evidence',
+                          });
+                          if (result.returns) setReturnRequests(result.returns);
+                          else setReturnRequests(await listReturns(50));
+                          setReturnNote(
+                            `Noted evidence on ${row.returnRequestId.slice(0, 8)}…`,
+                          );
+                        } catch (err) {
+                          setFormError(
+                            err instanceof Error ? err.message : 'return_communicate_failed',
+                          );
+                        } finally {
+                          setFormBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    Note evidence
+                  </button>
                 </li>
               ))}
             </ul>

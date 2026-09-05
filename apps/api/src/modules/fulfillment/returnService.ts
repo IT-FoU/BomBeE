@@ -65,6 +65,11 @@ export class ReturnService {
   }
 
   async appendCommunication(returnRequestId: string, message: Record<string, unknown>) {
+    const existing = await this.db.query<{ id: string }>(
+      `SELECT id FROM app.return_requests WHERE id = $1`,
+      [returnRequestId],
+    );
+    if (!existing.rows[0]) throw new Error('return_not_found');
     await this.db.query(
       `UPDATE app.return_requests
        SET communications = communications || $2::jsonb
@@ -195,10 +200,11 @@ export class ReturnService {
       total_lak: number;
       requested_at: string;
       delivered_at: string;
+      communications: unknown;
     }>(
       `SELECT r.id, r.child_order_id, co.parent_order_id, r.reason, r.status,
               r.shipping_liability, co.total_lak,
-              r.requested_at::text, r.delivered_at::text
+              r.requested_at::text, r.delivered_at::text, r.communications
        FROM app.return_requests r
        JOIN app.child_orders co ON co.id = r.child_order_id
        ORDER BY r.requested_at DESC
@@ -215,6 +221,7 @@ export class ReturnService {
       amountLak: Number(r.total_lak),
       requestedAt: r.requested_at,
       deliveredAt: r.delivered_at,
+      communications: Array.isArray(r.communications) ? r.communications : [],
     }));
   }
 

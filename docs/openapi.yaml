@@ -1358,6 +1358,24 @@ paths:
           description: Status approved
         '409':
           description: Return not pending
+  /v1/ops/returns/{returnRequestId}/append-communication:
+    post:
+      summary: Local/mock append support communication on a return
+      parameters:
+        - in: path
+          name: returnRequestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Communication appended; returns list refreshed
+        '400':
+          description: Missing text
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Return not found
   /v1/promotions:
     get:
       summary: List promotions (local ops)

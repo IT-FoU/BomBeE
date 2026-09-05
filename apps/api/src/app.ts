@@ -4167,6 +4167,45 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const returnCommunicateMatch = url.pathname.match(
+      /^\/v1\/ops\/returns\/([^/]+)\/append-communication$/,
+    );
+    if (req.method === 'POST' && returnCommunicateMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const returnRequestId = decodeURIComponent(returnCommunicateMatch[1]!);
+      const body = await readJsonBody<{
+        from?: string;
+        text?: string;
+        body?: string;
+        message?: Record<string, unknown>;
+      }>(req);
+      const text = (body.text ?? body.body)?.trim();
+      const message =
+        body.message && typeof body.message === 'object'
+          ? body.message
+          : {
+              from: body.from?.trim() || 'support',
+              text: text ?? '',
+              at: new Date().toISOString(),
+            };
+      if (!String((message as { text?: unknown }).text ?? '').trim()) {
+        sendJson(res, 400, { error: 'text_required' });
+        return;
+      }
+      try {
+        await services.returns.appendCommunication(returnRequestId, message);
+        const returns = await services.returns.listReturns(50);
+        sendJson(res, 200, { ok: true, returnRequestId, returns });
+      } catch (err) {
+        const messageText = err instanceof Error ? err.message : 'return_communicate_failed';
+        sendJson(res, messageText === 'return_not_found' ? 404 : 400, { error: messageText });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/support/tickets/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

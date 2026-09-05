@@ -84,6 +84,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B64 | Catalog product/variant setStatus HTTP | **Done** — ops list + status set; Catalog BO activate/pause |
 | P2-B65 | Inventory reconcile + safety buffer HTTP | **Done** — balance reconcile + ops safety-buffer; Inventory BO |
 | P2-B66 | Catalog import rollback HTTP | **Done** — ops rollback preview/failed batches; Catalog BO |
+| P2-B67 | Returns append-communication HTTP | **Done** — ops append note; Returns BO |
 
 ## C — Hard rules that stay
 

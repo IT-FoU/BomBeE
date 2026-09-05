@@ -1423,6 +1423,7 @@ export type ReturnRequestRow = {
   amountLak: number;
   requestedAt: string;
   deliveredAt: string;
+  communications?: Array<Record<string, unknown>>;
 };
 
 export async function listReturns(limit = 50): Promise<ReturnRequestRow[]> {
@@ -1466,6 +1467,28 @@ export async function approveReturn(
     throw new Error(err.error ?? `return_approve_failed_${res.status}`);
   }
   return (await res.json()) as { returns?: ReturnRequestRow[]; status?: string };
+}
+
+export async function appendReturnCommunication(
+  returnRequestId: string,
+  input: { from?: string; text: string } = { text: 'Received evidence' },
+): Promise<{ returns?: ReturnRequestRow[] }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/returns/${encodeURIComponent(returnRequestId)}/append-communication`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from: input.from ?? 'support',
+        text: input.text,
+      }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `return_communicate_failed_${res.status}`);
+  }
+  return (await res.json()) as { returns?: ReturnRequestRow[] };
 }
 
 export type DeliveryClaimRow = {

@@ -398,4 +398,34 @@ export class PromotionService {
     );
     return { redemptionId: row.rows[0]!.id, idempotentReplay: false as const };
   }
+
+  async listRedemptions(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      promotion_id: string;
+      parent_order_id: string;
+      amount_lak: number;
+      idempotency_key: string;
+      created_at: string;
+      promo_code: string | null;
+    }>(
+      `SELECT r.id, r.promotion_id, r.parent_order_id, r.amount_lak, r.idempotency_key,
+              r.created_at::text, p.code AS promo_code
+       FROM app.promotion_redemptions r
+       LEFT JOIN app.promotions p ON p.id = r.promotion_id
+       ORDER BY r.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      redemptionId: r.id,
+      promotionId: r.promotion_id,
+      parentOrderId: r.parent_order_id,
+      amountLak: Number(r.amount_lak),
+      idempotencyKey: r.idempotency_key,
+      createdAt: r.created_at,
+      promoCode: r.promo_code,
+    }));
+  }
 }

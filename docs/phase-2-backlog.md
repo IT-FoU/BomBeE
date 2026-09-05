@@ -102,6 +102,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B82 | Order contract snapshot HTTP | **Done** — order-contract-snapshots list + ops contracts mock-snapshot; Stores BO |
 | P2-B83 | Customer PII access log HTTP | **Done** — customer-pii-access list + ops mock-customer-pii-access (+ store-delivery-view logs); Audit BO |
 | P2-B84 | Inventory reservation consume + expire-due HTTP | **Done** — reservations list + ops mock-consume + mock-expire-due; Inventory BO |
+| P2-B85 | Promotion apply-to-order HTTP | **Done** — redemptions list + ops promotions mock-apply; Promotions BO |
 
 ## C — Hard rules that stay
 

@@ -3436,6 +3436,14 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/promotions/redemptions') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const redemptions = await services.promotions.listRedemptions(limit);
+      sendJson(res, 200, { ok: true, redemptions });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/recalls') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
@@ -5637,6 +5645,170 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
           message === 'promotion_not_found'
             ? 404
             : message === 'promotion_not_active'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/promotions/mock-apply') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        promotionId?: string;
+        promotion_id?: string;
+        promotionIds?: string[];
+        promotion_ids?: string[];
+        parentOrderId?: string;
+        parent_order_id?: string;
+        subtotalLak?: number;
+        subtotal_lak?: number;
+        idempotencyKey?: string;
+        idempotency_key?: string;
+      }>(req);
+      try {
+        let promotionIds =
+          body.promotionIds ??
+          body.promotion_ids ??
+          ([] as string[]);
+        const single = (body.promotionId ?? body.promotion_id)?.trim();
+        if (single) promotionIds = [single, ...promotionIds];
+        promotionIds = promotionIds.map((id) => String(id).trim()).filter(Boolean);
+
+        if (promotionIds.length === 0) {
+          const active = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.promotions
+             WHERE status = 'active'
+             ORDER BY effective_from DESC
+             LIMIT 1`,
+          );
+          if (active.rows[0]) promotionIds = [active.rows[0].id];
+        }
+        if (promotionIds.length === 0) {
+          const from = new Date();
+          const to = new Date(from.getTime() + 30 * 24 * 60 * 60_000);
+          const promotionId = await services.promotions.createPromotion({
+            code: `APPLY${Date.now().toString(36).toUpperCase().slice(-5)}`,
+            titleEn: 'Mock apply promo',
+            titleLo: 'ໂປຣໂມ apply',
+            percentOff: 10,
+            funding: 'platform',
+            budgetLak: 500_000,
+            effectiveFrom: from,
+            effectiveTo: to,
+            allowStack: false,
+          });
+          promotionIds = [promotionId];
+        }
+
+        let parentOrderId = (body.parentOrderId ?? body.parent_order_id)?.trim();
+        let subtotalLak =
+          typeof body.subtotalLak === 'number'
+            ? body.subtotalLak
+            : typeof body.subtotal_lak === 'number'
+              ? body.subtotal_lak
+              : undefined;
+
+        if (!parentOrderId) {
+          const existing = await services.db.query<{
+            id: string;
+            subtotal_lak: number;
+          }>(
+            `SELECT id, subtotal_lak FROM app.parent_orders
+             ORDER BY created_at DESC
+             LIMIT 1`,
+          );
+          parentOrderId = existing.rows[0]?.id;
+          if (subtotalLak == null && existing.rows[0]) {
+            subtotalLak = Number(existing.rows[0].subtotal_lak);
+          }
+        }
+        if (!parentOrderId) {
+          const product = await services.db.query<{
+            variant_id: string;
+            store_id: string;
+          }>(
+            `SELECT pv.id AS variant_id, pv.store_id
+             FROM app.product_variants pv
+             JOIN app.products p ON p.id = pv.product_id
+             WHERE p.status = 'active' AND pv.status = 'active'
+             ORDER BY p.created_at
+             LIMIT 1`,
+          );
+          const sell = product.rows[0];
+          if (!sell) {
+            sendJson(res, 409, { error: 'no_active_product' });
+            return;
+          }
+          const customerId = await services.identity.ensureCustomer(
+            '+8562097222085',
+            'Promo Apply QA',
+          );
+          const cartId = await services.orders.createCart(customerId);
+          await services.orders.addCartItem(cartId, {
+            storeId: sell.store_id,
+            variantId: sell.variant_id,
+            quantity: 1,
+          });
+          const created = await services.orders.checkout({
+            cartId,
+            customerIdentityId: customerId,
+            actorIdentityId: customerId,
+            correlationId: crypto.randomUUID(),
+            shippingLakByStore: { [sell.store_id]: 5000 },
+          });
+          parentOrderId = created.parentId;
+          const parent = await services.db.query<{ subtotal_lak: number }>(
+            `SELECT subtotal_lak FROM app.parent_orders WHERE id = $1`,
+            [parentOrderId],
+          );
+          subtotalLak = Number(parent.rows[0]?.subtotal_lak ?? 0);
+        }
+        if (!parentOrderId) {
+          sendJson(res, 409, { error: 'no_parent_order' });
+          return;
+        }
+        if (subtotalLak == null || !(subtotalLak > 0)) {
+          const parent = await services.db.query<{ subtotal_lak: number }>(
+            `SELECT subtotal_lak FROM app.parent_orders WHERE id = $1`,
+            [parentOrderId],
+          );
+          subtotalLak = Number(parent.rows[0]?.subtotal_lak ?? 100_000);
+        }
+
+        const idempotencyKey =
+          (body.idempotencyKey ?? body.idempotency_key)?.trim() ||
+          `mock-apply:${parentOrderId}:${crypto.randomUUID()}`;
+
+        const applied = await services.promotions.applyToOrder({
+          promotionIds,
+          parentOrderId,
+          subtotalLak,
+          idempotencyKey,
+        });
+        const redemptions = await services.promotions.listRedemptions(50);
+        const promotions = await services.promotions.listPromotions(50);
+        sendJson(res, 201, {
+          ok: true,
+          parentOrderId,
+          promotionIds,
+          discountLak: applied.discountLak,
+          idempotentReplay: 'idempotentReplay' in applied ? applied.idempotentReplay : false,
+          redemptions,
+          promotions,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'promotion_apply_failed';
+        const status =
+          message === 'promotion_not_found'
+            ? 404
+            : message === 'promotion_inactive' ||
+                message === 'promotion_cap_exceeded' ||
+                message === 'stacking_not_allowed' ||
+                message === 'max_two_stack'
               ? 409
               : 400;
         sendJson(res, status, { error: message });

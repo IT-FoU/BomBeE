@@ -120,6 +120,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/recalls/mock-start` | Local/mock start recall (archives product; tracks affected) |
 | POST | `/v1/ops/recalls/:id/contact` | Local/mock contact affected + auto-complete when clear |
 | POST | `/v1/ops/promotions/mock-create` | Local/mock create active promotion |
+| GET | `/v1/promotions/redemptions` | List promotion redemptions (local ops) |
+| POST | `/v1/ops/promotions/mock-apply` | Local/mock apply promotion(s) to a parent order |
 | POST | `/v1/ops/promotions/:id/pause` | Local/mock pause active promotion |
 | GET | `/v1/refunds` | List refund approvals (local ops) |
 | GET | `/v1/pricing/requests` | List price change requests (local ops) |

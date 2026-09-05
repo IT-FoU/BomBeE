@@ -1821,6 +1821,42 @@ paths:
           description: Status paused
         '409':
           description: Promotion not active
+  /v1/promotions/redemptions:
+    get:
+      summary: List promotion redemptions
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Redemptions array
+  /v1/ops/promotions/mock-apply:
+    post:
+      summary: Local/mock apply promotion(s) onto a parent order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                promotion_id:
+                  type: string
+                parent_order_id:
+                  type: string
+                subtotal_lak:
+                  type: integer
+                idempotency_key:
+                  type: string
+      responses:
+        '201':
+          description: Promotion applied; redemptions snapshot
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: Inactive/cap/stacking conflict
   /v1/refunds:
     get:
       summary: List refund approvals (local ops)

@@ -102,6 +102,8 @@ import {
   listPromotions,
   mockCreatePromotion,
   pausePromotion,
+  listPromotionRedemptions,
+  mockApplyPromotion,
   listRefunds,
   mockCreateRefund,
   approveRefund,
@@ -204,6 +206,7 @@ import {
   type CourierRow,
   type DeliveryRow,
   type PromotionRow,
+  type PromotionRedemptionRow,
   type RefundApprovalRow,
   type PriceRequestRow,
   type NearExpiryRequestRow,
@@ -323,6 +326,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([]);
   const [fulfillmentNote, setFulfillmentNote] = useState('');
   const [promotions, setPromotions] = useState<PromotionRow[]>([]);
+  const [promotionRedemptions, setPromotionRedemptions] = useState<PromotionRedemptionRow[]>([]);
   const [promoNote, setPromoNote] = useState('');
   const [refunds, setRefunds] = useState<RefundApprovalRow[]>([]);
   const [refundNote, setRefundNote] = useState('');
@@ -414,6 +418,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           courierRows,
           deliveryRows,
           promos,
+          promoRedemptionRows,
           refundRows,
           priceRows,
           nearExpiryRows,
@@ -469,6 +474,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listCouriers(50),
           listDeliveries(50),
           listPromotions(50),
+          listPromotionRedemptions(50),
           listRefunds(50),
           listPriceRequests(50),
           listNearExpiryRequests(50),
@@ -524,6 +530,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setCouriers(courierRows);
         setDeliveries(deliveryRows);
         setPromotions(promos);
+        setPromotionRedemptions(promoRedemptionRows);
         setRefunds(refundRows);
         setPriceRequests(priceRows);
         setNearExpiryRequests(nearExpiryRows);
@@ -3890,7 +3897,66 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             >
               Refresh promotions
             </button>
-          </section>
+          
+            <ul className="roles" aria-label="Promotion redemptions">
+              {promotionRedemptions.length === 0 ? (
+                <li>No promotion redemptions yet</li>
+              ) : null}
+              {promotionRedemptions.map((row) => (
+                <li key={row.redemptionId}>
+                  {row.promoCode ?? row.promotionId.slice(0, 8)} · {row.amountLak} LAK · order{' '}
+                  {row.parentOrderId.slice(0, 8)}… · {row.createdAt}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setPromoNote('');
+                void (async () => {
+                  try {
+                    const result = await mockApplyPromotion();
+                    setPromotionRedemptions(result.redemptions);
+                    if (result.promotions) setPromotions(result.promotions);
+                    setPromoNote(
+                      `Applied promo · −${result.discountLak} LAK on order ${result.parentOrderId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'promotion_apply_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock apply promo
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setPromotionRedemptions(await listPromotionRedemptions(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'promotion_redemptions_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh redemptions
+            </button>
+</section>
           <section aria-labelledby="notifications-heading" id="notifications">
             <h2 id="notifications-heading">
               <span lang="en">Notifications</span>

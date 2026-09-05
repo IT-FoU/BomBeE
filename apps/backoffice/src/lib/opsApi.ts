@@ -2227,6 +2227,55 @@ export async function pausePromotion(
   return (await res.json()) as { promotions?: PromotionRow[]; status?: string };
 }
 
+export type PromotionRedemptionRow = {
+  redemptionId: string;
+  promotionId: string;
+  parentOrderId: string;
+  amountLak: number;
+  idempotencyKey: string;
+  createdAt: string;
+  promoCode: string | null;
+};
+
+export async function listPromotionRedemptions(
+  limit = 50,
+): Promise<PromotionRedemptionRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/promotions/redemptions?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`promotion_redemptions_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { redemptions: PromotionRedemptionRow[] };
+  return body.redemptions;
+}
+
+export async function mockApplyPromotion(input: {
+  promotionId?: string;
+  parentOrderId?: string;
+  subtotalLak?: number;
+} = {}): Promise<{
+  parentOrderId: string;
+  discountLak: number;
+  redemptions: PromotionRedemptionRow[];
+  promotions?: PromotionRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/promotions/mock-apply`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `promotion_apply_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    parentOrderId: string;
+    discountLak: number;
+    redemptions: PromotionRedemptionRow[];
+    promotions?: PromotionRow[];
+  };
+}
+
+
 export type RefundApprovalRow = {
   approvalId: string;
   refundRequestId: string;

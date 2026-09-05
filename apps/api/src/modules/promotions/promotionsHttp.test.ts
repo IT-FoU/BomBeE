@@ -100,4 +100,28 @@ describe('promotions HTTP', () => {
       true,
     );
   });
+
+  it('applies a promotion to an order and lists redemptions', async () => {
+    const before = mockRes();
+    await router(mockReq('GET', '/v1/promotions/redemptions'), before.res);
+    expect(before.res.statusCode).toBe(200);
+    const beforeCount = (before.body().redemptions as unknown[]).length;
+
+    const applied = mockRes();
+    await router(mockReq('POST', '/v1/ops/promotions/mock-apply', {}), applied.res);
+    expect(applied.res.statusCode).toBe(201);
+    expect(applied.body().ok).toBe(true);
+    expect(applied.body().parentOrderId).toBeTruthy();
+    expect(Number(applied.body().discountLak)).toBeGreaterThan(0);
+    expect(
+      (applied.body().redemptions as Array<{ parentOrderId: string }>).some(
+        (r) => r.parentOrderId === applied.body().parentOrderId,
+      ),
+    ).toBe(true);
+
+    const listed = mockRes();
+    await router(mockReq('GET', '/v1/promotions/redemptions?limit=50'), listed.res);
+    expect(listed.res.statusCode).toBe(200);
+    expect((listed.body().redemptions as unknown[]).length).toBeGreaterThan(beforeCount);
+  });
 });

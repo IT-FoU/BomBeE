@@ -243,6 +243,73 @@ export async function mockEvaluateDocumentExpiry(input: {
   };
 }
 
+export async function mockSuspendExpiredDocuments(input: {
+  storeId?: string;
+} = {}): Promise<{
+  storeId: string;
+  storeStatus?: string;
+  canAcceptOrders?: boolean;
+  productsVisible?: boolean;
+  existingOrdersUnderReview?: boolean;
+  suspension?: {
+    suspensionId: string;
+    storeId: string;
+    reasonCode: string;
+    reasonDetail: string | null;
+    active: boolean;
+    suspendedAt: string;
+    reactivatedAt: string | null;
+  };
+  suspensions?: Array<{
+    suspensionId: string;
+    storeId: string;
+    reasonCode: string;
+    reasonDetail: string | null;
+    active: boolean;
+    suspendedAt: string;
+    reactivatedAt: string | null;
+  }>;
+  alerts?: DocumentExpiryAlertRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/stores/documents/mock-suspend-expired`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      store_id: input.storeId,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `doc_expiry_suspend_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    storeId: string;
+    storeStatus?: string;
+    canAcceptOrders?: boolean;
+    productsVisible?: boolean;
+    existingOrdersUnderReview?: boolean;
+    suspension?: {
+      suspensionId: string;
+      storeId: string;
+      reasonCode: string;
+      reasonDetail: string | null;
+      active: boolean;
+      suspendedAt: string;
+      reactivatedAt: string | null;
+    };
+    suspensions?: Array<{
+      suspensionId: string;
+      storeId: string;
+      reasonCode: string;
+      reasonDetail: string | null;
+      active: boolean;
+      suspendedAt: string;
+      reactivatedAt: string | null;
+    }>;
+    alerts?: DocumentExpiryAlertRow[];
+  };
+}
+
 export async function fetchStoreOnboarding(storeId: string): Promise<StoreOnboarding> {
   const res = await fetch(
     `${apiBaseUrl()}/v1/stores/${encodeURIComponent(storeId)}/onboarding`,

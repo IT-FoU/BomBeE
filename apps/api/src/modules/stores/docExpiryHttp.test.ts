@@ -113,4 +113,55 @@ describe('document expiry HTTP', () => {
       (expired.body().alerts as Array<{ storeId: string }>).some((a) => a.storeId === storeId),
     ).toBe(true);
   });
+
+  it('directly suspends a store for expired documents via ops mock', async () => {
+    const created = mockRes();
+    await router(
+      mockReq('POST', '/v1/stores', {
+        code: `DS${Date.now().toString().slice(-6)}`,
+        name: 'Direct Suspend Mart',
+      }),
+      created.res,
+    );
+    expect(created.res.statusCode).toBe(201);
+    const storeId = (created.body().store as { id: string }).id;
+    expect(storeId).toBeTruthy();
+
+    await services.db.query(
+      `UPDATE app.stores
+       SET status = 'active', can_accept_orders = true, products_visible = true
+       WHERE id = $1`,
+      [storeId],
+    );
+
+    const suspended = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/stores/documents/mock-suspend-expired', { store_id: storeId }),
+      suspended.res,
+    );
+    expect(suspended.res.statusCode).toBe(200);
+    expect(suspended.body().storeId).toBe(storeId);
+    expect(suspended.body().storeStatus).toBe('suspended');
+    expect(suspended.body().canAcceptOrders).toBe(false);
+    expect(suspended.body().productsVisible).toBe(true);
+    expect(suspended.body().existingOrdersUnderReview).toBe(true);
+    expect(
+      (suspended.body().suspension as { reasonCode: string; active: boolean } | undefined)
+        ?.reasonCode,
+    ).toBe('document_expired');
+    expect(
+      (suspended.body().suspension as { active: boolean } | undefined)?.active,
+    ).toBe(true);
+    expect(
+      (
+        suspended.body().suspensions as Array<{
+          storeId: string;
+          reasonCode: string;
+          active: boolean;
+        }>
+      ).some(
+        (s) => s.storeId === storeId && s.reasonCode === 'document_expired' && s.active,
+      ),
+    ).toBe(true);
+  });
 });

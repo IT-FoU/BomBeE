@@ -273,6 +273,22 @@ paths:
           description: Mock ops disabled
         '404':
           description: Document not found
+  /v1/ops/stores/documents/mock-suspend-expired:
+    post:
+      summary: Local/mock suspend store for expired documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                store_id:
+                  type: string
+      responses:
+        '200':
+          description: Store suspended with document_expired reason
+        '403':
+          description: Mock ops disabled
   /v1/stores/{storeId}/onboarding:
     get:
       summary: Store onboarding checklist and activation gate

@@ -452,6 +452,69 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/ops/stores/documents/mock-suspend-expired') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const existing = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores
+             WHERE status IN ('active', 'onboarding', 'draft')
+             ORDER BY created_at DESC LIMIT 1`,
+          );
+          storeId = existing.rows[0]?.id;
+        }
+        if (!storeId) {
+          storeId = await services.stores.createStore({
+            code: `SUS${Date.now().toString().slice(-6)}`,
+            name: 'Doc Suspend QA Mart',
+          });
+        }
+        const actorIdentityId = await resolveOpsActor(services);
+        await services.stores.suspendForExpiredDocuments(storeId, actorIdentityId);
+        const [store, suspensions, alerts] = await Promise.all([
+          services.db.query<{
+            id: string;
+            status: string;
+            can_accept_orders: boolean;
+            products_visible: boolean;
+            existing_orders_under_review: boolean;
+          }>(
+            `SELECT id, status, can_accept_orders, products_visible, existing_orders_under_review
+             FROM app.stores WHERE id = $1`,
+            [storeId],
+          ),
+          services.quality.listSuspensions(50),
+          services.stores.listDocumentExpiryAlerts(50),
+        ]);
+        const suspension = suspensions.find(
+          (s) => s.storeId === storeId && s.active && s.reasonCode === 'document_expired',
+        );
+        sendJson(res, 200, {
+          ok: true,
+          storeId,
+          storeStatus: store.rows[0]?.status,
+          canAcceptOrders: store.rows[0]?.can_accept_orders,
+          productsVisible: store.rows[0]?.products_visible,
+          existingOrdersUnderReview: store.rows[0]?.existing_orders_under_review,
+          suspension,
+          suspensions,
+          alerts,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'doc_expiry_suspend_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     const storeOnboardingMatch = url.pathname.match(/^\/v1\/stores\/([^/]+)\/onboarding$/);
     if (req.method === 'GET' && storeOnboardingMatch) {
       const storeId = decodeURIComponent(storeOnboardingMatch[1]!);

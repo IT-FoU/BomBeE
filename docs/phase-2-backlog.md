@@ -103,6 +103,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B83 | Customer PII access log HTTP | **Done** — customer-pii-access list + ops mock-customer-pii-access (+ store-delivery-view logs); Audit BO |
 | P2-B84 | Inventory reservation consume + expire-due HTTP | **Done** — reservations list + ops mock-consume + mock-expire-due; Inventory BO |
 | P2-B85 | Promotion apply-to-order HTTP | **Done** — redemptions list + ops promotions mock-apply; Promotions BO |
+| P2-B86 | Store document-expiry suspend HTTP | **Done** — ops documents mock-suspend-expired; Stores BO |
 
 ## C — Hard rules that stay
 

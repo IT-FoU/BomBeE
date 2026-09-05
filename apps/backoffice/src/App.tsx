@@ -56,6 +56,7 @@ import {
   listStoreContacts,
   listDocumentExpiryAlerts,
   mockEvaluateDocumentExpiry,
+  mockSuspendExpiredDocuments,
   mockAddStoreContact,
   fetchStoreOnboarding,
   mockUploadStoreDocument,
@@ -1497,6 +1498,36 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Mock evaluate doc expiry
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setOnboardNote('');
+                void (async () => {
+                  try {
+                    const result = await mockSuspendExpiredDocuments({});
+                    if (result.alerts) setDocExpiryAlerts(result.alerts);
+                    if (result.suspensions) setSuspensions(result.suspensions);
+                    setStoreDrafts(await listStores());
+                    setStoreDocuments(await listStoreDocuments(50));
+                    setOnboardNote(
+                      `Doc expiry suspend · store ${result.storeId.slice(0, 8)}… · ${result.storeStatus ?? ''} · reason ${result.suspension?.reasonCode ?? 'document_expired'}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'doc_expiry_suspend_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock suspend expired docs
             </button>{' '}
             <button
               type="button"

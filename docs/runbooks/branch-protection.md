@@ -20,3 +20,12 @@ Repo: `IT-FoU/BomBeE` → **Settings → Branches → Add branch protection rule
 ## Verify
 
 After saving, open a test PR and confirm merge is blocked until checks are green.
+
+## Status (P2-A7)
+
+**Done (Owner-verified in GitHub UI).** Agent API cannot read protection details (`administration=read` 403); Owner confirmed:
+
+- `main` protected; PR required; 1 approval; stale approvals dismissed
+- Required checks: `Typecheck · Lint · Test · Build`, `Dependency / security scan`, `Secret scan`, `Migration validation`
+- Branch must be up to date; conversations must be resolved
+- Force pushes disabled; branch deletion disabled; bypassing disabled

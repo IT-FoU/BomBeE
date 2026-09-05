@@ -6,13 +6,13 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 
 | ID | Item | Depends on |
 | --- | --- | --- |
-| P2-A1 | Supabase Staging project + hosted E2E | Owner Staging credentials |
-| P2-A2 | Supabase Production project + deploy | Owner Production project + host |
+| P2-A1 | Supabase Staging project + hosted E2E | **At Owner approval gate** — prep pack ready; no Staging project created yet |
+| P2-A2 | Supabase Production project + deploy | Owner Production project + host — **not started** |
 | P2-A3 | Live SMS provider for Lao numbers | Owner SMS contract |
 | P2-A4 | Bank QR / remittance live mode | Owner bank credentials + written live approval |
 | P2-A5 | Courier API adapters beyond manual | Owner courier contracts |
 | P2-A6 | Monitoring DSN + alert recipients | Owner Ops inbox |
-| P2-A7 | Branch protection on `main` | Owner GitHub admin — `docs/runbooks/branch-protection.md` |
+| P2-A7 | Branch protection on `main` | **Done** — Owner-verified classic rule on `main` (PR required, 1 approval, dismiss stale, 4 CI checks, up-to-date, conversations resolved, no force-push/delete, no bypass) |
 
 ## B — Product / UX polish (can start without Production DB)
 

@@ -553,6 +553,7 @@ export class PaymentService {
       `SELECT amount_lak FROM finance.payment_requests WHERE id = $1`,
       [paymentRequestId],
     );
+    if (!req.rows[0]) throw new Error('payment_request_not_found');
     const receipts = await this.db.query<{ total: number }>(
       `SELECT coalesce(sum(r.amount_lak),0)::bigint AS total
        FROM finance.payment_receipts r

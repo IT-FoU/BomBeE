@@ -2001,6 +2001,51 @@ export async function approvePaymentAdjustment(
   return (await res.json()) as { adjustments?: PaymentAdjustmentRow[]; status?: string };
 }
 
+export type BankReconcileReport = {
+  ok: true;
+  paymentRequestId: string;
+  expectedLak: number;
+  actualLak: number;
+  allocationLak: number;
+  difference: number;
+  mismatches: ReconMismatchRow[];
+};
+
+export async function reconcileBankPayment(
+  paymentRequestId?: string,
+): Promise<BankReconcileReport> {
+  const path = paymentRequestId
+    ? `/v1/ops/payments/${encodeURIComponent(paymentRequestId)}/reconcile-bank`
+    : '/v1/ops/payments/reconcile-bank';
+  const res = await fetch(`${apiBaseUrl()}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: paymentRequestId ? '{}' : JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `bank_reconcile_failed_${res.status}`);
+  }
+  return (await res.json()) as BankReconcileReport;
+}
+
+export type DailyTotalsProof = {
+  ok: true;
+  day: string;
+  dayTotal: number;
+  childTotals: Array<{ childOrderId: string; amountLak: number }>;
+};
+
+export async function fetchDailyTotalsProof(day?: string): Promise<DailyTotalsProof> {
+  const q = day ? `?day=${encodeURIComponent(day)}` : '';
+  const res = await fetch(`${apiBaseUrl()}/v1/payments/daily-totals-proof${q}`);
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `daily_totals_proof_failed_${res.status}`);
+  }
+  return (await res.json()) as DailyTotalsProof;
+}
+
 export type ContractVersionRow = {
   contractId: string;
   storeId: string;

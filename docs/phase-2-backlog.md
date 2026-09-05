@@ -85,6 +85,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B65 | Inventory reconcile + safety buffer HTTP | **Done** — balance reconcile + ops safety-buffer; Inventory BO |
 | P2-B66 | Catalog import rollback HTTP | **Done** — ops rollback preview/failed batches; Catalog BO |
 | P2-B67 | Returns append-communication HTTP | **Done** — ops append note; Returns BO |
+| P2-B68 | Payment bank reconcile + daily totals proof HTTP | **Done** — ops reconcile-bank + daily-totals-proof; Approvals BO |
 
 ## C — Hard rules that stay
 

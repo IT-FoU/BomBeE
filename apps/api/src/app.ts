@@ -3293,6 +3293,74 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/payments/daily-totals-proof') {
+      const day =
+        url.searchParams.get('day')?.trim() || new Date().toISOString().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+        sendJson(res, 400, { error: 'invalid_day' });
+        return;
+      }
+      try {
+        const proof = await services.payments.dailyTotalsProof(day);
+        sendJson(res, 200, { ok: true, day, ...proof });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'daily_totals_proof_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    const bankReconcileMatch = url.pathname.match(
+      /^\/v1\/ops\/payments\/([^/]+)\/reconcile-bank$/,
+    );
+    if (req.method === 'POST' && bankReconcileMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const paymentRequestId = decodeURIComponent(bankReconcileMatch[1]!);
+      try {
+        const report = await services.payments.reconcileBank(paymentRequestId);
+        const mismatches = await services.payments.listMismatches(50);
+        sendJson(res, 200, { ok: true, paymentRequestId, ...report, mismatches });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'bank_reconcile_failed';
+        sendJson(res, message === 'payment_request_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/payments/reconcile-bank') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        paymentRequestId?: string;
+        payment_request_id?: string;
+      }>(req);
+      try {
+        let paymentRequestId = (body.paymentRequestId ?? body.payment_request_id)?.trim();
+        if (!paymentRequestId) {
+          const latest = await services.db.query<{ id: string }>(
+            `SELECT id FROM finance.payment_requests ORDER BY created_at DESC LIMIT 1`,
+          );
+          paymentRequestId = latest.rows[0]?.id;
+        }
+        if (!paymentRequestId) {
+          sendJson(res, 409, { error: 'no_payment_request' });
+          return;
+        }
+        const report = await services.payments.reconcileBank(paymentRequestId);
+        const mismatches = await services.payments.listMismatches(50);
+        sendJson(res, 200, { ok: true, paymentRequestId, ...report, mismatches });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'bank_reconcile_failed';
+        sendJson(res, message === 'payment_request_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/payments/adjustments') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

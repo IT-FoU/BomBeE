@@ -99,6 +99,8 @@ import {
   mockCreateMismatch,
   resolveReconMismatch,
   approvePaymentAdjustment,
+  reconcileBankPayment,
+  fetchDailyTotalsProof,
   listContracts,
   mockCreateContract,
   listPayoutRequests,
@@ -3837,6 +3839,58 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh mismatches
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setAdjustNote('');
+                void (async () => {
+                  try {
+                    const report = await reconcileBankPayment();
+                    setReconMismatches(report.mismatches);
+                    setAdjustNote(
+                      `Bank reconcile ${report.paymentRequestId.slice(0, 8)}… · expected ${formatLak(LAK(report.expectedLak))} / actual ${formatLak(LAK(report.actualLak))} · Δ ${formatLak(LAK(report.difference))}`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'bank_reconcile_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Bank reconcile (latest)
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setAdjustNote('');
+                void (async () => {
+                  try {
+                    const proof = await fetchDailyTotalsProof();
+                    const childCount = proof.childTotals.length;
+                    setAdjustNote(
+                      `Daily totals ${proof.day} · dayTotal ${formatLak(LAK(proof.dayTotal))} · ${childCount} child allocation(s)`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'daily_totals_proof_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Daily totals proof
             </button>
             <ul className="roles" aria-label="Payment adjustments">
               {paymentAdjustments.length === 0 ? <li>No payment adjustments yet</li> : null}

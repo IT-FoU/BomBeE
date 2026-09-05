@@ -2399,6 +2399,58 @@ paths:
       responses:
         '200':
           description: Mismatches array
+  /v1/payments/daily-totals-proof:
+    get:
+      summary: Daily payment totals proof (day total + per-child)
+      parameters:
+        - in: query
+          name: day
+          schema:
+            type: string
+            format: date
+          description: UTC day YYYY-MM-DD (default today)
+      responses:
+        '200':
+          description: Proof payload
+        '400':
+          description: Invalid day
+  /v1/ops/payments/reconcile-bank:
+    post:
+      summary: Local mock bank reconcile (optional paymentRequestId; else latest)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentRequestId:
+                  type: string
+      responses:
+        '200':
+          description: Reconcile report + mismatches
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Payment request not found
+        '409':
+          description: No payment request
+  /v1/ops/payments/{paymentRequestId}/reconcile-bank:
+    post:
+      summary: Local mock bank reconcile for a payment request
+      parameters:
+        - in: path
+          name: paymentRequestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reconcile report + mismatches
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Payment request not found
   /v1/payments/adjustments:
     get:
       summary: List payment adjustments

@@ -2443,6 +2443,66 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/couriers') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const couriers = await services.delivery.listCouriers(limit);
+      sendJson(res, 200, { ok: true, couriers });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/couriers/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        code?: string;
+        name?: string;
+        podMethods?: string[];
+        pod_methods?: string[];
+        lostLiability?: string;
+        lost_liability?: string;
+        damagedLiability?: string;
+        damaged_liability?: string;
+        compensationRules?: Record<string, unknown>;
+        compensation_rules?: Record<string, unknown>;
+      }>(req);
+      try {
+        const suffix = Date.now().toString(36).toUpperCase();
+        const code = body.code?.trim() || `MOCK-CO-${suffix}`;
+        const name = body.name?.trim() || `Mock Courier ${suffix}`;
+        if (code.length < 2 || name.length < 2) {
+          sendJson(res, 400, { error: 'invalid_courier' });
+          return;
+        }
+        const created = await services.delivery.createCourier({
+          code,
+          name,
+          podMethods: body.podMethods ?? body.pod_methods,
+          lostLiability: body.lostLiability ?? body.lost_liability,
+          damagedLiability: body.damagedLiability ?? body.damaged_liability,
+          compensationRules: body.compensationRules ?? body.compensation_rules,
+        });
+        const couriers = await services.delivery.listCouriers(50);
+        sendJson(res, 201, {
+          ok: true,
+          ...created,
+          code,
+          name,
+          couriers,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'courier_create_failed';
+        const status =
+          /unique|duplicate/i.test(message) || message.includes('23505')
+            ? 409
+            : 400;
+        sendJson(res, status, { error: message.includes('23505') ? 'courier_code_taken' : message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/packing-deadlines') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

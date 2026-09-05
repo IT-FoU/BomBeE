@@ -61,6 +61,49 @@ export class DeliveryService {
     return { courierId: courier.rows[0]!.id, contractId: contract.rows[0]!.id };
   }
 
+  async listCouriers(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      code: string;
+      name: string;
+      status: string;
+      created_at: string;
+      contract_id: string | null;
+      version_no: number | null;
+      pod_methods: string[] | null;
+      lost_liability_party: string | null;
+      damaged_liability_party: string | null;
+    }>(
+      `SELECT c.id, c.code, c.name, c.status, c.created_at::text,
+              cc.id AS contract_id, cc.version_no, cc.pod_methods,
+              cc.lost_liability_party, cc.damaged_liability_party
+       FROM app.couriers c
+       LEFT JOIN LATERAL (
+         SELECT id, version_no, pod_methods, lost_liability_party, damaged_liability_party
+         FROM app.courier_contracts
+         WHERE courier_id = c.id
+         ORDER BY version_no DESC
+         LIMIT 1
+       ) cc ON true
+       ORDER BY c.created_at ASC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      courierId: r.id,
+      code: r.code,
+      name: r.name,
+      status: r.status,
+      createdAt: r.created_at,
+      contractId: r.contract_id,
+      versionNo: r.version_no,
+      podMethods: r.pod_methods,
+      lostLiabilityParty: r.lost_liability_party,
+      damagedLiabilityParty: r.damaged_liability_party,
+    }));
+  }
+
   async schedulePackingDeadline(childOrderId: string, confirmedAt: Date) {
     const due = packingDueAt(confirmedAt);
     const row = await this.db.query<{ id: string }>(

@@ -96,6 +96,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/delivery-claims/:claimId/resolve` | Resolve or reject open claim (`status` resolved\|rejected) |
 | GET | `/v1/packing-deadlines` | List packing SLA deadlines (`late=true` optional) |
 | POST | `/v1/ops/packing-deadlines/mock-evaluate` | Local/mock schedule overdue confirm + evaluate late |
+| GET | `/v1/couriers` | List couriers + latest contract (local ops) |
+| POST | `/v1/ops/couriers/mock-create` | Local/mock create courier + contract v1 |
 | GET | `/v1/me/returns` | List own return requests (Bearer) |
 | POST | `/v1/me/returns` | Request return for owned delivered child (Bearer) |
 | POST | `/v1/ops/returns/mock-create` | Local/mock return for delivered child (optional `child_order_id`) |

@@ -1763,6 +1763,60 @@ export async function resolveDeliveryClaim(
   return (await res.json()) as { claims?: DeliveryClaimRow[]; status?: string };
 }
 
+export type CourierRow = {
+  courierId: string;
+  code: string;
+  name: string;
+  status: string;
+  createdAt: string;
+  contractId: string | null;
+  versionNo: number | null;
+  podMethods: string[] | null;
+  lostLiabilityParty: string | null;
+  damagedLiabilityParty: string | null;
+};
+
+export async function listCouriers(limit = 50): Promise<CourierRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/couriers?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`couriers_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { couriers: CourierRow[] };
+  return body.couriers;
+}
+
+export async function mockCreateCourier(input: {
+  code?: string;
+  name?: string;
+  podMethods?: string[];
+  lostLiability?: string;
+  damagedLiability?: string;
+  compensationRules?: Record<string, unknown>;
+} = {}): Promise<{
+  courierId: string;
+  contractId: string;
+  code: string;
+  name: string;
+  couriers?: CourierRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/couriers/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `courier_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    courierId: string;
+    contractId: string;
+    code: string;
+    name: string;
+    couriers?: CourierRow[];
+  };
+}
+
 export type PackingDeadlineRow = {
   packingDeadlineId: string;
   childOrderId: string;

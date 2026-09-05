@@ -90,6 +90,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B70 | Staff role mock-assign HTTP | **Done** — ops roles/mock-assign; Staff BO |
 | P2-B71 | Catalog brand/product/variant mock-create HTTP | **Done** — ops mock-create; Catalog BO |
 | P2-B72 | Inventory lot mock-create HTTP | **Done** — ops lots/mock-create + ensure balance; Inventory BO |
+| P2-B73 | Courier list + mock-create HTTP | **Done** — couriers list + ops mock-create; Fulfillment BO |
 
 ## C — Hard rules that stay
 

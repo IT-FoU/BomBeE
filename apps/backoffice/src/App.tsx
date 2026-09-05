@@ -91,6 +91,7 @@ import {
   listCouriers,
   mockCreateCourier,
   mockEvaluatePackingDeadline,
+  mockMarkPackingDeadline,
   listPromotions,
   mockCreatePromotion,
   pausePromotion,
@@ -2497,8 +2498,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ຈັດສົ່ງ</span>
             </h2>
             <p className="lede">
-              Orders still use Confirm / Advance / Deliver. Here: couriers, packing SLA deadlines, and
-              lost/damaged delivery claims.
+              Orders still use Confirm / Advance / Deliver. Here: couriers, packing SLA deadlines
+              (evaluate / mark packed), and lost/damaged delivery claims.
             </p>
             {fulfillmentNote ? (
               <p className="lede" role="status">
@@ -2541,6 +2542,36 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Mock evaluate packing SLA
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setFulfillmentNote('');
+                void (async () => {
+                  try {
+                    const result = await mockMarkPackingDeadline({
+                      confirmedHoursAgo: 0.5,
+                    });
+                    if (result.deadlines) setPackingDeadlines(result.deadlines);
+                    setFulfillmentNote(
+                      `Marked packed ${result.childOrderId.slice(0, 8)}… · late=${String(result.late)}` +
+                        (result.packedAt ? ` · ${result.packedAt.slice(0, 16)}` : ''),
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'packing_mark_packed_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock mark packed
             </button>{' '}
             <button
               type="button"

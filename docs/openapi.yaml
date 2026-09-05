@@ -1438,6 +1438,35 @@ paths:
           description: Mock ops disabled
         '409':
           description: No eligible child order
+  /v1/ops/packing-deadlines/mock-mark-packed:
+    post:
+      summary: Local/mock schedule packing deadline and mark child packed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_order_id:
+                  type: string
+                confirmed_hours_ago:
+                  type: number
+                  default: 0.5
+                packed_at:
+                  type: string
+                  format: date-time
+                now:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Marked packed; deadlines returned
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Packing deadline missing
+        '409':
+          description: No eligible child order
   /v1/me/returns:
     get:
       summary: List own return requests

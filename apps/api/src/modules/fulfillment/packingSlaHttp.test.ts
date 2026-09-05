@@ -151,4 +151,69 @@ describe('packing SLA HTTP', () => {
       ),
     ).toBe(true);
   });
+
+  it('schedules and marks packed via mock-mark-packed', async () => {
+    const productsRes = mockRes();
+    await router(mockReq('GET', '/v1/catalog/products'), productsRes.res);
+    const products = productsRes.body().products as Array<{
+      storeId: string;
+      variants: Array<{ id: string }>;
+    }>;
+    const product = products[0]!;
+    const variant = product.variants[0]!;
+
+    const cartRes = mockRes();
+    await router(
+      mockReq('POST', '/v1/carts', {}, { authorization: `Bearer ${token}` }),
+      cartRes.res,
+    );
+    const cartId = cartRes.body().cartId as string;
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/items`,
+        { storeId: product.storeId, variantId: variant.id, quantity: 1 },
+        { authorization: `Bearer ${token}` },
+      ),
+      mockRes().res,
+    );
+    const checkoutRes = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/checkout`,
+        { shippingLakByStore: { [product.storeId]: 5000 } },
+        { authorization: `Bearer ${token}` },
+      ),
+      checkoutRes.res,
+    );
+    const parentId = checkoutRes.body().parentId as string;
+    await router(mockReq('POST', `/v1/ops/orders/${parentId}/confirm-children`, {}), mockRes().res);
+
+    const marked = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/packing-deadlines/mock-mark-packed', {
+        confirmed_hours_ago: 0.5,
+      }),
+      marked.res,
+    );
+    expect(marked.res.statusCode).toBe(200);
+    expect(marked.body().ok).toBe(true);
+    expect(marked.body().late).toBe(false);
+    const childOrderId = marked.body().childOrderId as string;
+    expect(childOrderId).toBeTruthy();
+    expect(marked.body().packedAt).toBeTruthy();
+    expect(
+      (
+        marked.body().deadlines as Array<{
+          childOrderId: string;
+          packedAt: string | null;
+          late: boolean;
+        }>
+      ).some(
+        (d) =>
+          d.childOrderId === childOrderId && Boolean(d.packedAt) && d.late === false,
+      ),
+    ).toBe(true);
+  });
 });

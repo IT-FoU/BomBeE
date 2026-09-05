@@ -2694,6 +2694,86 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/ops/packing-deadlines/mock-mark-packed') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        childOrderId?: string;
+        child_order_id?: string;
+        now?: string;
+        packedAt?: string;
+        packed_at?: string;
+        confirmedHoursAgo?: number;
+        confirmed_hours_ago?: number;
+      }>(req);
+      try {
+        let childOrderId = (body.childOrderId ?? body.child_order_id)?.trim();
+        if (!childOrderId) {
+          const unpacked = await services.db.query<{ child_order_id: string }>(
+            `SELECT child_order_id FROM app.packing_deadlines
+             WHERE packed_at IS NULL
+             ORDER BY due_at ASC
+             LIMIT 1`,
+          );
+          childOrderId = unpacked.rows[0]?.child_order_id;
+        }
+        if (!childOrderId) {
+          const existing = await services.db.query<{ child_order_id: string }>(
+            `SELECT child_order_id FROM app.packing_deadlines
+             ORDER BY due_at DESC LIMIT 1`,
+          );
+          childOrderId = existing.rows[0]?.child_order_id;
+        }
+        if (!childOrderId) {
+          const child = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.child_orders ORDER BY created_at DESC LIMIT 1`,
+          );
+          childOrderId = child.rows[0]?.id;
+        }
+        if (!childOrderId) {
+          sendJson(res, 409, { error: 'no_eligible_child' });
+          return;
+        }
+
+        const now = body.now ? new Date(body.now) : new Date();
+        if (Number.isNaN(now.getTime())) {
+          sendJson(res, 400, { error: 'invalid_now' });
+          return;
+        }
+        const packedAtRaw = body.packedAt ?? body.packed_at;
+        const packedAt = packedAtRaw ? new Date(packedAtRaw) : now;
+        if (Number.isNaN(packedAt.getTime())) {
+          sendJson(res, 400, { error: 'invalid_packed_at' });
+          return;
+        }
+
+        const hoursAgoRaw = body.confirmedHoursAgo ?? body.confirmed_hours_ago ?? 0.5;
+        const hoursAgo =
+          typeof hoursAgoRaw === 'number' && Number.isFinite(hoursAgoRaw)
+            ? Math.max(hoursAgoRaw, 0)
+            : 0.5;
+        const confirmedAt = new Date(now.getTime() - hoursAgo * 60 * 60_000);
+        await services.delivery.schedulePackingDeadline(childOrderId, confirmedAt);
+        const marked = await services.delivery.markPacked(childOrderId, packedAt, now);
+        const deadlines = await services.delivery.listPackingDeadlines(50);
+        sendJson(res, 200, {
+          ok: true,
+          childOrderId,
+          late: marked.late,
+          confirmedAt: confirmedAt.toISOString(),
+          packedAt: packedAt.toISOString(),
+          now: now.toISOString(),
+          deadlines,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'packing_mark_packed_failed';
+        sendJson(res, message === 'packing_deadline_missing' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/me/returns') {
       const session = await requireCustomerSession(req, services);
       if (!session) {

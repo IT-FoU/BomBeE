@@ -1924,6 +1924,40 @@ export async function mockEvaluatePackingDeadline(input: {
   };
 }
 
+
+export async function mockMarkPackingDeadline(input: {
+  childOrderId?: string;
+  confirmedHoursAgo?: number;
+  packedAt?: string;
+  now?: string;
+} = {}): Promise<{
+  childOrderId: string;
+  late: boolean;
+  packedAt?: string;
+  deadlines?: PackingDeadlineRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/packing-deadlines/mock-mark-packed`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      child_order_id: input.childOrderId,
+      confirmed_hours_ago: input.confirmedHoursAgo,
+      packed_at: input.packedAt,
+      now: input.now,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `packing_mark_packed_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    childOrderId: string;
+    late: boolean;
+    packedAt?: string;
+    deadlines?: PackingDeadlineRow[];
+  };
+}
+
 export type PromotionRow = {
   promotionId: string;
   code: string;

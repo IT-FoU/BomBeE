@@ -2901,6 +2901,43 @@ export async function approvePayoutRequest(
   };
 }
 
+export async function mockSettlementPayoutVersion(input: {
+  storeId?: string;
+  settlementAt?: string | number;
+  afterHold?: boolean;
+  ensureActive?: boolean;
+} = {}): Promise<{
+  storeId: string;
+  settlementAt: string;
+  evaluation: { ok: boolean; reason?: string; versionId?: string };
+  payoutHoldUntil?: string | null;
+  requests: PayoutRequestRow[];
+  accounts: PayoutAccountRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/payouts/mock-settlement-version`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      store_id: input.storeId,
+      settlement_at: input.settlementAt,
+      after_hold: input.afterHold,
+      ensure_active: input.ensureActive,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `payout_settlement_version_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    storeId: string;
+    settlementAt: string;
+    evaluation: { ok: boolean; reason?: string; versionId?: string };
+    payoutHoldUntil?: string | null;
+    requests: PayoutRequestRow[];
+    accounts: PayoutAccountRow[];
+  };
+}
+
 export type AuditEventRow = {
   eventId: string;
   actorIdentityId: string | null;

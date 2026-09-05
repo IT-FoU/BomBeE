@@ -128,6 +128,7 @@ import {
   mockSnapshotOrderContract,
   listPayoutRequests,
   mockProposePayout,
+  mockSettlementPayoutVersion,
   approvePayoutRequest,
   listAuditEvents,
   mockAuditEvent,
@@ -4552,6 +4553,44 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               disabled={formBusy}
               onClick={() => {
                 setFormBusy(true);
+                setFormError('');
+                setPayoutNote('');
+                void (async () => {
+                  try {
+                    const held = await mockSettlementPayoutVersion({
+                      ensureActive: true,
+                      afterHold: false,
+                    });
+                    setPayoutRequests(held.requests);
+                    setPayoutAccounts(held.accounts);
+                    const released = await mockSettlementPayoutVersion({
+                      storeId: held.storeId,
+                      ensureActive: false,
+                      afterHold: true,
+                    });
+                    setPayoutRequests(released.requests);
+                    setPayoutAccounts(released.accounts);
+                    setPayoutNote(
+                      `Settlement version · store ${held.storeId.slice(0, 8)}… · during ${held.evaluation.ok ? 'ok' : held.evaluation.reason} · after ${released.evaluation.ok ? `ok ${released.evaluation.versionId?.slice(0, 8)}…` : released.evaluation.reason}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'payout_settlement_version_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock settlement payout version
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
                 void (async () => {
                   try {
                     const payouts = await listPayoutRequests(50);
@@ -4566,7 +4605,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh payouts
-            </button>
+            </button>{' '}
             {adjustNote ? (
               <p className="lede" role="status">
                 {adjustNote}

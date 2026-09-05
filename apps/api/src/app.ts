@@ -896,6 +896,128 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/ops/payouts/mock-settlement-version') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        settlementAt?: string | number;
+        settlement_at?: string | number;
+        afterHold?: boolean;
+        after_hold?: boolean;
+        ensureActive?: boolean;
+        ensure_active?: boolean;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        if (!storeId) {
+          const activeAcct = await services.db.query<{ store_id: string }>(
+            `SELECT store_id FROM finance.payout_account_versions
+             WHERE status = 'active' ORDER BY activated_at DESC NULLS LAST LIMIT 1`,
+          );
+          storeId = activeAcct.rows[0]?.store_id;
+        }
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 409, { error: 'no_active_store' });
+          return;
+        }
+
+        const ensureActive = body.ensureActive ?? body.ensure_active ?? true;
+        let active = (
+          await services.payouts.listAccounts({ storeId, limit: 10 })
+        ).find((a) => a.status === 'active');
+
+        if (!active && ensureActive) {
+          const maker = await services.identity.ensureStaff(
+            'staff:local-catalog-maker',
+            'Catalog Maker',
+            '+8562087000001',
+          );
+          const owner = await services.identity.ensureStaff(
+            'staff:local-catalog-owner',
+            'Catalog Owner',
+            '+8562087000002',
+          );
+          const versionId = await services.payouts.createPendingVersion({
+            storeId,
+            bankName: 'BCEL',
+            accountNumberLast4: String(Date.now()).slice(-4),
+            accountHolder: 'Settlement Mock Account',
+          });
+          const requestId = await services.payouts.requestChange({
+            storeId,
+            requestedVersionId: versionId,
+            makerIdentityId: maker.identityId,
+          });
+          const approved = await services.payouts.approveChange({
+            requestId,
+            approverIdentityId: owner.identityId,
+            actorRoles: ['owner'],
+            stepUpVerified: true,
+          });
+          if (!approved.ok) {
+            sendJson(res, 400, { error: approved.reason });
+            return;
+          }
+          active = (
+            await services.payouts.listAccounts({ storeId, limit: 10 })
+          ).find((a) => a.status === 'active');
+        }
+
+        if (!active) {
+          sendJson(res, 409, { error: 'no_active_account' });
+          return;
+        }
+
+        const afterHold = body.afterHold ?? body.after_hold ?? false;
+        const rawSettlement = body.settlementAt ?? body.settlement_at;
+        let settlementAt = Date.now();
+        if (rawSettlement !== undefined && rawSettlement !== null && rawSettlement !== '') {
+          settlementAt =
+            typeof rawSettlement === 'number'
+              ? rawSettlement
+              : Date.parse(String(rawSettlement));
+          if (!Number.isFinite(settlementAt)) {
+            sendJson(res, 400, { error: 'invalid_settlement_at' });
+            return;
+          }
+        } else if (afterHold && active.payoutHoldUntil) {
+          settlementAt = Date.parse(active.payoutHoldUntil) + 1;
+        }
+
+        const evaluation = await services.payouts.settlementPayoutVersion(
+          storeId,
+          settlementAt,
+        );
+        const [requests, accounts] = await Promise.all([
+          services.payouts.listChangeRequests(50),
+          services.payouts.listAccounts({ limit: 50 }),
+        ]);
+        sendJson(res, 200, {
+          ok: true,
+          storeId,
+          settlementAt: new Date(settlementAt).toISOString(),
+          evaluation,
+          payoutHoldUntil: active.payoutHoldUntil,
+          requests,
+          accounts,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'payout_settlement_version_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/cod/shipments') {
       const rows = await services.db.query<{
         id: string;

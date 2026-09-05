@@ -117,6 +117,34 @@ describe('payouts/contracts HTTP', () => {
     ).toBe(true);
   });
 
+  it('evaluates settlement payout version during and after hold via HTTP', async () => {
+    const held = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/payouts/mock-settlement-version', {
+        ensure_active: true,
+        after_hold: false,
+      }),
+      held.res,
+    );
+    expect(held.res.statusCode).toBe(200);
+    expect(held.body().storeId).toBeTruthy();
+    expect(held.body().evaluation).toMatchObject({ ok: false, reason: 'payout_hold_active' });
+    expect(held.body().payoutHoldUntil).toBeTruthy();
+
+    const released = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/payouts/mock-settlement-version', {
+        store_id: held.body().storeId,
+        ensure_active: false,
+        after_hold: true,
+      }),
+      released.res,
+    );
+    expect(released.res.statusCode).toBe(200);
+    expect(released.body().evaluation).toMatchObject({ ok: true });
+    expect((released.body().evaluation as { versionId: string }).versionId).toBeTruthy();
+  });
+
   it('snapshots contract terms onto a child order via HTTP', async () => {
     const before = mockRes();
     await router(mockReq('GET', '/v1/stores/order-contract-snapshots'), before.res);

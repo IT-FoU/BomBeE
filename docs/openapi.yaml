@@ -467,6 +467,33 @@ paths:
           description: Owner or 2FA required
         '409':
           description: Not pending or self-approval
+  /v1/ops/payouts/mock-settlement-version:
+    post:
+      summary: Local/mock evaluate settlement payout version against 48h hold
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                settlement_at:
+                  oneOf:
+                    - type: string
+                      format: date-time
+                    - type: number
+                after_hold:
+                  type: boolean
+                ensure_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Evaluation result (held or released) plus accounts
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No active store or payout account
   /v1/stores/quality:
     get:
       summary: List quality events and suspensions

@@ -118,6 +118,7 @@ import {
   approveNearExpiryRequest,
   listReconMismatches,
   listPaymentAdjustments,
+  mockExpirePaymentRequest,
   mockCreateMismatch,
   resolveReconMismatch,
   approvePaymentAdjustment,
@@ -3239,6 +3240,34 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Mock ensure COD profile
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setRemitNote('');
+                void (async () => {
+                  try {
+                    const result = await mockExpirePaymentRequest({ force: true });
+                    setRemitNote(
+                      result.ok
+                        ? `Payment expire · ${result.paymentRequestId.slice(0, 8)}… · ${result.status ?? result.payment?.status ?? ''} · ${result.payment?.referenceCode ?? ''}`
+                        : `Payment expire blocked · ${result.error ?? 'unknown'} · ${result.paymentRequestId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'payment_expire_request_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock expire payment request
             </button>{' '}
             <button
               type="button"

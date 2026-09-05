@@ -7715,6 +7715,90 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/payments/mock-expire-request') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        paymentRequestId?: string;
+        payment_request_id?: string;
+        now?: string;
+        force?: boolean;
+      }>(req);
+      try {
+        let paymentRequestId = (body.paymentRequestId ?? body.payment_request_id)?.trim();
+        const now = body.now ? new Date(body.now) : new Date();
+        if (Number.isNaN(now.getTime())) {
+          sendJson(res, 400, { error: 'invalid_now' });
+          return;
+        }
+        if (!paymentRequestId) {
+          const open = await services.db.query<{ id: string }>(
+            `SELECT id FROM finance.payment_requests
+             WHERE status IN ('open', 'partially_paid')
+             ORDER BY expires_at ASC
+             LIMIT 1`,
+          );
+          paymentRequestId = open.rows[0]?.id;
+        }
+        if (!paymentRequestId) {
+          sendJson(res, 409, { error: 'no_open_payment_request' });
+          return;
+        }
+        if (body.force) {
+          await services.db.query(
+            `UPDATE finance.payment_requests
+             SET expires_at = $2::timestamptz
+             WHERE id = $1 AND status IN ('open', 'partially_paid')`,
+            [paymentRequestId, new Date(now.getTime() - 60_000).toISOString()],
+          );
+        }
+        const result = await services.payments.expirePaymentRequest(paymentRequestId, now);
+        const row = await services.db.query<{
+          id: string;
+          status: string;
+          expires_at: string;
+          amount_lak: number;
+          reference_code: string;
+        }>(
+          `SELECT id, status, expires_at::text, amount_lak, reference_code
+           FROM finance.payment_requests WHERE id = $1`,
+          [paymentRequestId],
+        );
+        const status = result.ok
+          ? 200
+          : result.reason === 'not_found'
+            ? 404
+            : result.reason === 'not_due' || result.reason === 'already_paid'
+              ? 409
+              : 400;
+        sendJson(res, status, {
+          ok: result.ok,
+          paymentRequestId,
+          ...(result.ok
+            ? { status: result.status, idempotentReplay: 'idempotentReplay' in result ? result.idempotentReplay : false }
+            : { error: result.reason }),
+          payment: row.rows[0]
+            ? {
+                paymentRequestId: row.rows[0].id,
+                status: row.rows[0].status,
+                expiresAt: row.rows[0].expires_at,
+                amountLak: Number(row.rows[0].amount_lak),
+                referenceCode: row.rows[0].reference_code,
+              }
+            : undefined,
+          now: now.toISOString(),
+          forced: Boolean(body.force),
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'payment_expire_request_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/payments/mock-expire-due') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

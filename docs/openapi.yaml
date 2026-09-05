@@ -3210,6 +3210,31 @@ paths:
           description: Marked paid
         '403':
           description: Mock ops disabled
+  /v1/ops/payments/mock-expire-request:
+    post:
+      summary: Local/mock expire a single payment request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_request_id:
+                  type: string
+                now:
+                  type: string
+                  format: date-time
+                force:
+                  type: boolean
+      responses:
+        '200':
+          description: Payment request expired (or idempotent replay)
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Payment request not found
+        '409':
+          description: Not due / already paid / none open
   /v1/payments/mock-expire-due:
     post:
       summary: Local/mock expire open QR past deadline, release reservations, cancel awaiting children

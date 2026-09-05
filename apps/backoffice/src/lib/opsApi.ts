@@ -2630,6 +2630,61 @@ export async function listPaymentAdjustments(
   return body.adjustments;
 }
 
+
+export async function mockExpirePaymentRequest(input: {
+  paymentRequestId?: string;
+  now?: string;
+  force?: boolean;
+} = {}): Promise<{
+  ok: boolean;
+  paymentRequestId: string;
+  status?: string;
+  error?: string;
+  forced?: boolean;
+  payment?: {
+    paymentRequestId: string;
+    status: string;
+    expiresAt: string;
+    amountLak: number;
+    referenceCode: string;
+  };
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/payments/mock-expire-request`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      payment_request_id: input.paymentRequestId,
+      now: input.now,
+      force: input.force ?? true,
+    }),
+  });
+  const body = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    paymentRequestId?: string;
+    status?: string;
+    error?: string;
+    forced?: boolean;
+    payment?: {
+      paymentRequestId: string;
+      status: string;
+      expiresAt: string;
+      amountLak: number;
+      referenceCode: string;
+    };
+  };
+  if (!res.ok && res.status !== 409) {
+    throw new Error(body.error ?? `payment_expire_request_failed_${res.status}`);
+  }
+  return {
+    ok: Boolean(body.ok),
+    paymentRequestId: body.paymentRequestId ?? input.paymentRequestId ?? '',
+    status: body.status,
+    error: body.error,
+    forced: body.forced,
+    payment: body.payment,
+  };
+}
+
 export async function mockCreateMismatch(input: {
   expectedLak?: number;
   actualLak?: number;

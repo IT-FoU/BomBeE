@@ -210,6 +210,7 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/payments/:id` | Payment request status |
 | POST | `/v1/payments/:id/mock-confirm` | Local/mock evidence + confirm |
 | POST | `/v1/payments/mock-expire-due` | Local/mock expire open QR past deadline + release stock + cancel `awaiting_payment` children; also grace-expire reservations |
+| POST | `/v1/ops/payments/mock-expire-request` | Local/mock `expirePaymentRequest` (optional `force` backdates due) |
 | GET | `/v1/payments/mismatches` | List recon mismatches (local ops) |
 | GET | `/v1/payments/daily-totals-proof` | Day receipt total + per-child allocation proof (`?day=YYYY-MM-DD`, default UTC today) |
 | GET | `/v1/payments/adjustments` | List payment adjustments (local ops) |

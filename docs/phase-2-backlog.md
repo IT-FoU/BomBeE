@@ -107,6 +107,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B87 | Settlement payout version HTTP | **Done** — ops payouts mock-settlement-version; Approvals/Payouts BO |
 | P2-B88 | Store quality rolling-counts + mock-suspend HTTP | **Done** — rolling-counts list + ops quality mock-suspend; Quality BO |
 | P2-B89 | COD ensure-profile HTTP | **Done** — ops cod profiles mock-ensure; Payments/COD BO |
+| P2-B90 | Payment expire-request HTTP | **Done** — ops payments mock-expire-request; Payments BO |
 
 ## C — Hard rules that stay
 

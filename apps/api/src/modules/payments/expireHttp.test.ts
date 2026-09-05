@@ -184,4 +184,97 @@ describe('payment mock-expire-due HTTP', () => {
     await router(mockReq('GET', `/v1/inventory/stock?variantId=${variant.id}`), stockAfter.res);
     expect(Number(stockAfter.body().availableQty)).toBe(availableBefore);
   });
+
+  it('expires a single payment request via ops mock-expire-request', async () => {
+    const productsRes = mockRes();
+    await router(mockReq('GET', '/v1/catalog/products'), productsRes.res);
+    const products = productsRes.body().products as Array<{
+      storeId: string;
+      variants: Array<{ id: string }>;
+    }>;
+    const product = products[0]!;
+    const variant = product.variants[0]!;
+
+    const cartRes = mockRes();
+    await router(
+      mockReq('POST', '/v1/carts', {}, { authorization: `Bearer ${token}` }),
+      cartRes.res,
+    );
+    const cartId = cartRes.body().cartId as string;
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/items`,
+        { storeId: product.storeId, variantId: variant.id, quantity: 1 },
+        { authorization: `Bearer ${token}` },
+      ),
+      mockRes().res,
+    );
+    const checkoutRes = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/checkout`,
+        { shippingLakByStore: { [product.storeId]: 5000 } },
+        { authorization: `Bearer ${token}` },
+      ),
+      checkoutRes.res,
+    );
+    const parentId = checkoutRes.body().parentId as string;
+    await router(
+      mockReq('POST', `/v1/orders/${parentId}/confirm-children`, {}, {
+        authorization: `Bearer ${token}`,
+      }),
+      mockRes().res,
+    );
+    const qr = mockRes();
+    await router(
+      mockReq('POST', `/v1/orders/${parentId}/payments/qr`, {}, {
+        authorization: `Bearer ${token}`,
+      }),
+      qr.res,
+    );
+    expect(qr.res.statusCode).toBe(201);
+    const paymentRequestId = qr.body().paymentRequestId as string;
+    expect(paymentRequestId).toBeTruthy();
+
+    const blocked = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/payments/mock-expire-request', {
+        payment_request_id: paymentRequestId,
+        force: false,
+      }),
+      blocked.res,
+    );
+    expect(blocked.res.statusCode).toBe(409);
+    expect(blocked.body().error).toBe('not_due');
+
+    const expired = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/payments/mock-expire-request', {
+        payment_request_id: paymentRequestId,
+        force: true,
+        now: '2026-09-05T12:00:00.000Z',
+      }),
+      expired.res,
+    );
+    expect(expired.res.statusCode).toBe(200);
+    expect(expired.body().ok).toBe(true);
+    expect(expired.body().status).toBe('expired');
+    expect(expired.body().paymentRequestId).toBe(paymentRequestId);
+    expect((expired.body().payment as { status: string }).status).toBe('expired');
+
+    const again = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/payments/mock-expire-request', {
+        payment_request_id: paymentRequestId,
+        force: true,
+      }),
+      again.res,
+    );
+    expect(again.res.statusCode).toBe(200);
+    expect(again.body().ok).toBe(true);
+    expect(again.body().status).toBe('expired');
+  });
+
 });

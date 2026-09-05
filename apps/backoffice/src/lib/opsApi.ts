@@ -3333,6 +3333,85 @@ export async function restoreDrillBackup(
   return (await res.json()) as { jobs?: BackupJobRow[]; ok?: boolean };
 }
 
+
+export type OrderAddressSnapshotRow = {
+  snapshotId: string;
+  parentOrderId: string;
+  recipientName: string;
+  recipientPhone: string;
+  addressLine: string;
+  district: string | null;
+  province: string | null;
+  snappedAt: string;
+  storeId: string | null;
+};
+
+export async function listOrderAddressSnapshots(
+  limit = 50,
+): Promise<OrderAddressSnapshotRow[]> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/privacy/order-address-snapshots?limit=${limit}`,
+  );
+  if (!res.ok) {
+    throw new Error(`order_address_snapshots_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { snapshots: OrderAddressSnapshotRow[] };
+  return body.snapshots;
+}
+
+export async function mockSnapshotOrderAddress(input: {
+  parentOrderId?: string;
+  addressId?: string;
+} = {}): Promise<{
+  parentOrderId: string;
+  addressId: string;
+  snapshots?: OrderAddressSnapshotRow[];
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/privacy/order-address-snapshots/mock-snapshot`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        parent_order_id: input.parentOrderId,
+        address_id: input.addressId,
+      }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `order_address_snapshot_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    parentOrderId: string;
+    addressId: string;
+    snapshots?: OrderAddressSnapshotRow[];
+  };
+}
+
+export async function getStoreDeliveryView(
+  parentOrderId: string,
+  storeId?: string,
+): Promise<{
+  parentOrderId: string;
+  storeId: string;
+  view: { recipientName: string; recipientPhone: string; addressLine: string };
+}> {
+  const qs = storeId ? `?storeId=${encodeURIComponent(storeId)}` : '';
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/privacy/orders/${encodeURIComponent(parentOrderId)}/store-delivery-view${qs}`,
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_delivery_view_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    parentOrderId: string;
+    storeId: string;
+    view: { recipientName: string; recipientPhone: string; addressLine: string };
+  };
+}
+
 export type DeletionRequestRow = {
   requestId: string;
   customerIdentityId: string;

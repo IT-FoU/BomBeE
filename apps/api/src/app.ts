@@ -7075,6 +7075,145 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+
+    if (req.method === 'GET' && url.pathname === '/v1/privacy/order-address-snapshots') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const snapshots = await services.privacy.listOrderAddressSnapshots(limit);
+      sendJson(res, 200, { ok: true, snapshots });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/privacy/order-address-snapshots/mock-snapshot') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        parentOrderId?: string;
+        parent_order_id?: string;
+        addressId?: string;
+        address_id?: string;
+      }>(req);
+      try {
+        let parentOrderId = (body.parentOrderId ?? body.parent_order_id)?.trim();
+        if (!parentOrderId) {
+          const eligible = await services.db.query<{ id: string }>(
+            `SELECT p.id
+             FROM app.parent_orders p
+             WHERE NOT EXISTS (
+               SELECT 1 FROM app.order_address_snapshots s
+               WHERE s.parent_order_id = p.id
+             )
+             ORDER BY p.created_at DESC
+             LIMIT 1`,
+          );
+          parentOrderId = eligible.rows[0]?.id;
+        }
+        if (!parentOrderId) {
+          sendJson(res, 409, { error: 'no_eligible_parent_order' });
+          return;
+        }
+
+        let addressId = (body.addressId ?? body.address_id)?.trim();
+        if (!addressId) {
+          const owner = await services.db.query<{ customer_identity_id: string }>(
+            `SELECT customer_identity_id FROM app.parent_orders WHERE id = $1`,
+            [parentOrderId],
+          );
+          const customerId = owner.rows[0]?.customer_identity_id;
+          if (customerId) {
+            const existing = await services.db.query<{ id: string }>(
+              `SELECT id FROM app.customer_addresses
+               WHERE customer_identity_id = $1 AND archived_at IS NULL
+               ORDER BY is_default DESC, created_at DESC
+               LIMIT 1`,
+              [customerId],
+            );
+            addressId = existing.rows[0]?.id;
+            if (!addressId) {
+              addressId = await services.privacy.addAddress({
+                customerIdentityId: customerId,
+                recipientName: 'Mock Recipient',
+                recipientPhoneE164: '+8562097000001',
+                addressLine: 'Mock address Vientiane',
+                district: 'Chanthabouly',
+                province: 'Vientiane Capital',
+                isDefault: true,
+              });
+            }
+          }
+        }
+        if (!addressId) {
+          sendJson(res, 409, { error: 'no_eligible_address' });
+          return;
+        }
+
+        await services.privacy.snapshotOrderAddress({ parentOrderId, addressId });
+        const snapshots = await services.privacy.listOrderAddressSnapshots(50);
+        sendJson(res, 201, {
+          ok: true,
+          parentOrderId,
+          addressId,
+          snapshots,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'address_snapshot_failed';
+        const status =
+          message === 'address_not_found'
+            ? 404
+            : /unique|duplicate|23505/i.test(message)
+              ? 409
+              : 400;
+        sendJson(res, status, {
+          error: /unique|duplicate|23505/i.test(message)
+            ? 'address_snapshot_exists'
+            : message,
+        });
+      }
+      return;
+    }
+
+    const storeDeliveryViewMatch = url.pathname.match(
+      /^\/v1\/privacy\/orders\/([^/]+)\/store-delivery-view$/,
+    );
+    if (req.method === 'GET' && storeDeliveryViewMatch) {
+      const parentOrderId = decodeURIComponent(storeDeliveryViewMatch[1]!);
+      const storeId =
+        url.searchParams.get('storeId') ??
+        url.searchParams.get('store_id') ??
+        '';
+      try {
+        let resolvedStoreId = storeId.trim();
+        if (!resolvedStoreId) {
+          const child = await services.db.query<{ store_id: string }>(
+            `SELECT store_id FROM app.child_orders
+             WHERE parent_order_id = $1
+             ORDER BY created_at ASC
+             LIMIT 1`,
+            [parentOrderId],
+          );
+          resolvedStoreId = child.rows[0]?.store_id ?? '00000000-0000-4000-8000-000000000001';
+        }
+        const view = await services.privacy.storeDeliveryView(
+          resolvedStoreId,
+          parentOrderId,
+        );
+        sendJson(res, 200, {
+          ok: true,
+          parentOrderId,
+          storeId: resolvedStoreId,
+          view,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'store_delivery_view_failed';
+        sendJson(res, message === 'address_snapshot_missing' ? 404 : 400, {
+          error: message,
+        });
+      }
+      return;
+    }
+
     const deletionApproveMatch = url.pathname.match(
       /^\/v1\/ops\/privacy\/deletion-requests\/([^/]+)\/approve$/,
     );

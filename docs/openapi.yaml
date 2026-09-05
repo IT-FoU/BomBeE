@@ -2392,6 +2392,56 @@ paths:
           description: Recovery request pending
         '400':
           description: Invalid phone or non-private storage key
+  /v1/privacy/order-address-snapshots:
+    get:
+      summary: List order address snapshots (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Snapshots array
+  /v1/ops/privacy/order-address-snapshots/mock-snapshot:
+    post:
+      summary: Local/mock snapshot a customer address onto a parent order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parent_order_id:
+                  type: string
+                address_id:
+                  type: string
+      responses:
+        '201':
+          description: Snapshot created; list snapshot
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No eligible parent/address or snapshot already exists
+  /v1/privacy/orders/{parentOrderId}/store-delivery-view:
+    get:
+      summary: Store-safe delivery address fields from order address snapshot
+      parameters:
+        - in: path
+          name: parentOrderId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: storeId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Delivery view
+        '404':
+          description: Address snapshot missing
   /v1/privacy/deletion-requests:
     get:
       summary: List account deletion requests (local ops)

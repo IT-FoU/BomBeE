@@ -207,4 +207,131 @@ describe('privacy HTTP', () => {
     expect(after.res.statusCode).toBe(200);
     expect((after.body().profile as { displayName: string }).displayName).toBe('anonymized');
   });
+
+  it('mock-snapshots order address and returns store delivery view', async () => {
+    const empty = mockRes();
+    await router(mockReq('GET', '/v1/privacy/order-address-snapshots'), empty.res);
+    expect(empty.res.statusCode).toBe(200);
+    const before = (empty.body().snapshots as unknown[]).length;
+
+    const productsRes = mockRes();
+    await router(mockReq('GET', '/v1/catalog/products'), productsRes.res);
+    const products = productsRes.body().products as Array<{
+      storeId: string;
+      variants: Array<{ id: string }>;
+    }>;
+    const product = products[0]!;
+    const variant = product.variants[0]!;
+
+    const identityId = await services.identity.ensureCustomer('+8562097222055', 'Snapshot QA');
+    const snapToken = await services.identity.createSession({
+      authIdentityId: identityId,
+      audience: 'customer',
+      ttlMs: 60 * 60_000,
+    });
+
+    const addr = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        '/v1/me/addresses',
+        {
+          recipientName: 'Snapshot QA',
+          recipientPhoneE164: '+8562097222055',
+          addressLine: 'Ban Phonethan',
+          district: 'Xaysettha',
+          province: 'Vientiane Capital',
+          isDefault: true,
+        },
+        { authorization: `Bearer ${snapToken}` },
+      ),
+      addr.res,
+    );
+    expect(addr.res.statusCode).toBe(201);
+    const addressId = addr.body().addressId as string;
+
+    const cartRes = mockRes();
+    await router(
+      mockReq('POST', '/v1/carts', {}, { authorization: `Bearer ${snapToken}` }),
+      cartRes.res,
+    );
+    const cartId = cartRes.body().cartId as string;
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/items`,
+        { storeId: product.storeId, variantId: variant.id, quantity: 1 },
+        { authorization: `Bearer ${snapToken}` },
+      ),
+      mockRes().res,
+    );
+    const checkoutRes = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/checkout`,
+        { shippingLakByStore: { [product.storeId]: 5000 } },
+        { authorization: `Bearer ${snapToken}` },
+      ),
+      checkoutRes.res,
+    );
+    const parentId = checkoutRes.body().parentId as string;
+    expect(parentId).toBeTruthy();
+
+    const noneView = mockRes();
+    await router(
+      mockReq('GET', `/v1/privacy/orders/${parentId}/store-delivery-view`),
+      noneView.res,
+    );
+    expect(noneView.res.statusCode).toBe(404);
+    expect(noneView.body().error).toBe('address_snapshot_missing');
+
+    const snapped = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/privacy/order-address-snapshots/mock-snapshot', {
+        parent_order_id: parentId,
+        address_id: addressId,
+      }),
+      snapped.res,
+    );
+    expect(snapped.res.statusCode).toBe(201);
+    expect(snapped.body().ok).toBe(true);
+    expect(snapped.body().parentOrderId).toBe(parentId);
+    expect(
+      (
+        snapped.body().snapshots as Array<{ parentOrderId: string; addressLine: string }>
+      ).some((s) => s.parentOrderId === parentId && s.addressLine === 'Ban Phonethan'),
+    ).toBe(true);
+
+    const listed = mockRes();
+    await router(mockReq('GET', '/v1/privacy/order-address-snapshots'), listed.res);
+    expect(listed.res.statusCode).toBe(200);
+    expect((listed.body().snapshots as unknown[]).length).toBe(before + 1);
+
+    const view = mockRes();
+    await router(
+      mockReq(
+        'GET',
+        `/v1/privacy/orders/${parentId}/store-delivery-view?storeId=${product.storeId}`,
+      ),
+      view.res,
+    );
+    expect(view.res.statusCode).toBe(200);
+    expect(view.body().view).toEqual({
+      recipientName: 'Snapshot QA',
+      recipientPhone: '+8562097222055',
+      addressLine: 'Ban Phonethan',
+    });
+
+    const dup = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/privacy/order-address-snapshots/mock-snapshot', {
+        parent_order_id: parentId,
+        address_id: addressId,
+      }),
+      dup.res,
+    );
+    expect(dup.res.statusCode).toBe(409);
+  });
+
 });

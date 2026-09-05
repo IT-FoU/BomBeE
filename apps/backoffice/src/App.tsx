@@ -150,6 +150,9 @@ import {
   restoreDrillBackup,
   listDeletionRequests,
   approveDeletionRequest,
+  listOrderAddressSnapshots,
+  mockSnapshotOrderAddress,
+  getStoreDeliveryView,
   listRecoveryRequests,
   listReviews,
   mockCreateReview,
@@ -215,6 +218,7 @@ import {
   type BackupJobRow,
   type BackupAlertRow,
   type DeletionRequestRow,
+  type OrderAddressSnapshotRow,
   type RecoveryRequestRow,
   type ReviewRow,
   type SupplierResponseRow,
@@ -342,6 +346,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [backupAlerts, setBackupAlerts] = useState<BackupAlertRow[]>([]);
   const [backupNote, setBackupNote] = useState('');
   const [deletionRequests, setDeletionRequests] = useState<DeletionRequestRow[]>([]);
+  const [orderAddressSnapshots, setOrderAddressSnapshots] = useState<
+    OrderAddressSnapshotRow[]
+  >([]);
   const [recoveryRequests, setRecoveryRequests] = useState<RecoveryRequestRow[]>([]);
   const [privacyNote, setPrivacyNote] = useState('');
   const [productReviews, setProductReviews] = useState<ReviewRow[]>([]);
@@ -409,6 +416,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           reconcile,
           backupBundle,
           deletionRows,
+          snapshotRows,
           recoveryRows,
           reviewRows,
           responseRows,
@@ -460,6 +468,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           fetchPaymentsReconcile(),
           listBackups(50),
           listDeletionRequests(50),
+          listOrderAddressSnapshots(50),
           listRecoveryRequests(50),
           listReviews(50),
           listSupplierResponses(50),
@@ -515,6 +524,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setBackupJobs(backupBundle.jobs);
         setBackupAlerts(backupBundle.alerts);
         setDeletionRequests(deletionRows);
+        setOrderAddressSnapshots(snapshotRows);
         setRecoveryRequests(recoveryRows);
         setProductReviews(reviewRows);
         setSupplierResponses(responseRows);
@@ -4975,13 +4985,108 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </h2>
             <p className="lede">
               Account deletion requests — approve anonymizes profile/phone; orders retained.
-              Recovery queue lists encrypted private document submissions.
+              Order address snapshots freeze delivery PII for stores. Recovery queue lists encrypted
+              private document submissions.
             </p>
             {privacyNote ? (
               <p className="lede" role="status">
                 {privacyNote}
               </p>
             ) : null}
+            <ul className="roles" aria-label="Order address snapshots">
+              {orderAddressSnapshots.length === 0 ? (
+                <li>No order address snapshots yet</li>
+              ) : null}
+              {orderAddressSnapshots.map((row) => (
+                <li key={row.snapshotId}>
+                  {row.recipientName} · {row.addressLine} · order {row.parentOrderId.slice(0, 8)}…
+                  {' '}
+                  <button
+                    type="button"
+                    className="cta"
+                    disabled={formBusy}
+                    onClick={() => {
+                      setFormBusy(true);
+                      setPrivacyNote('');
+                      void (async () => {
+                        try {
+                          const result = await getStoreDeliveryView(
+                            row.parentOrderId,
+                            row.storeId ?? undefined,
+                          );
+                          setPrivacyNote(
+                            `Store view ${result.parentOrderId.slice(0, 8)}… · ${result.view.recipientName} · ${result.view.addressLine}`,
+                          );
+                        } catch (err) {
+                          setFormError(
+                            err instanceof Error
+                              ? err.message
+                              : 'store_delivery_view_failed',
+                          );
+                        } finally {
+                          setFormBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    Store delivery view
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setPrivacyNote('');
+                void (async () => {
+                  try {
+                    const result = await mockSnapshotOrderAddress({});
+                    if (result.snapshots) setOrderAddressSnapshots(result.snapshots);
+                    else setOrderAddressSnapshots(await listOrderAddressSnapshots(50));
+                    setPrivacyNote(
+                      `Snapshotted address for order ${result.parentOrderId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error
+                        ? err.message
+                        : 'order_address_snapshot_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock snapshot order address
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setOrderAddressSnapshots(await listOrderAddressSnapshots(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error
+                        ? err.message
+                        : 'order_address_snapshots_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh address snapshots
+            </button>
             <ul className="roles" aria-label="Deletion requests">
               {deletionRequests.length === 0 ? <li>No deletion requests</li> : null}
               {deletionRequests.map((row) => (

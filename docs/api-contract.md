@@ -164,7 +164,10 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/me/phone-change/start` | Dual OTP phone change start (Bearer; local returns `devOldCode`/`devNewCode`) |
 | POST | `/v1/me/phone-change/confirm` | Confirm phone change with both OTP codes |
 | POST | `/v1/me/recovery-document` | Submit private encrypted recovery document (`private/` key) |
-| GET | `/v1/privacy/deletion-requests` | List deletion requests (local ops) |
+| GET | `/v1/privacy/order-address-snapshots` | List order address snapshots (local ops) |
+| `/v1/ops/privacy/order-address-snapshots/mock-snapshot` | Local/mock snapshot address onto parent order |
+| `/v1/privacy/orders/:parentOrderId/store-delivery-view` | Store-safe delivery address view from snapshot |
+| `/v1/privacy/deletion-requests` | List deletion requests (local ops) |
 | GET | `/v1/privacy/recovery-requests` | List recovery document requests (local ops) |
 | POST | `/v1/ops/privacy/deletion-requests/:id/approve` | Approve + anonymize (orders retained) |
 | GET | `/v1/reviews` | List product reviews (optional `productId`) |

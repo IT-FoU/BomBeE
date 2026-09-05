@@ -98,6 +98,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B78 | Delivery list + mock-create HTTP | **Done** — deliveries list + ops mock-create; Fulfillment BO |
 | P2-B79 | Delivery mock-handoff + mock-record-pod HTTP | **Done** — ops deliveries mock-handoff + mock-record-pod; Fulfillment BO |
 | P2-B80 | Identity mock-revoke-all-sessions HTTP | **Done** — ops identity mock-revoke-sessions; Staff BO |
+| P2-B81 | Privacy order-address snapshot + store delivery-view HTTP | **Done** — snapshots list + ops mock-snapshot + store-delivery-view; Privacy BO |
 
 ## C — Hard rules that stay
 

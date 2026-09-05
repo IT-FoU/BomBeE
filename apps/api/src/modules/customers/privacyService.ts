@@ -317,6 +317,46 @@ export class CustomerPrivacyService {
     }));
   }
 
+
+  async listOrderAddressSnapshots(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      parent_order_id: string;
+      recipient_name: string;
+      recipient_phone_e164: string;
+      address_line: string;
+      district: string | null;
+      province: string | null;
+      snapped_at: string;
+      store_id: string | null;
+    }>(
+      `SELECT s.id, s.parent_order_id, s.recipient_name, s.recipient_phone_e164,
+              s.address_line, s.district, s.province, s.snapped_at::text,
+              (
+                SELECT c.store_id FROM app.child_orders c
+                WHERE c.parent_order_id = s.parent_order_id
+                ORDER BY c.created_at ASC
+                LIMIT 1
+              ) AS store_id
+       FROM app.order_address_snapshots s
+       ORDER BY s.snapped_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      snapshotId: r.id,
+      parentOrderId: r.parent_order_id,
+      recipientName: r.recipient_name,
+      recipientPhone: r.recipient_phone_e164,
+      addressLine: r.address_line,
+      district: r.district,
+      province: r.province,
+      snappedAt: r.snapped_at,
+      storeId: r.store_id,
+    }));
+  }
+
   async listDeletionRequests(limit = 50) {
     const capped = Math.min(Math.max(limit, 1), 100);
     const rows = await this.db.query<{

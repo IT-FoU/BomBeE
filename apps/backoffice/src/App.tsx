@@ -17,6 +17,7 @@ import {
   listInventoryAdjustments,
   opsReceiveStock,
   opsAdjustStock,
+  mockCreateInventoryLot,
   reconcileInventoryBalance,
   opsSetSafetyBuffer,
   listStockImportBatches,
@@ -1791,10 +1792,10 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ສະຕັອກ</span>
             </h2>
             <p className="lede">
-              Lot balances for a selected variant (use Stock on a catalog row). Mock receive adds
-              units; adjust applies maker-checker in one shot. Reconcile checks ledger vs balance;
-              safety buffer updates available qty. Preview/commit stock import batches apply deltas
-              as import ledger txs.
+              Lot balances for a selected variant (use Stock on a catalog row). Mock create lot adds
+              a lot + zero balance; receive adds units; adjust applies maker-checker in one shot.
+              Reconcile checks ledger vs balance; safety buffer updates available qty.
+              Preview/commit stock import batches apply deltas as import ledger txs.
             </p>
             {inventoryNote ? (
               <p className="lede" role="status">
@@ -1995,6 +1996,39 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                 </li>
               ))}
             </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setInventoryNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateInventoryLot({
+                      variantId: stockDetail?.variantId,
+                      storeId: stockDetail?.balances[0]?.storeId,
+                      lotCode: `BO-LOT-${Date.now().toString(36).toUpperCase()}`,
+                      categorySlug: 'general',
+                    });
+                    if (result.stock) setStockDetail(result.stock);
+                    else setStockDetail(await fetchVariantStock(result.variantId));
+                    setInventoryNote(
+                      `Created lot ${result.lotCode} · balance ${result.balanceId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'inventory_lot_create_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Create lot
+            </button>{' '}
             <button
               type="button"
               className="cta"

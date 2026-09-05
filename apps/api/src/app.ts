@@ -1627,6 +1627,142 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/lots/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        variantId?: string;
+        variant_id?: string;
+        locationId?: string;
+        location_id?: string;
+        lotCode?: string;
+        lot_code?: string;
+        productionDate?: string;
+        production_date?: string;
+        expiryDate?: string;
+        expiry_date?: string;
+        categorySlug?: string;
+        category_slug?: string;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        let variantId = (body.variantId ?? body.variant_id)?.trim();
+        let locationId = (body.locationId ?? body.location_id)?.trim();
+        let categorySlug = (body.categorySlug ?? body.category_slug)?.trim();
+
+        if (!variantId) {
+          const variant = await services.db.query<{
+            id: string;
+            store_id: string;
+            category_slug: string;
+          }>(
+            `SELECT pv.id, pv.store_id, c.slug AS category_slug
+             FROM app.product_variants pv
+             JOIN app.products p ON p.id = pv.product_id
+             JOIN app.categories c ON c.id = p.category_id
+             WHERE pv.status = 'active'
+             ORDER BY pv.created_at
+             LIMIT 1`,
+          );
+          variantId = variant.rows[0]?.id;
+          storeId = storeId || variant.rows[0]?.store_id;
+          categorySlug = categorySlug || variant.rows[0]?.category_slug;
+        }
+        if (!variantId) {
+          sendJson(res, 409, { error: 'no_active_variant' });
+          return;
+        }
+
+        if (!storeId) {
+          const variant = await services.db.query<{ store_id: string }>(
+            `SELECT store_id FROM app.product_variants WHERE id = $1`,
+            [variantId],
+          );
+          storeId = variant.rows[0]?.store_id;
+        }
+        if (!storeId) {
+          const store = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+          );
+          storeId = store.rows[0]?.id;
+        }
+        if (!storeId) {
+          sendJson(res, 409, { error: 'no_active_store' });
+          return;
+        }
+
+        if (!categorySlug) {
+          const category = await services.db.query<{ slug: string }>(
+            `SELECT c.slug
+             FROM app.product_variants pv
+             JOIN app.products p ON p.id = pv.product_id
+             JOIN app.categories c ON c.id = p.category_id
+             WHERE pv.id = $1`,
+            [variantId],
+          );
+          categorySlug = category.rows[0]?.slug;
+        }
+
+        if (!locationId) {
+          const location = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.fulfillment_locations
+             WHERE store_id = $1 AND active = true AND archived_at IS NULL
+             ORDER BY created_at
+             LIMIT 1`,
+            [storeId],
+          );
+          locationId = location.rows[0]?.id;
+        }
+        if (!locationId) {
+          sendJson(res, 409, { error: 'no_active_location' });
+          return;
+        }
+
+        const suffix = Date.now().toString(36).toUpperCase();
+        const lotCode = (body.lotCode ?? body.lot_code)?.trim() || `LOT-${suffix}`;
+        const productionDate = (body.productionDate ?? body.production_date)?.trim() || undefined;
+        const expiryDate = (body.expiryDate ?? body.expiry_date)?.trim() || undefined;
+
+        const lotId = await services.inventory.createLot({
+          storeId,
+          variantId,
+          locationId,
+          lotCode,
+          productionDate,
+          expiryDate,
+          categorySlug,
+        });
+        const balanceId = await services.inventory.ensureBalance({
+          storeId,
+          locationId,
+          variantId,
+          lotId,
+        });
+        const stock = await services.inventory.listStockByVariant(variantId);
+        sendJson(res, 201, {
+          ok: true,
+          lotId,
+          balanceId,
+          storeId,
+          variantId,
+          locationId,
+          lotCode,
+          productionDate: productionDate ?? null,
+          expiryDate: expiryDate ?? null,
+          categorySlug: categorySlug ?? null,
+          stock,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'lot_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/receive') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

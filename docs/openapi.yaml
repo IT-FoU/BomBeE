@@ -703,6 +703,18 @@ paths:
       responses:
         '200':
           description: Adjustments array
+  /v1/ops/inventory/lots/mock-create:
+    post:
+      summary: Local mock create inventory lot and ensure zero balance
+      responses:
+        '201':
+          description: Lot + balance created; stock snapshot
+        '400':
+          description: Validation failed (e.g. lot_fields_required for food/cosmetics)
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No active variant, store, or location
   /v1/ops/inventory/receive:
     post:
       summary: Local mock receive units onto a balance

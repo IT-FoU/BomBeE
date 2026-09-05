@@ -1119,6 +1119,43 @@ export async function listInventoryAdjustments(
   return body.adjustments;
 }
 
+export async function mockCreateInventoryLot(input: {
+  storeId?: string;
+  variantId?: string;
+  locationId?: string;
+  lotCode?: string;
+  productionDate?: string;
+  expiryDate?: string;
+  categorySlug?: string;
+} = {}): Promise<{
+  lotId: string;
+  balanceId: string;
+  storeId: string;
+  variantId: string;
+  locationId: string;
+  lotCode: string;
+  stock?: OpsStockView;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/inventory/lots/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `inventory_lot_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    lotId: string;
+    balanceId: string;
+    storeId: string;
+    variantId: string;
+    locationId: string;
+    lotCode: string;
+    stock?: OpsStockView;
+  };
+}
+
 export async function opsReceiveStock(input: {
   balanceId?: string;
   quantity?: number;

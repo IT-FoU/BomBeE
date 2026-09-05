@@ -55,6 +55,7 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/inventory/balances/:balanceId/reconcile` | Ledger vs balance reconcile report |
 | POST | `/v1/ops/inventory/safety-buffer` | Local/mock set safety buffer (updates existing balances) |
 | GET | `/v1/inventory/adjustments` | List inventory adjustment requests (local ops) |
+| POST | `/v1/ops/inventory/lots/mock-create` | Local/mock create lot + ensure zero balance |
 | POST | `/v1/ops/inventory/receive` | Local/mock receive units onto a balance |
 | POST | `/v1/ops/inventory/adjust` | Local/mock adjust (one-shot maker≠approver) |
 | GET | `/v1/inventory/import/batches` | List stock import batches (local ops) |

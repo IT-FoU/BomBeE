@@ -234,6 +234,45 @@ export class InventoryService {
     return decision;
   }
 
+  async listLotExpiryAlerts(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      lot_id: string;
+      alert_type: string;
+      remaining_days: number;
+      created_at: string;
+      lot_code: string;
+      expiry_date: string | null;
+      lot_status: string;
+      variant_id: string;
+      store_id: string;
+      discount_request_id: string | null;
+    }>(
+      `SELECT a.id, a.lot_id, a.alert_type, a.remaining_days, a.created_at::text,
+              l.lot_code, l.expiry_date::text, l.status AS lot_status, l.variant_id, l.store_id,
+              a.discount_request_id
+       FROM private.lot_expiry_alerts a
+       JOIN private.inventory_lots l ON l.id = a.lot_id
+       ORDER BY a.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      alertId: r.id,
+      lotId: r.lot_id,
+      alertType: r.alert_type,
+      remainingDays: r.remaining_days,
+      createdAt: r.created_at,
+      lotCode: r.lot_code,
+      expiryDate: r.expiry_date,
+      lotStatus: r.lot_status,
+      variantId: r.variant_id,
+      storeId: r.store_id,
+      discountRequestId: r.discount_request_id,
+    }));
+  }
+
   async linkExpiryDiscount(lotId: string, discountRequestId: string) {
     await this.db.query(
       `UPDATE private.lot_expiry_alerts

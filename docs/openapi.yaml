@@ -715,6 +715,28 @@ paths:
           description: Mock ops disabled
         '409':
           description: No active variant, store, or location
+  /v1/inventory/lot-expiry-alerts:
+    get:
+      summary: List lot expiry alerts (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Alerts array
+  /v1/ops/inventory/lots/mock-evaluate-allocation:
+    post:
+      summary: Local/mock evaluate lot shelf-life for allocation
+      responses:
+        '200':
+          description: Decision + alerts snapshot
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No lot context
   /v1/ops/inventory/receive:
     post:
       summary: Local mock receive units onto a balance

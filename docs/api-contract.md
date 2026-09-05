@@ -56,6 +56,8 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/inventory/safety-buffer` | Local/mock set safety buffer (updates existing balances) |
 | GET | `/v1/inventory/adjustments` | List inventory adjustment requests (local ops) |
 | POST | `/v1/ops/inventory/lots/mock-create` | Local/mock create lot + ensure zero balance |
+| GET | `/v1/inventory/lot-expiry-alerts` | List lot expiry alerts (local ops) |
+| POST | `/v1/ops/inventory/lots/mock-evaluate-allocation` | Local/mock evaluate lot for allocation (writes alerts on fail) |
 | POST | `/v1/ops/inventory/receive` | Local/mock receive units onto a balance |
 | POST | `/v1/ops/inventory/adjust` | Local/mock adjust (one-shot maker≠approver) |
 | GET | `/v1/inventory/import/batches` | List stock import batches (local ops) |

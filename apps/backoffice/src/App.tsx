@@ -18,6 +18,8 @@ import {
   opsReceiveStock,
   opsAdjustStock,
   mockCreateInventoryLot,
+  listLotExpiryAlerts,
+  mockEvaluateLotAllocation,
   reconcileInventoryBalance,
   opsSetSafetyBuffer,
   listStockImportBatches,
@@ -169,6 +171,7 @@ import {
   type OpsOrderRow,
   type SplitShipmentRequestRow,
   type OpsStockView,
+  type LotExpiryAlertRow,
   type InventoryAdjustmentRow,
   type StockImportBatchRow,
   type SettlementBatchRow,
@@ -276,6 +279,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [inventoryAdjustments, setInventoryAdjustments] = useState<InventoryAdjustmentRow[]>([]);
   const [stockImportBatches, setStockImportBatches] = useState<StockImportBatchRow[]>([]);
   const [inventoryNote, setInventoryNote] = useState('');
+  const [lotExpiryAlerts, setLotExpiryAlerts] = useState<LotExpiryAlertRow[]>([]);
   const [settlementBatches, setSettlementBatches] = useState<SettlementBatchRow[]>([]);
   const [settlementCarryforwards, setSettlementCarryforwards] = useState<
     SettlementCarryforwardRow[]
@@ -361,6 +365,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           mediaRows,
           inventoryAdjRows,
           stockImportRows,
+          lotExpiryAlertRows,
           batches,
           carryforwardRows,
           tickets,
@@ -408,6 +413,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listCatalogMedia(50),
           listInventoryAdjustments(50),
           listStockImportBatches(50),
+          listLotExpiryAlerts(50),
           listSettlementBatches(50),
           listSettlementCarryforwards(50),
           listSupportTickets(50),
@@ -455,6 +461,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setCatalogMedia(mediaRows);
         setInventoryAdjustments(inventoryAdjRows);
         setStockImportBatches(stockImportRows);
+        setLotExpiryAlerts(lotExpiryAlertRows);
         setSettlementBatches(batches);
         setSettlementCarryforwards(carryforwardRows);
         setSupportTickets(tickets);
@@ -2036,6 +2043,68 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             >
               Create lot
             </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setInventoryNote('');
+                void (async () => {
+                  try {
+                    const result = await mockEvaluateLotAllocation({
+                      categorySlug: 'food',
+                    });
+                    if (result.alerts) setLotExpiryAlerts(result.alerts);
+                    else setLotExpiryAlerts(await listLotExpiryAlerts(50));
+                    setInventoryNote(
+                      `Lot allocate ${result.lotId.slice(0, 8)}… · ok=${String(result.decision.ok)}` +
+                        (result.decision.reason ? ` · ${result.decision.reason}` : ''),
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'lot_evaluate_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Evaluate lot allocation
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setLotExpiryAlerts(await listLotExpiryAlerts(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'lot_expiry_alerts_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh lot alerts
+            </button>
+            <ul className="roles" aria-label="Lot expiry alerts">
+              {lotExpiryAlerts.length === 0 ? <li>No lot expiry alerts yet</li> : null}
+              {lotExpiryAlerts.map((a) => (
+                <li key={a.alertId}>
+                  {a.alertType} · {a.lotCode} · rem {a.remainingDays}d
+                  {a.expiryDate ? ` · exp ${a.expiryDate}` : ''} · lot{' '}
+                  {a.lotId.slice(0, 8)}…
+                </li>
+              ))}
+            </ul>
             <button
               type="button"
               className="cta"

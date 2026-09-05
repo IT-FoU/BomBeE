@@ -1119,6 +1119,59 @@ export async function listInventoryAdjustments(
   return body.adjustments;
 }
 
+export type LotExpiryAlertRow = {
+  alertId: string;
+  lotId: string;
+  alertType: string;
+  remainingDays: number;
+  createdAt: string;
+  lotCode: string;
+  expiryDate: string | null;
+  lotStatus: string;
+  variantId: string;
+  storeId: string;
+  discountRequestId: string | null;
+};
+
+export async function listLotExpiryAlerts(limit = 50): Promise<LotExpiryAlertRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/inventory/lot-expiry-alerts?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`lot_expiry_alerts_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { alerts: LotExpiryAlertRow[] };
+  return body.alerts;
+}
+
+export async function mockEvaluateLotAllocation(input: {
+  lotId?: string;
+  categorySlug?: string;
+  now?: string;
+  expiryDate?: string;
+} = {}): Promise<{
+  lotId: string;
+  categorySlug: string;
+  now: string;
+  decision: { ok: boolean; reason?: string };
+  alerts?: LotExpiryAlertRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/inventory/lots/mock-evaluate-allocation`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `lot_evaluate_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    lotId: string;
+    categorySlug: string;
+    now: string;
+    decision: { ok: boolean; reason?: string };
+    alerts?: LotExpiryAlertRow[];
+  };
+}
+
 export async function mockCreateInventoryLot(input: {
   storeId?: string;
   variantId?: string;

@@ -1763,6 +1763,119 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/inventory/lot-expiry-alerts') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const alerts = await services.inventory.listLotExpiryAlerts(limit);
+      sendJson(res, 200, { ok: true, alerts });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/lots/mock-evaluate-allocation') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        lotId?: string;
+        lot_id?: string;
+        categorySlug?: string;
+        category_slug?: string;
+        now?: string;
+        expiryDate?: string;
+        expiry_date?: string;
+      }>(req);
+      try {
+        let lotId = (body.lotId ?? body.lot_id)?.trim();
+        const categorySlug = (body.categorySlug ?? body.category_slug)?.trim() || 'food';
+        const expiryOverride = (body.expiryDate ?? body.expiry_date)?.trim();
+
+        let nowMs = Date.parse('2026-09-03T00:00:00.000Z');
+        if (body.now?.trim()) {
+          const parsed = Date.parse(body.now.trim());
+          if (Number.isNaN(parsed)) {
+            sendJson(res, 400, { error: 'invalid_now' });
+            return;
+          }
+          nowMs = parsed;
+        }
+
+        if (!lotId) {
+          let storeId: string | undefined;
+          let locationId: string | undefined;
+          const variant = await services.db.query<{ id: string; store_id: string }>(
+            `SELECT pv.id, pv.store_id
+             FROM app.product_variants pv
+             WHERE pv.status = 'active'
+             ORDER BY pv.created_at
+             LIMIT 1`,
+          );
+          const variantId = variant.rows[0]?.id;
+          storeId = variant.rows[0]?.store_id;
+          if (!storeId) {
+            const store = await services.db.query<{ id: string }>(
+              `SELECT id FROM app.stores WHERE status = 'active' ORDER BY created_at LIMIT 1`,
+            );
+            storeId = store.rows[0]?.id;
+          }
+          if (storeId) {
+            const loc = await services.db.query<{ id: string }>(
+              `SELECT id FROM app.fulfillment_locations
+               WHERE store_id = $1 AND active = true AND archived_at IS NULL
+               ORDER BY created_at
+               LIMIT 1`,
+              [storeId],
+            );
+            locationId = loc.rows[0]?.id;
+          }
+          if (!storeId || !variantId || !locationId) {
+            sendJson(res, 409, { error: 'no_lot_context' });
+            return;
+          }
+          const suffix = Date.now().toString(36).toUpperCase();
+          lotId = await services.inventory.createLot({
+            storeId,
+            variantId,
+            locationId,
+            lotCode: `EVAL-${suffix}`,
+            productionDate: '2026-01-01',
+            expiryDate: expiryOverride || '2026-09-20',
+            categorySlug: 'food',
+          });
+          await services.inventory.ensureBalance({
+            storeId,
+            locationId,
+            variantId,
+            lotId,
+          });
+        } else if (expiryOverride) {
+          await services.db.query(
+            `UPDATE private.inventory_lots SET expiry_date = $2::date WHERE id = $1`,
+            [lotId, expiryOverride],
+          );
+        }
+
+        const decision = await services.inventory.evaluateLotForAllocation(
+          lotId,
+          categorySlug,
+          nowMs,
+        );
+        const alerts = await services.inventory.listLotExpiryAlerts(50);
+        sendJson(res, 200, {
+          ok: true,
+          lotId,
+          categorySlug,
+          now: new Date(nowMs).toISOString(),
+          decision,
+          alerts,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'lot_evaluate_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/receive') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

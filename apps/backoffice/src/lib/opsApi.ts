@@ -1939,6 +1939,67 @@ export async function mockCreateDelivery(input: {
   };
 }
 
+
+export async function mockHandoffDelivery(input: {
+  deliveryId?: string;
+  handoffAt?: string;
+} = {}): Promise<{
+  deliveryId: string;
+  handoffAt?: string;
+  deliveries?: DeliveryRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/deliveries/mock-handoff`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      delivery_id: input.deliveryId,
+      handoff_at: input.handoffAt,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `delivery_handoff_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    deliveryId: string;
+    handoffAt?: string;
+    deliveries?: DeliveryRow[];
+  };
+}
+
+export async function mockRecordPod(input: {
+  deliveryId?: string;
+  podMethod?: 'otp' | 'signature' | 'photo' | 'api';
+  evidenceKey?: string;
+  deliveredAt?: string;
+} = {}): Promise<{
+  deliveryId: string;
+  podMethod?: string;
+  deliveredAt?: string;
+  deliveries?: DeliveryRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/deliveries/mock-record-pod`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      delivery_id: input.deliveryId,
+      pod_method: input.podMethod,
+      evidence_key: input.evidenceKey,
+      delivered_at: input.deliveredAt,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `delivery_record_pod_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    deliveryId: string;
+    podMethod?: string;
+    deliveredAt?: string;
+    deliveries?: DeliveryRow[];
+  };
+}
+
 export type PackingDeadlineRow = {
   packingDeadlineId: string;
   childOrderId: string;

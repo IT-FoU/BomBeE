@@ -92,6 +92,8 @@ import {
   mockCreateCourier,
   listDeliveries,
   mockCreateDelivery,
+  mockHandoffDelivery,
+  mockRecordPod,
   mockEvaluatePackingDeadline,
   mockMarkPackingDeadline,
   listPromotions,
@@ -2505,7 +2507,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ຈັດສົ່ງ</span>
             </h2>
             <p className="lede">
-              Orders still use Confirm / Advance / Deliver. Here: couriers, deliveries (mock-create),
+              Orders still use Confirm / Advance / Deliver. Here: couriers, deliveries (create / handoff / POD),
               packing SLA deadlines (evaluate / mark packed), and lost/damaged delivery claims.
             </p>
             {fulfillmentNote ? (
@@ -2719,6 +2721,63 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh deliveries
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setFulfillmentNote('');
+                void (async () => {
+                  try {
+                    const result = await mockHandoffDelivery({});
+                    if (result.deliveries) setDeliveries(result.deliveries);
+                    else setDeliveries(await listDeliveries(50));
+                    setFulfillmentNote(
+                      `Handed off delivery ${result.deliveryId.slice(0, 8)}…` +
+                        (result.handoffAt ? ` · ${result.handoffAt.slice(0, 16)}` : ''),
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'delivery_handoff_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock handoff delivery
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setFulfillmentNote('');
+                void (async () => {
+                  try {
+                    const result = await mockRecordPod({ podMethod: 'signature' });
+                    if (result.deliveries) setDeliveries(result.deliveries);
+                    else setDeliveries(await listDeliveries(50));
+                    setFulfillmentNote(
+                      `Recorded POD ${result.deliveryId.slice(0, 8)}… · ${result.podMethod ?? 'signature'}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'delivery_record_pod_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock record POD
             </button>
             <ul className="roles" aria-label="Delivery claims">
               {deliveryClaims.length === 0 ? <li>No delivery claims yet</li> : null}

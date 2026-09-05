@@ -2727,6 +2727,132 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/deliveries/mock-handoff') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        deliveryId?: string;
+        delivery_id?: string;
+        handoffAt?: string;
+        handoff_at?: string;
+      }>(req);
+      try {
+        let deliveryId = (body.deliveryId ?? body.delivery_id)?.trim();
+        if (!deliveryId) {
+          const eligible = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.shipment_deliveries
+             WHERE status = 'created'
+             ORDER BY created_at DESC
+             LIMIT 1`,
+          );
+          deliveryId = eligible.rows[0]?.id;
+        }
+        if (!deliveryId) {
+          sendJson(res, 409, { error: 'no_eligible_delivery' });
+          return;
+        }
+        const handoffRaw = body.handoffAt ?? body.handoff_at;
+        const handoffAt = handoffRaw ? new Date(handoffRaw) : new Date();
+        if (Number.isNaN(handoffAt.getTime())) {
+          sendJson(res, 400, { error: 'invalid_handoff_at' });
+          return;
+        }
+        const actorIdentityId = await resolveOpsActor(services);
+        await services.delivery.handoff({
+          deliveryId,
+          handoffAt,
+          actorIdentityId,
+        });
+        const deliveries = await services.delivery.listDeliveries(50);
+        sendJson(res, 200, {
+          ok: true,
+          deliveryId,
+          handoffAt: handoffAt.toISOString(),
+          deliveries,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'delivery_handoff_failed';
+        sendJson(res, message === 'delivery_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/deliveries/mock-record-pod') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        deliveryId?: string;
+        delivery_id?: string;
+        podMethod?: string;
+        pod_method?: string;
+        evidenceKey?: string;
+        evidence_key?: string;
+        deliveredAt?: string;
+        delivered_at?: string;
+      }>(req);
+      try {
+        let deliveryId = (body.deliveryId ?? body.delivery_id)?.trim();
+        if (!deliveryId) {
+          const eligible = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.shipment_deliveries
+             WHERE status = 'handed_off'
+             ORDER BY handoff_at DESC NULLS LAST, created_at DESC
+             LIMIT 1`,
+          );
+          deliveryId = eligible.rows[0]?.id;
+        }
+        if (!deliveryId) {
+          sendJson(res, 409, { error: 'no_eligible_delivery' });
+          return;
+        }
+        const podMethodRaw = (body.podMethod ?? body.pod_method ?? 'signature').trim();
+        if (
+          podMethodRaw !== 'otp' &&
+          podMethodRaw !== 'signature' &&
+          podMethodRaw !== 'photo' &&
+          podMethodRaw !== 'api'
+        ) {
+          sendJson(res, 400, { error: 'invalid_pod_method' });
+          return;
+        }
+        const deliveredRaw = body.deliveredAt ?? body.delivered_at;
+        const deliveredAt = deliveredRaw ? new Date(deliveredRaw) : new Date();
+        if (Number.isNaN(deliveredAt.getTime())) {
+          sendJson(res, 400, { error: 'invalid_delivered_at' });
+          return;
+        }
+        await services.delivery.recordPod({
+          deliveryId,
+          podMethod: podMethodRaw,
+          evidenceKey: body.evidenceKey ?? body.evidence_key ?? `mock/pod/${deliveryId}.jpg`,
+          deliveredAt,
+        });
+        const deliveries = await services.delivery.listDeliveries(50);
+        sendJson(res, 200, {
+          ok: true,
+          deliveryId,
+          podMethod: podMethodRaw,
+          deliveredAt: deliveredAt.toISOString(),
+          deliveries,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'delivery_record_pod_failed';
+        const status =
+          message === 'delivery_not_found'
+            ? 404
+            : message === 'pod_method_not_allowed'
+              ? 409
+              : 400;
+        sendJson(res, status, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/packing-deadlines') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

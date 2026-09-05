@@ -163,4 +163,88 @@ describe('delivery list + mock-create HTTP', () => {
       ),
     ).toBe(true);
   });
+
+  it('mock-handoffs then records POD on a created delivery', async () => {
+    const productsRes = mockRes();
+    await router(mockReq('GET', '/v1/catalog/products'), productsRes.res);
+    const products = productsRes.body().products as Array<{
+      storeId: string;
+      variants: Array<{ id: string }>;
+    }>;
+    const product = products[0]!;
+    const variant = product.variants[0]!;
+
+    const cartRes = mockRes();
+    await router(
+      mockReq('POST', '/v1/carts', {}, { authorization: `Bearer ${token}` }),
+      cartRes.res,
+    );
+    const cartId = cartRes.body().cartId as string;
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/items`,
+        { storeId: product.storeId, variantId: variant.id, quantity: 1 },
+        { authorization: `Bearer ${token}` },
+      ),
+      mockRes().res,
+    );
+    const checkoutRes = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        `/v1/carts/${cartId}/checkout`,
+        { shippingLakByStore: { [product.storeId]: 5000 } },
+        { authorization: `Bearer ${token}` },
+      ),
+      checkoutRes.res,
+    );
+    const parentId = checkoutRes.body().parentId as string;
+    await router(
+      mockReq('POST', `/v1/ops/orders/${parentId}/confirm-children`, {}),
+      mockRes().res,
+    );
+
+    const created = mockRes();
+    await router(mockReq('POST', '/v1/ops/deliveries/mock-create', {}), created.res);
+    expect(created.res.statusCode).toBe(201);
+    const deliveryId = created.body().deliveryId as string;
+
+    const nonePod = mockRes();
+    await router(mockReq('POST', '/v1/ops/deliveries/mock-record-pod', {}), nonePod.res);
+    expect(nonePod.res.statusCode).toBe(409);
+    expect(nonePod.body().error).toBe('no_eligible_delivery');
+
+    const handed = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/deliveries/mock-handoff', { delivery_id: deliveryId }),
+      handed.res,
+    );
+    expect(handed.res.statusCode).toBe(200);
+    expect(handed.body().ok).toBe(true);
+    expect(handed.body().deliveryId).toBe(deliveryId);
+    expect(
+      (
+        handed.body().deliveries as Array<{ deliveryId: string; status: string }>
+      ).some((d) => d.deliveryId === deliveryId && d.status === 'handed_off'),
+    ).toBe(true);
+
+    const pod = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/deliveries/mock-record-pod', {
+        delivery_id: deliveryId,
+        pod_method: 'signature',
+      }),
+      pod.res,
+    );
+    expect(pod.res.statusCode).toBe(200);
+    expect(pod.body().ok).toBe(true);
+    expect(pod.body().podMethod).toBe('signature');
+    expect(
+      (
+        pod.body().deliveries as Array<{ deliveryId: string; status: string }>
+      ).some((d) => d.deliveryId === deliveryId && d.status === 'delivered'),
+    ).toBe(true);
+  });
+
 });

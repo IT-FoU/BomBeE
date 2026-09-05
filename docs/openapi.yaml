@@ -1442,6 +1442,56 @@ paths:
           description: Courier or contract missing
         '409':
           description: No eligible child order
+  /v1/ops/deliveries/mock-handoff:
+    post:
+      summary: Local/mock handoff a created delivery to courier
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                delivery_id:
+                  type: string
+                handoff_at:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Handed off; deliveries snapshot
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No eligible created delivery
+  /v1/ops/deliveries/mock-record-pod:
+    post:
+      summary: Local/mock record proof of delivery on a handed-off delivery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                delivery_id:
+                  type: string
+                pod_method:
+                  type: string
+                  enum: [otp, signature, photo, api]
+                  default: signature
+                evidence_key:
+                  type: string
+                delivered_at:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: POD recorded; deliveries snapshot
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Delivery not found
+        '409':
+          description: No eligible handed-off delivery or POD method not allowed
   /v1/packing-deadlines:
     get:
       summary: List packing SLA deadlines (local ops)

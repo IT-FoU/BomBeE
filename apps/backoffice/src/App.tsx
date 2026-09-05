@@ -123,6 +123,7 @@ import {
   listStaffDirectory,
   mockLockStaff,
   unlockStaff,
+  mockAssignStaffRole,
   fetchDashboardKpis,
   fetchPaymentsReconcile,
   listBackups,
@@ -738,7 +739,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ພະນັກງານ</span>
             </h2>
             <p className="lede">
-              Role catalog, local staff directory, mock lock (non-owner), and unlock (Owner actor).
+              Role catalog, local staff directory, mock role assign, mock lock (non-owner), and
+              unlock (Owner actor).
             </p>
             {staffNote ? <p className="lede">{staffNote}</p> : null}
             <ul className="roles" aria-label="Standard staff roles">
@@ -792,6 +794,41 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                         }}
                       >
                         Unlock
+                      </button>
+                    </>
+                  ) : null}
+                  {!person.roles.includes('support') ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="cta"
+                        disabled={formBusy}
+                        onClick={() => {
+                          setFormBusy(true);
+                          setFormError('');
+                          setStaffNote('');
+                          void (async () => {
+                            try {
+                              const result = await mockAssignStaffRole(person.staffProfileId, {
+                                roleCode: 'support',
+                              });
+                              if (result.roles) setStaffRoles(result.roles);
+                              if (result.staff) setStaffDirectory(result.staff);
+                              setStaffNote(
+                                `Assigned support → ${person.displayName} · roles ${result.assignedRoles.join(', ')}`,
+                              );
+                            } catch (err) {
+                              setFormError(
+                                err instanceof Error ? err.message : 'staff_role_assign_failed',
+                              );
+                            } finally {
+                              setFormBusy(false);
+                            }
+                          })();
+                        }}
+                      >
+                        Assign support
                       </button>
                     </>
                   ) : null}

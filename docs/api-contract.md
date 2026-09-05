@@ -128,6 +128,7 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | GET | `/v1/staff` | Role catalog defaults + staff directory (local ops) |
 | POST | `/v1/ops/identity/mock-lock` | Local/mock lock non-owner staff (default catalog maker; 5 failed logins) |
 | POST | `/v1/ops/staff/:identityId/unlock` | Unlock locked staff (Owner actor; no self/owner unlock) |
+| POST | `/v1/ops/staff/:staffProfileId/roles/mock-assign` | Local/mock assign APP_ROLE to staff profile |
 | GET | `/v1/reports/dashboard` | Live dashboard KPIs (local ops; optional `store_id`) |
 | GET | `/v1/reports/payments/reconcile` | Payment request vs allocation/receipt reconcile |
 | GET | `/v1/backups` | List backup jobs + alerts (local ops) |

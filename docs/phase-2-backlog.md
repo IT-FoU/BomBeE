@@ -87,6 +87,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B67 | Returns append-communication HTTP | **Done** — ops append note; Returns BO |
 | P2-B68 | Payment bank reconcile + daily totals proof HTTP | **Done** — ops reconcile-bank + daily-totals-proof; Approvals BO |
 | P2-B69 | Store contacts list + mock-add HTTP | **Done** — contacts list + ops mock-add; Stores BO |
+| P2-B70 | Staff role mock-assign HTTP | **Done** — ops roles/mock-assign; Staff BO |
 
 ## C — Hard rules that stay
 

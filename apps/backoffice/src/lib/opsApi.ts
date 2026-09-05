@@ -2610,6 +2610,37 @@ export async function unlockStaff(
   };
 }
 
+export async function mockAssignStaffRole(
+  staffProfileId: string,
+  input: { roleCode: string },
+): Promise<{
+  staffProfileId: string;
+  roleCode: string;
+  assignedRoles: string[];
+  roles?: StaffRoleCatalogRow[];
+  staff?: StaffDirectoryRow[];
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/ops/staff/${encodeURIComponent(staffProfileId)}/roles/mock-assign`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ roleCode: input.roleCode }),
+    },
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `staff_role_assign_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    staffProfileId: string;
+    roleCode: string;
+    assignedRoles: string[];
+    roles?: StaffRoleCatalogRow[];
+    staff?: StaffDirectoryRow[];
+  };
+}
+
 export type DashboardKpis = {
   source: string;
   orders: number;

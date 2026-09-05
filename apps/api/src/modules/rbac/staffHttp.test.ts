@@ -132,4 +132,59 @@ describe('staff HTTP', () => {
     expect([400, 403]).toContain(self.res.statusCode);
     expect(['self_unlock_forbidden', 'insufficient_role']).toContain(self.body().error);
   });
+
+
+  it('assigns a role via mock-assign and rejects invalid role codes', async () => {
+    const listed = mockRes();
+    await router(mockReq('GET', '/v1/staff'), listed.res);
+    expect(listed.res.statusCode).toBe(200);
+    const staff = listed.body().staff as Array<{
+      staffProfileId: string;
+      subject: string;
+      roles: string[];
+    }>;
+    const maker = staff.find((s) => s.subject === 'staff:local-catalog-maker');
+    expect(maker?.staffProfileId).toBeTruthy();
+
+    const assigned = mockRes();
+    await router(
+      mockReq('POST', `/v1/ops/staff/${maker!.staffProfileId}/roles/mock-assign`, {
+        roleCode: 'support',
+      }),
+      assigned.res,
+    );
+    expect(assigned.res.statusCode).toBe(200);
+    expect(assigned.body().roleCode).toBe('support');
+    expect(
+      (assigned.body().assignedRoles as string[]).includes('support'),
+    ).toBe(true);
+    expect(
+      (assigned.body().staff as Array<{ staffProfileId: string; roles: string[] }>).some(
+        (s) => s.staffProfileId === maker!.staffProfileId && s.roles.includes('support'),
+      ),
+    ).toBe(true);
+
+    const bad = mockRes();
+    await router(
+      mockReq('POST', `/v1/ops/staff/${maker!.staffProfileId}/roles/mock-assign`, {
+        roleCode: 'not-a-role',
+      }),
+      bad.res,
+    );
+    expect(bad.res.statusCode).toBe(400);
+    expect(bad.body().error).toBe('invalid_role_code');
+
+    const missing = mockRes();
+    await router(
+      mockReq(
+        'POST',
+        '/v1/ops/staff/00000000-0000-4000-8000-000000000070/roles/mock-assign',
+        { roleCode: 'finance' },
+      ),
+      missing.res,
+    );
+    expect(missing.res.statusCode).toBe(404);
+    expect(missing.body().error).toBe('staff_profile_not_found');
+  });
+
 });

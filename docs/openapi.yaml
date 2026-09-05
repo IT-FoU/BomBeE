@@ -1826,6 +1826,35 @@ paths:
       responses:
         '200':
           description: Roles array + staff directory
+  /v1/ops/staff/{staffProfileId}/roles/mock-assign:
+    post:
+      summary: Local mock assign APP_ROLE to staff profile
+      parameters:
+        - in: path
+          name: staffProfileId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roleCode]
+              properties:
+                roleCode:
+                  type: string
+                  enum: [owner, admin, finance, operations, catalog, support, auditor]
+      responses:
+        '200':
+          description: Role assigned; refreshed roles + staff
+        '400':
+          description: Invalid role code
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Staff profile not found
   /v1/ops/identity/mock-lock:
     post:
       summary: Local/mock lock a non-owner staff identity (failed-login threshold)

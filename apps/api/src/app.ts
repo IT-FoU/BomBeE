@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import type { BombeeEnv } from '@bombee/config';
-import { BRAND_NAME, CURRENCY_CODE, DISPLAY_TIMEZONE } from '@bombee/shared';
+import { APP_ROLES, BRAND_NAME, CURRENCY_CODE, DISPLAY_TIMEZONE } from '@bombee/shared';
 
 import { readJsonBody } from './http/readJsonBody.js';
 import { applyCors } from './http/cors.js';
@@ -3334,6 +3334,56 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'staff_unlock_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+
+    const staffRoleAssignMatch = url.pathname.match(
+      /^\/v1\/ops\/staff\/([^/]+)\/roles\/mock-assign$/,
+    );
+    if (req.method === 'POST' && staffRoleAssignMatch) {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const staffProfileId = decodeURIComponent(staffRoleAssignMatch[1]!);
+      const body = await readJsonBody<{
+        roleCode?: string;
+        role_code?: string;
+      }>(req);
+      try {
+        const roleCode = (body.roleCode ?? body.role_code ?? '').trim();
+        if (!roleCode || !(APP_ROLES as readonly string[]).includes(roleCode)) {
+          sendJson(res, 400, { error: 'invalid_role_code' });
+          return;
+        }
+        const profile = await services.db.query<{ id: string }>(
+          `SELECT id FROM app.staff_profiles WHERE id = $1`,
+          [staffProfileId],
+        );
+        if (!profile.rows[0]) {
+          sendJson(res, 404, { error: 'staff_profile_not_found' });
+          return;
+        }
+        const actorIdentityId = await resolveOpsActor(services);
+        await services.identity.ensureStaffRole(staffProfileId, roleCode, actorIdentityId);
+        const [roles, staff] = await Promise.all([
+          Promise.resolve(listRoleCatalog()),
+          services.identity.listStaffDirectory(50),
+        ]);
+        const row = staff.find((s) => s.staffProfileId === staffProfileId);
+        sendJson(res, 200, {
+          ok: true,
+          staffProfileId,
+          roleCode,
+          roles,
+          staff,
+          assignedRoles: row?.roles ?? [],
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'staff_role_assign_failed';
         sendJson(res, 400, { error: message });
       }
       return;

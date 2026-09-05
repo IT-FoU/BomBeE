@@ -12,6 +12,9 @@ export class InventoryService {
   constructor(private readonly db: PGlite) {}
 
   async setSafetyBuffer(storeId: string, variantId: string, safetyBuffer: number) {
+    if (!Number.isInteger(safetyBuffer) || safetyBuffer < 0) {
+      throw new Error('invalid_safety_buffer');
+    }
     await this.db.query(
       `INSERT INTO private.inventory_safety_buffers (store_id, variant_id, safety_buffer)
        VALUES ($1,$2,$3)
@@ -19,6 +22,19 @@ export class InventoryService {
        DO UPDATE SET safety_buffer = EXCLUDED.safety_buffer`,
       [storeId, variantId, safetyBuffer],
     );
+    const updated = await this.db.query<{ id: string }>(
+      `UPDATE private.inventory_balances
+       SET safety_buffer = $3, updated_at = timezone('utc', now())
+       WHERE store_id = $1 AND variant_id = $2
+       RETURNING id`,
+      [storeId, variantId, safetyBuffer],
+    );
+    return {
+      storeId,
+      variantId,
+      safetyBuffer,
+      balancesUpdated: updated.rows.length,
+    };
   }
 
   async createLot(input: {
@@ -405,6 +421,11 @@ export class InventoryService {
   }
 
   async reconcileLedger(balanceId: string) {
+    const exists = await this.db.query<{ id: string }>(
+      `SELECT id FROM private.inventory_balances WHERE id = $1`,
+      [balanceId],
+    );
+    if (!exists.rows[0]) throw new Error('balance_not_found');
     const bal = await this.getBalance(balanceId);
     const txs = await this.db.query<{ tx_type: string; quantity: number }>(
       `SELECT tx_type, quantity FROM private.inventory_transactions WHERE balance_id = $1`,
@@ -446,7 +467,8 @@ export class InventoryService {
        FROM private.inventory_balances WHERE id = $1`,
       [balanceId],
     );
-    const bal = row.rows[0]!;
+    const bal = row.rows[0];
+    if (!bal) throw new Error('balance_not_found');
     return {
       ...bal,
       available: availableQty(bal.on_hand, bal.reserved, bal.safety_buffer),

@@ -568,6 +568,32 @@ paths:
           description: availableQty + balances
         '400':
           description: Missing variantId
+  /v1/inventory/balances/{balanceId}/reconcile:
+    get:
+      summary: Reconcile inventory balance against ledger transactions
+      parameters:
+        - in: path
+          name: balanceId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: balance vs ledger report including difference
+        '404':
+          description: Balance not found
+  /v1/ops/inventory/safety-buffer:
+    post:
+      summary: Local mock set safety buffer for store+variant
+      responses:
+        '200':
+          description: Buffer upserted; existing balances updated; stock snapshot
+        '400':
+          description: Invalid buffer or missing store/variant
+        '403':
+          description: Mock ops disabled
+        '404':
+          description: Balance not found when resolving via balanceId
   /v1/inventory/adjustments:
     get:
       summary: List inventory adjustment requests

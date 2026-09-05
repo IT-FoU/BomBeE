@@ -830,6 +830,7 @@ export type OpsStockView = {
     onHand: number;
     reserved: number;
     available: number;
+    safetyBuffer?: number;
     lotId: string;
     lotCode: string | null;
     expiryDate: string | null;
@@ -853,7 +854,64 @@ export async function fetchVariantStock(variantId: string): Promise<OpsStockView
       onHand: Number(b.onHand),
       reserved: Number(b.reserved),
       available: Number(b.available),
+      safetyBuffer: Number(b.safetyBuffer ?? 0),
     })),
+  };
+}
+
+export type InventoryReconcileReport = {
+  balanceId: string;
+  balanceOnHand: number;
+  balanceReserved: number;
+  ledgerOnHand: number;
+  ledgerReserved: number;
+  difference: number;
+};
+
+export async function reconcileInventoryBalance(
+  balanceId: string,
+): Promise<InventoryReconcileReport> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/inventory/balances/${encodeURIComponent(balanceId)}/reconcile`,
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `inventory_reconcile_failed_${res.status}`);
+  }
+  const body = (await res.json()) as InventoryReconcileReport & { ok?: boolean };
+  return {
+    balanceId: body.balanceId,
+    balanceOnHand: Number(body.balanceOnHand),
+    balanceReserved: Number(body.balanceReserved),
+    ledgerOnHand: Number(body.ledgerOnHand),
+    ledgerReserved: Number(body.ledgerReserved),
+    difference: Number(body.difference),
+  };
+}
+
+export async function opsSetSafetyBuffer(input: {
+  storeId?: string;
+  variantId?: string;
+  balanceId?: string;
+  safetyBuffer: number;
+}): Promise<{
+  safetyBuffer: number;
+  balancesUpdated?: number;
+  stock?: OpsStockView;
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/inventory/safety-buffer`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `safety_buffer_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    safetyBuffer: number;
+    balancesUpdated?: number;
+    stock?: OpsStockView;
   };
 }
 

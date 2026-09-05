@@ -82,6 +82,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B62 | Store document expiry alerts list + mock-evaluate suspend | **Done** — alerts list/mock-evaluate; Stores BO |
 | P2-B63 | Support ticket auto-close stale + customer reopen HTTP | **Done** — mock-auto-close + me/reopen; Support BO + customer |
 | P2-B64 | Catalog product/variant setStatus HTTP | **Done** — ops list + status set; Catalog BO activate/pause |
+| P2-B65 | Inventory reconcile + safety buffer HTTP | **Done** — balance reconcile + ops safety-buffer; Inventory BO |
 
 ## C — Hard rules that stay
 

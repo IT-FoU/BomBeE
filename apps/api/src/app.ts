@@ -1262,6 +1262,69 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const inventoryReconcileMatch = url.pathname.match(
+      /^\/v1\/inventory\/balances\/([^/]+)\/reconcile$/,
+    );
+    if (req.method === 'GET' && inventoryReconcileMatch) {
+      const balanceId = decodeURIComponent(inventoryReconcileMatch[1]!);
+      try {
+        const report = await services.inventory.reconcileLedger(balanceId);
+        sendJson(res, 200, { ok: true, balanceId, ...report });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'inventory_reconcile_failed';
+        sendJson(res, message === 'balance_not_found' ? 404 : 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/inventory/safety-buffer') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        storeId?: string;
+        store_id?: string;
+        variantId?: string;
+        variant_id?: string;
+        balanceId?: string;
+        balance_id?: string;
+        safetyBuffer?: number;
+        safety_buffer?: number;
+      }>(req);
+      try {
+        let storeId = (body.storeId ?? body.store_id)?.trim();
+        let variantId = (body.variantId ?? body.variant_id)?.trim();
+        const balanceId = (body.balanceId ?? body.balance_id)?.trim();
+        if ((!storeId || !variantId) && balanceId) {
+          const bal = await services.inventory.getBalance(balanceId);
+          storeId = bal.store_id;
+          variantId = bal.variant_id;
+        }
+        if (!storeId || !variantId) {
+          sendJson(res, 400, { error: 'store_and_variant_required' });
+          return;
+        }
+        const safetyBufferRaw = body.safetyBuffer ?? body.safety_buffer;
+        if (typeof safetyBufferRaw !== 'number' || !Number.isFinite(safetyBufferRaw)) {
+          sendJson(res, 400, { error: 'invalid_safety_buffer' });
+          return;
+        }
+        const safetyBuffer = Math.floor(safetyBufferRaw);
+        const updated = await services.inventory.setSafetyBuffer(storeId, variantId, safetyBuffer);
+        const stock = await services.inventory.listStockByVariant(variantId);
+        sendJson(res, 200, { ok: true, ...updated, stock });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'safety_buffer_failed';
+        sendJson(
+          res,
+          message === 'balance_not_found' ? 404 : 400,
+          { error: message },
+        );
+      }
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/inventory/adjustments') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;

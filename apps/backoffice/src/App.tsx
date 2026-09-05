@@ -17,6 +17,8 @@ import {
   listInventoryAdjustments,
   opsReceiveStock,
   opsAdjustStock,
+  reconcileInventoryBalance,
+  opsSetSafetyBuffer,
   listStockImportBatches,
   previewStockImport,
   commitStockImport,
@@ -1598,8 +1600,9 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
             </h2>
             <p className="lede">
               Lot balances for a selected variant (use Stock on a catalog row). Mock receive adds
-              units; adjust applies maker-checker in one shot. Preview/commit stock import batches
-              apply deltas as import ledger txs.
+              units; adjust applies maker-checker in one shot. Reconcile checks ledger vs balance;
+              safety buffer updates available qty. Preview/commit stock import batches apply deltas
+              as import ledger txs.
             </p>
             {inventoryNote ? (
               <p className="lede" role="status">
@@ -1615,6 +1618,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   <li key={b.balanceId}>
                     {b.lotCode ?? b.lotId.slice(0, 8)} · on hand {b.onHand} · reserved {b.reserved} ·
                     avail {b.available}
+                    {typeof b.safetyBuffer === 'number' ? ` · buffer ${b.safetyBuffer}` : ''}
                     {b.expiryDate ? ` · exp ${b.expiryDate}` : ''}{' '}
                     <button
                       type="button"
@@ -1678,6 +1682,66 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                       }}
                     >
                       Adjust −1
+                    </button>{' '}
+                    <button
+                      type="button"
+                      className="cta"
+                      disabled={formBusy}
+                      onClick={() => {
+                        setFormBusy(true);
+                        setFormError('');
+                        setInventoryNote('');
+                        void (async () => {
+                          try {
+                            const report = await reconcileInventoryBalance(b.balanceId);
+                            setInventoryNote(
+                              `Reconcile ${b.lotCode ?? b.balanceId.slice(0, 8)}… · Δ ${report.difference} (bal ${report.balanceOnHand}/${report.balanceReserved} vs ledger ${report.ledgerOnHand}/${report.ledgerReserved})`,
+                            );
+                          } catch (err) {
+                            setFormError(
+                              err instanceof Error ? err.message : 'inventory_reconcile_failed',
+                            );
+                          } finally {
+                            setFormBusy(false);
+                          }
+                        })();
+                      }}
+                    >
+                      Reconcile
+                    </button>{' '}
+                    <button
+                      type="button"
+                      className="cta"
+                      disabled={formBusy}
+                      onClick={() => {
+                        setFormBusy(true);
+                        setFormError('');
+                        setInventoryNote('');
+                        void (async () => {
+                          try {
+                            const nextBuffer = (b.safetyBuffer ?? 0) === 2 ? 0 : 2;
+                            const result = await opsSetSafetyBuffer({
+                              balanceId: b.balanceId,
+                              safetyBuffer: nextBuffer,
+                            });
+                            if (result.stock) setStockDetail(result.stock);
+                            else if (stockDetail?.variantId) {
+                              setStockDetail(await fetchVariantStock(stockDetail.variantId));
+                            }
+                            setInventoryNote(
+                              `Safety buffer → ${result.safetyBuffer} on ${b.lotCode ?? b.balanceId.slice(0, 8)}…`,
+                            );
+                          } catch (err) {
+                            setFormError(
+                              err instanceof Error ? err.message : 'safety_buffer_failed',
+                            );
+                          } finally {
+                            setFormBusy(false);
+                          }
+                        })();
+                      }}
+                    >
+                      Buffer {(b.safetyBuffer ?? 0) === 2 ? '0' : '2'}
                     </button>
                   </li>
                 ))}

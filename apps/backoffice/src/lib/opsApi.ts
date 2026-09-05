@@ -2744,6 +2744,51 @@ export async function mockAuditEvent(input: {
   return (await res.json()) as { eventId: string; events: AuditEventRow[] };
 }
 
+
+export type CustomerPiiAccessLogRow = {
+  logId: string;
+  actorIdentityId: string;
+  customerProfileId: string;
+  fields: string[];
+  reason: string;
+  correlationId: string;
+  createdAt: string;
+};
+
+export async function listCustomerPiiAccessLogs(
+  limit = 50,
+): Promise<CustomerPiiAccessLogRow[]> {
+  const res = await fetch(`${apiBaseUrl()}/v1/audit/customer-pii-access?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`pii_access_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { logs: CustomerPiiAccessLogRow[] };
+  return body.logs;
+}
+
+export async function mockCustomerPiiAccess(input: {
+  customerProfileId?: string;
+  fields?: string[];
+  reason?: string;
+} = {}): Promise<{
+  customerProfileId: string;
+  logs: CustomerPiiAccessLogRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/audit/mock-customer-pii-access`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `pii_access_mock_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    customerProfileId: string;
+    logs: CustomerPiiAccessLogRow[];
+  };
+}
+
 export type ExportRequestRow = {
   exportId: string;
   exportType: string;

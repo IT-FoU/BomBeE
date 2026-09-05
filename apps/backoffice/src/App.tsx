@@ -125,6 +125,8 @@ import {
   approvePayoutRequest,
   listAuditEvents,
   mockAuditEvent,
+  listCustomerPiiAccessLogs,
+  mockCustomerPiiAccess,
   listExports,
   mockCreateExport,
   approveExportRequest,
@@ -208,6 +210,7 @@ import {
   type PayoutRequestRow,
   type PayoutAccountRow,
   type AuditEventRow,
+  type CustomerPiiAccessLogRow,
   type ExportRequestRow,
   type NotificationInboxRow,
   type NotificationOutboxRow,
@@ -332,6 +335,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccountRow[]>([]);
   const [payoutNote, setPayoutNote] = useState('');
   const [auditEvents, setAuditEvents] = useState<AuditEventRow[]>([]);
+  const [piiAccessLogs, setPiiAccessLogs] = useState<CustomerPiiAccessLogRow[]>([]);
   const [auditNote, setAuditNote] = useState('');
   const [exportRequests, setExportRequests] = useState<ExportRequestRow[]>([]);
   const [exportNote, setExportNote] = useState('');
@@ -413,6 +417,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           contractSnapshotRows,
           payoutBundle,
           auditRows,
+          piiLogRows,
           exportRows,
           notificationBundle,
           integrationsStatus,
@@ -466,6 +471,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listOrderContractSnapshots(50),
           listPayoutRequests(50),
           listAuditEvents(50),
+          listCustomerPiiAccessLogs(50),
           listExports(50),
           listNotifications(50),
           listIntegrations(),
@@ -520,6 +526,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setPayoutRequests(payoutBundle.requests);
         setPayoutAccounts(payoutBundle.accounts);
         setAuditEvents(auditRows);
+        setPiiAccessLogs(piiLogRows);
         setExportRequests(exportRows);
         setNotificationInbox(notificationBundle.inbox);
         setNotificationOutbox(notificationBundle.outbox);
@@ -4737,6 +4744,63 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh audit
+            </button>
+            <ul className="roles" aria-label="Customer PII access logs">
+              {piiAccessLogs.length === 0 ? <li>No customer PII access logs yet</li> : null}
+              {piiAccessLogs.map((row) => (
+                <li key={row.logId}>
+                  {row.fields.join(', ')} · {row.reason} · profile {row.customerProfileId.slice(0, 8)}…
+                  {' · '}
+                  {row.createdAt}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setAuditNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCustomerPiiAccess({
+                      fields: ['phone', 'address'],
+                      reason: 'bo_mock_pii_access',
+                    });
+                    setPiiAccessLogs(result.logs);
+                    setAuditNote(
+                      `PII access logged for profile ${result.customerProfileId.slice(0, 8)}…`,
+                    );
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'pii_access_mock_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock customer PII access
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setPiiAccessLogs(await listCustomerPiiAccessLogs(50));
+                  } catch (err) {
+                    setFormError(err instanceof Error ? err.message : 'pii_access_list_failed');
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh PII access logs
             </button>
           </section>
           <section aria-labelledby="exports-heading" id="exports">

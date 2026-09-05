@@ -109,4 +109,33 @@ export class AuditService {
       createdAt: r.created_at,
     }));
   }
+
+  async listCustomerPiiAccessLogs(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      actor_identity_id: string;
+      customer_profile_id: string;
+      fields: string[];
+      reason: string;
+      correlation_id: string;
+      created_at: string;
+    }>(
+      `SELECT id, actor_identity_id, customer_profile_id, fields, reason,
+              correlation_id::text, created_at::text
+       FROM security.customer_pii_access_logs
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      logId: r.id,
+      actorIdentityId: r.actor_identity_id,
+      customerProfileId: r.customer_profile_id,
+      fields: r.fields,
+      reason: r.reason,
+      correlationId: r.correlation_id,
+      createdAt: r.created_at,
+    }));
+  }
 }

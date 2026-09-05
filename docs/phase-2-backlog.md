@@ -100,6 +100,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B80 | Identity mock-revoke-all-sessions HTTP | **Done** — ops identity mock-revoke-sessions; Staff BO |
 | P2-B81 | Privacy order-address snapshot + store delivery-view HTTP | **Done** — snapshots list + ops mock-snapshot + store-delivery-view; Privacy BO |
 | P2-B82 | Order contract snapshot HTTP | **Done** — order-contract-snapshots list + ops contracts mock-snapshot; Stores BO |
+| P2-B83 | Customer PII access log HTTP | **Done** — customer-pii-access list + ops mock-customer-pii-access (+ store-delivery-view logs); Audit BO |
 
 ## C — Hard rules that stay
 

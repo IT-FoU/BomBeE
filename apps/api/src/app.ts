@@ -4105,6 +4105,14 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/audit/customer-pii-access') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const logs = await services.audit.listCustomerPiiAccessLogs(limit);
+      sendJson(res, 200, { ok: true, logs });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/v1/exports') {
       const limitRaw = Number(url.searchParams.get('limit') ?? '50');
       const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
@@ -5158,6 +5166,74 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
         sendJson(res, 201, { ok: true, eventId, events });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'audit_append_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/audit/mock-customer-pii-access') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        customerProfileId?: string;
+        customer_profile_id?: string;
+        fields?: string[];
+        reason?: string;
+      }>(req);
+      try {
+        const actorIdentityId = await resolveOpsActor(services);
+        let customerProfileId = (
+          body.customerProfileId ??
+          body.customer_profile_id ??
+          ''
+        ).trim();
+        if (!customerProfileId) {
+          const existing = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.customer_profiles ORDER BY created_at ASC LIMIT 1`,
+          );
+          customerProfileId = existing.rows[0]?.id ?? '';
+        }
+        if (!customerProfileId) {
+          const customerIdentityId = await services.identity.ensureCustomer(
+            '+8562097222083',
+            'PII Access QA',
+          );
+          const profile = await services.db.query<{ id: string }>(
+            `SELECT id FROM app.customer_profiles WHERE auth_identity_id = $1`,
+            [customerIdentityId],
+          );
+          customerProfileId = profile.rows[0]?.id ?? '';
+        }
+        if (!customerProfileId) {
+          sendJson(res, 409, { error: 'no_customer_profile' });
+          return;
+        }
+        const fields =
+          Array.isArray(body.fields) && body.fields.length > 0
+            ? body.fields.map(String)
+            : ['phone', 'address'];
+        const reason = body.reason?.trim() || 'local_mock_pii_access';
+        const correlationId = crypto.randomUUID();
+        await services.audit.logCustomerPiiAccess({
+          actorIdentityId,
+          customerProfileId,
+          fields,
+          reason,
+          correlationId,
+        });
+        const logs = await services.audit.listCustomerPiiAccessLogs(50);
+        sendJson(res, 201, {
+          ok: true,
+          customerProfileId,
+          fields,
+          reason,
+          correlationId,
+          logs,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'pii_access_log_failed';
         sendJson(res, 400, { error: message });
       }
       return;
@@ -7357,6 +7433,29 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
           resolvedStoreId,
           parentOrderId,
         );
+        try {
+          const profile = await services.db.query<{ id: string }>(
+            `SELECT cp.id
+             FROM app.customer_profiles cp
+             JOIN app.parent_orders po ON po.customer_identity_id = cp.auth_identity_id
+             WHERE po.id = $1
+             LIMIT 1`,
+            [parentOrderId],
+          );
+          const customerProfileId = profile.rows[0]?.id;
+          if (customerProfileId) {
+            const actorIdentityId = await resolveOpsActor(services);
+            await services.audit.logCustomerPiiAccess({
+              actorIdentityId,
+              customerProfileId,
+              fields: ['recipient_name', 'recipient_phone', 'address_line'],
+              reason: 'store_delivery_view',
+              correlationId: crypto.randomUUID(),
+            });
+          }
+        } catch {
+          /* best-effort PII access log; do not fail the view */
+        }
         sendJson(res, 200, {
           ok: true,
           parentOrderId,

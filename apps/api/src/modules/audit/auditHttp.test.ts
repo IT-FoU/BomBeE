@@ -86,4 +86,35 @@ describe('audit HTTP', () => {
     const events = list.body().events as Array<{ eventId: string; action: string }>;
     expect(events.some((e) => e.eventId === eventId && e.action === 'ops.qa_probe')).toBe(true);
   });
+
+  it('logs and lists customer PII access via HTTP', async () => {
+    const before = mockRes();
+    await router(mockReq('GET', '/v1/audit/customer-pii-access'), before.res);
+    expect(before.res.statusCode).toBe(200);
+    const beforeCount = (before.body().logs as unknown[]).length;
+
+    const logged = mockRes();
+    await router(
+      mockReq('POST', '/v1/ops/audit/mock-customer-pii-access', {
+        fields: ['phone', 'address'],
+        reason: 'audit_http_pii_test',
+      }),
+      logged.res,
+    );
+    expect(logged.res.statusCode).toBe(201);
+    expect(logged.body().ok).toBe(true);
+    expect(logged.body().customerProfileId).toBeTruthy();
+    expect(
+      (logged.body().logs as Array<{ reason: string; customerProfileId: string }>).some(
+        (l) =>
+          l.reason === 'audit_http_pii_test' &&
+          l.customerProfileId === logged.body().customerProfileId,
+      ),
+    ).toBe(true);
+
+    const listed = mockRes();
+    await router(mockReq('GET', '/v1/audit/customer-pii-access?limit=50'), listed.res);
+    expect(listed.res.statusCode).toBe(200);
+    expect((listed.body().logs as unknown[]).length).toBe(beforeCount + 1);
+  });
 });

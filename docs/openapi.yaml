@@ -1925,6 +1925,42 @@ paths:
           description: Event appended
         '403':
           description: Mock ops disabled
+  /v1/audit/customer-pii-access:
+    get:
+      summary: List customer PII access logs (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Logs array
+  /v1/ops/audit/mock-customer-pii-access:
+    post:
+      summary: Local/mock log customer PII access
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_profile_id:
+                  type: string
+                fields:
+                  type: array
+                  items:
+                    type: string
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: PII access logged; list snapshot
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No customer profile available
   /v1/exports:
     get:
       summary: List export requests (ciphertext never returned)

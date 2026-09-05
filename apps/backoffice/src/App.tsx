@@ -60,6 +60,7 @@ import {
   mockSuspendExpiredDocuments,
   mockAddStoreContact,
   fetchStoreOnboarding,
+  fetchStoreChecklist,
   mockUploadStoreDocument,
   verifyStoreDocument,
   issueStoreDocumentSignedAccess,
@@ -1399,6 +1400,39 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
                   : ` · blocked (${storeOnboarding.activation.reason})`}
               </p>
             ) : null}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy || (!storeOnboarding && storeDrafts.length === 0)}
+              onClick={() => {
+                const storeId = storeOnboarding?.storeId ?? storeDrafts[0]?.id;
+                if (!storeId) return;
+                setFormBusy(true);
+                setFormError('');
+                setOnboardNote('');
+                void (async () => {
+                  try {
+                    const result = await fetchStoreChecklist(storeId);
+                    setStoreOnboarding((prev) =>
+                      prev && prev.storeId === result.storeId
+                        ? { ...prev, checklist: result.checklist }
+                        : prev,
+                    );
+                    setOnboardNote(
+                      `Checklist · owner ${result.checklist.ownerIdOk ? 'ok' : '—'} · info ${result.checklist.storeInfoOk ? 'ok' : '—'} · bank ${result.checklist.bankAccountOk ? 'ok' : '—'} · contract ${result.checklist.contractOk ? 'ok' : '—'}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'store_checklist_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh checklist
+            </button>
             <ul className="roles" aria-label="Store documents">
               {storeDocuments.length === 0 ? <li>No store documents yet</li> : null}
               {storeDocuments.slice(0, 12).map((row) => (

@@ -125,6 +125,30 @@ describe('store onboarding HTTP', () => {
     expect(onboard.res.statusCode).toBe(200);
     expect((onboard.body().activation as { ok: boolean }).ok).toBe(true);
 
+    const checklist = mockRes();
+    await router(mockReq('GET', `/v1/stores/${storeId}/checklist`), checklist.res);
+    expect(checklist.res.statusCode).toBe(200);
+    expect(checklist.body().ok).toBe(true);
+    expect(checklist.body().storeId).toBe(storeId);
+    const flags = checklist.body().checklist as {
+      ownerIdOk: boolean;
+      storeInfoOk: boolean;
+      bankAccountOk: boolean;
+      contractOk: boolean;
+    };
+    expect(flags.ownerIdOk).toBe(true);
+    expect(flags.storeInfoOk).toBe(true);
+    expect(flags.bankAccountOk).toBe(true);
+    expect(flags.contractOk).toBe(true);
+
+    const missing = mockRes();
+    await router(
+      mockReq('GET', '/v1/stores/00000000-0000-4000-8000-000000000000/checklist'),
+      missing.res,
+    );
+    expect(missing.res.statusCode).toBe(404);
+    expect(missing.body().error).toBe('store_not_found');
+
     const activated = mockRes();
     await router(mockReq('POST', `/v1/ops/stores/${storeId}/activate`), activated.res);
     expect(activated.res.statusCode).toBe(200);

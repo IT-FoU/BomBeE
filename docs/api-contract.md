@@ -24,6 +24,7 @@ OpenAPI full export is deferred; this contract mirrors shipped HTTP surface + mo
 | POST | `/v1/ops/stores/documents/mock-evaluate-expiry` | Local/mock backdate/verify expired doc + suspend store |
 | POST | `/v1/ops/stores/documents/mock-suspend-expired` | Local/mock direct `suspendForExpiredDocuments` |
 | GET | `/v1/stores/:storeId/onboarding` | Checklist + docs + fulfillment + activation gate |
+| GET | `/v1/stores/:storeId/checklist` | Onboarding checklist flags only (`getChecklist`) |
 | POST | `/v1/ops/stores/:storeId/documents/mock-upload` | Local/mock upload onboarding document |
 | POST | `/v1/ops/stores/documents/:documentId/verify` | Verify document + checklist flag |
 | POST | `/v1/ops/stores/documents/:documentId/signed-access` | Issue short-lived signed access token |

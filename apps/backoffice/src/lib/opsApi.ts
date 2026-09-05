@@ -321,6 +321,30 @@ export async function fetchStoreOnboarding(storeId: string): Promise<StoreOnboar
   return (await res.json()) as StoreOnboarding;
 }
 
+export async function fetchStoreChecklist(storeId: string): Promise<{
+  storeId: string;
+  checklist: StoreOnboarding['checklist'];
+}> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/stores/${encodeURIComponent(storeId)}/checklist`,
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `store_checklist_failed_${res.status}`);
+  }
+  const body = (await res.json()) as {
+    storeId?: string;
+    checklist?: StoreOnboarding['checklist'];
+  };
+  if (!body.checklist) {
+    throw new Error('store_checklist_missing');
+  }
+  return {
+    storeId: body.storeId ?? storeId,
+    checklist: body.checklist,
+  };
+}
+
 export async function mockUploadStoreDocument(
   storeId: string,
   input: {

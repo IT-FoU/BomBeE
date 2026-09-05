@@ -303,6 +303,20 @@ paths:
           description: Checklist, documents, fulfillment, activation
         '404':
           description: Store not found
+  /v1/stores/{storeId}/checklist:
+    get:
+      summary: Store onboarding checklist flags
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Checklist flags (owner/info/bank/contract)
+        '404':
+          description: Store not found
   /v1/ops/stores/{storeId}/documents/mock-upload:
     post:
       summary: Local mock upload onboarding document

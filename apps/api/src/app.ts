@@ -531,6 +531,22 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    const storeChecklistMatch = url.pathname.match(/^\/v1\/stores\/([^/]+)\/checklist$/);
+    if (req.method === 'GET' && storeChecklistMatch) {
+      const storeId = decodeURIComponent(storeChecklistMatch[1]!);
+      const store = await services.db.query<{ id: string }>(
+        `SELECT id FROM app.stores WHERE id = $1`,
+        [storeId],
+      );
+      if (!store.rows[0]) {
+        sendJson(res, 404, { error: 'store_not_found' });
+        return;
+      }
+      const checklist = await services.stores.getChecklist(storeId);
+      sendJson(res, 200, { ok: true, storeId, checklist });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/stores/contracts/mock-create') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

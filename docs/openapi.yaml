@@ -1940,6 +1940,28 @@ paths:
           description: Mock ops disabled
         '404':
           description: Staff profile not found
+  /v1/identity/owner-recovery-requests:
+    get:
+      summary: List owner recovery requests (local ops)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Requests array
+  /v1/ops/identity/owner-recovery/mock-create:
+    post:
+      summary: Local/mock create pending owner recovery request
+      responses:
+        '201':
+          description: Request created; list snapshot
+        '403':
+          description: Mock ops disabled
+        '409':
+          description: No owner identity available
   /v1/ops/identity/mock-lock:
     post:
       summary: Local/mock lock a non-owner staff identity (failed-login threshold)

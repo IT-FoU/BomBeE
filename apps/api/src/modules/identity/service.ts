@@ -375,6 +375,45 @@ export class IdentityService {
     return row.rows[0]!.id;
   }
 
+  async listOwnerRecoveryRequests(limit = 50) {
+    const capped = Math.min(Math.max(limit, 1), 100);
+    const rows = await this.db.query<{
+      id: string;
+      owner_identity_id: string;
+      owner_subject: string | null;
+      owner_display_name: string | null;
+      status: string;
+      evidence_ref: string;
+      reason: string;
+      created_at: string;
+      resolved_at: string | null;
+      resolved_by: string | null;
+    }>(
+      `SELECT r.id, r.owner_identity_id, i.subject AS owner_subject,
+              sp.display_name AS owner_display_name,
+              r.status, r.evidence_ref, r.reason,
+              r.created_at::text, r.resolved_at::text, r.resolved_by
+       FROM security.owner_recovery_requests r
+       JOIN security.auth_identities i ON i.id = r.owner_identity_id
+       LEFT JOIN app.staff_profiles sp ON sp.auth_identity_id = r.owner_identity_id
+       ORDER BY r.created_at DESC
+       LIMIT $1`,
+      [capped],
+    );
+    return rows.rows.map((r) => ({
+      requestId: r.id,
+      ownerIdentityId: r.owner_identity_id,
+      ownerSubject: r.owner_subject,
+      ownerDisplayName: r.owner_display_name,
+      status: r.status,
+      evidenceRef: r.evidence_ref,
+      reason: r.reason,
+      createdAt: r.created_at,
+      resolvedAt: r.resolved_at,
+      resolvedBy: r.resolved_by,
+    }));
+  }
+
   get maxFailedLogins() {
     return MAX_FAILED_LOGINS;
   }

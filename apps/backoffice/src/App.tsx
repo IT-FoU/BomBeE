@@ -130,6 +130,8 @@ import {
   mockEnsureEgoProfiles,
   listStaffDirectory,
   mockLockStaff,
+  listOwnerRecoveryRequests,
+  mockCreateOwnerRecoveryRequest,
   unlockStaff,
   mockAssignStaffRole,
   fetchDashboardKpis,
@@ -196,6 +198,7 @@ import {
   type NotificationOutboxRow,
   type IntegrationsStatus,
   type StaffDirectoryRow,
+  type OwnerRecoveryRequestRow,
   type StaffRoleCatalogRow,
   type DashboardKpis,
   type PaymentsReconcile,
@@ -319,6 +322,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
   const [staffRoles, setStaffRoles] = useState<StaffRoleCatalogRow[]>([]);
   const [staffDirectory, setStaffDirectory] = useState<StaffDirectoryRow[]>([]);
   const [staffNote, setStaffNote] = useState('');
+  const [ownerRecoveryRequests, setOwnerRecoveryRequests] = useState<OwnerRecoveryRequestRow[]>([]);
   const [dashboardKpis, setDashboardKpis] = useState<DashboardKpis | null>(null);
   const [paymentsReconcile, setPaymentsReconcile] = useState<PaymentsReconcile | null>(null);
   const [dashboardNote, setDashboardNote] = useState('');
@@ -386,6 +390,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           notificationBundle,
           integrationsStatus,
           staffBundle,
+          ownerRecoveryRows,
           kpis,
           reconcile,
           backupBundle,
@@ -434,6 +439,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
           listNotifications(50),
           listIntegrations(),
           listStaffDirectory(50),
+          listOwnerRecoveryRequests(50),
           fetchDashboardKpis(),
           fetchPaymentsReconcile(),
           listBackups(50),
@@ -485,6 +491,7 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
         setIntegrations(integrationsStatus);
         setStaffRoles(staffBundle.roles);
         setStaffDirectory(staffBundle.staff);
+        setOwnerRecoveryRequests(ownerRecoveryRows);
         setDashboardKpis(kpis);
         setPaymentsReconcile(reconcile);
         setBackupJobs(backupBundle.jobs);
@@ -757,8 +764,8 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               <span lang="lo">ພະນັກງານ</span>
             </h2>
             <p className="lede">
-              Role catalog, local staff directory, mock role assign, mock lock (non-owner), and
-              unlock (Owner actor).
+              Role catalog, local staff directory, mock role assign, mock lock (non-owner),
+              unlock (Owner actor), and owner recovery requests.
             </p>
             {staffNote ? <p className="lede">{staffNote}</p> : null}
             <ul className="roles" aria-label="Standard staff roles">
@@ -899,6 +906,70 @@ export function App({ locale = 'en' as UiLocale }: { locale?: UiLocale }) {
               }}
             >
               Refresh staff
+            </button>
+            <ul className="roles" aria-label="Owner recovery requests">
+              {ownerRecoveryRequests.length === 0 ? (
+                <li>No owner recovery requests yet</li>
+              ) : null}
+              {ownerRecoveryRequests.map((row) => (
+                <li key={row.requestId}>
+                  {row.status} ·{' '}
+                  {row.ownerDisplayName ?? row.ownerSubject ?? row.ownerIdentityId.slice(0, 8)}
+                  … · {row.reason} · evidence {row.evidenceRef}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                setFormError('');
+                setStaffNote('');
+                void (async () => {
+                  try {
+                    const result = await mockCreateOwnerRecoveryRequest({
+                      reason: 'BO mock owner recovery',
+                      evidenceRef: `bo-evidence/${Date.now().toString(36)}`,
+                    });
+                    if (result.requests) setOwnerRecoveryRequests(result.requests);
+                    else setOwnerRecoveryRequests(await listOwnerRecoveryRequests(50));
+                    setStaffNote(
+                      `Owner recovery ${result.requestId.slice(0, 8)}… · ${result.status}`,
+                    );
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'owner_recovery_create_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Mock owner recovery
+            </button>{' '}
+            <button
+              type="button"
+              className="cta"
+              disabled={formBusy}
+              onClick={() => {
+                setFormBusy(true);
+                void (async () => {
+                  try {
+                    setOwnerRecoveryRequests(await listOwnerRecoveryRequests(50));
+                  } catch (err) {
+                    setFormError(
+                      err instanceof Error ? err.message : 'owner_recovery_list_failed',
+                    );
+                  } finally {
+                    setFormBusy(false);
+                  }
+                })();
+              }}
+            >
+              Refresh owner recovery
             </button>
           </section>
           <section aria-labelledby="invites-heading" id="invites">

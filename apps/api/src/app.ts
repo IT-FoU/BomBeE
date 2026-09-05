@@ -3711,6 +3711,67 @@ export function createAppRouter(env: BombeeEnv, services: ApiServices) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/v1/identity/owner-recovery-requests') {
+      const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+      const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
+      const requests = await services.identity.listOwnerRecoveryRequests(limit);
+      sendJson(res, 200, { ok: true, requests });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/v1/ops/identity/owner-recovery/mock-create') {
+      if (!mockOpsAllowed(env)) {
+        sendJson(res, 403, { error: 'mock_ops_disabled' });
+        return;
+      }
+      const body = await readJsonBody<{
+        ownerIdentityId?: string;
+        owner_identity_id?: string;
+        evidenceRef?: string;
+        evidence_ref?: string;
+        reason?: string;
+      }>(req);
+      try {
+        let ownerIdentityId = (body.ownerIdentityId ?? body.owner_identity_id)?.trim();
+        if (!ownerIdentityId) {
+          const staff = await services.identity.listStaffDirectory(100);
+          const owner =
+            staff.find((s) => s.roles.includes('owner')) ??
+            staff.find((s) => s.subject === 'staff:local-catalog-owner') ??
+            staff[0];
+          ownerIdentityId = owner?.identityId;
+        }
+        if (!ownerIdentityId) {
+          sendJson(res, 409, { error: 'no_owner_identity' });
+          return;
+        }
+        const evidenceRef =
+          (body.evidenceRef ?? body.evidence_ref)?.trim() ||
+          `mock-evidence/${Date.now().toString(36)}`;
+        const reason =
+          body.reason?.trim() || 'local mock owner recovery request';
+        const requestId = await services.identity.createOwnerRecoveryRequest({
+          ownerIdentityId,
+          evidenceRef,
+          reason,
+        });
+        const requests = await services.identity.listOwnerRecoveryRequests(50);
+        sendJson(res, 201, {
+          ok: true,
+          requestId,
+          ownerIdentityId,
+          evidenceRef,
+          reason,
+          status: 'pending',
+          requests,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'owner_recovery_create_failed';
+        sendJson(res, 400, { error: message });
+      }
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/v1/ops/identity/mock-lock') {
       if (!mockOpsAllowed(env)) {
         sendJson(res, 403, { error: 'mock_ops_disabled' });

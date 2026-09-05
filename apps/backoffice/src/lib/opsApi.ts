@@ -2789,6 +2789,67 @@ export async function listStaffDirectory(
   };
 }
 
+export type OwnerRecoveryRequestRow = {
+  requestId: string;
+  ownerIdentityId: string;
+  ownerSubject: string | null;
+  ownerDisplayName: string | null;
+  status: string;
+  evidenceRef: string;
+  reason: string;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+};
+
+export async function listOwnerRecoveryRequests(
+  limit = 50,
+): Promise<OwnerRecoveryRequestRow[]> {
+  const res = await fetch(
+    `${apiBaseUrl()}/v1/identity/owner-recovery-requests?limit=${limit}`,
+  );
+  if (!res.ok) {
+    throw new Error(`owner_recovery_list_failed_${res.status}`);
+  }
+  const body = (await res.json()) as { requests: OwnerRecoveryRequestRow[] };
+  return body.requests;
+}
+
+export async function mockCreateOwnerRecoveryRequest(input: {
+  ownerIdentityId?: string;
+  evidenceRef?: string;
+  reason?: string;
+} = {}): Promise<{
+  requestId: string;
+  ownerIdentityId: string;
+  evidenceRef: string;
+  reason: string;
+  status: string;
+  requests?: OwnerRecoveryRequestRow[];
+}> {
+  const res = await fetch(`${apiBaseUrl()}/v1/ops/identity/owner-recovery/mock-create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      owner_identity_id: input.ownerIdentityId,
+      evidence_ref: input.evidenceRef,
+      reason: input.reason,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? `owner_recovery_create_failed_${res.status}`);
+  }
+  return (await res.json()) as {
+    requestId: string;
+    ownerIdentityId: string;
+    evidenceRef: string;
+    reason: string;
+    status: string;
+    requests?: OwnerRecoveryRequestRow[];
+  };
+}
+
 export async function mockLockStaff(input: {
   identityId?: string;
   subject?: string;

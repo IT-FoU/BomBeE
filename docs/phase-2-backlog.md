@@ -92,6 +92,7 @@ Phase 1 packaging is closed on `main`. Items below are **not** started until Own
 | P2-B72 | Inventory lot mock-create HTTP | **Done** — ops lots/mock-create + ensure balance; Inventory BO |
 | P2-B73 | Courier list + mock-create HTTP | **Done** — couriers list + ops mock-create; Fulfillment BO |
 | P2-B74 | Lot allocation evaluate + expiry alerts HTTP | **Done** — lot-expiry-alerts list + ops mock-evaluate-allocation; Inventory BO |
+| P2-B75 | Owner recovery list + mock-create HTTP | **Done** — owner-recovery-requests list + ops mock-create; Staff BO |
 
 ## C — Hard rules that stay
 
